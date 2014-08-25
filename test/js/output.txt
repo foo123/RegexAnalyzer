@@ -1,0 +1,156 @@
+Testing Composer
+================
+Partial: [_a-z][_a-z0-9]*
+Composed: /^([_a-z][_a-z0-9]*|\*\*aabb\*\*|.|\s|\D+)*?$/i
+Expected: /^([_a-z][_a-z0-9]*|\*\*aabb\*\*|.|\s|\D+)*?$/i
+================
+
+Testing Analyzer
+================
+Input: /^(?:[^\u0000-\u1234a-zA-Z\d\-\.\*\+\?\^\$\{\}\(\)\|\[\]\/\\]+)|abcdef\u1234{1,}/gim
+
+Regular Expression: ^(?:[^\u0000-\u1234a-zA-Z\d\-\.\*\+\?\^\$\{\}\(\)\|\[\]\/\\]+)|abcdef\u1234{1,}
+
+Regular Expression Flags: 
+{ m: 1, i: 1, g: 1 }
+
+Regular Expression Parts: 
+{
+    "part": [
+        {
+            "part": [
+                {
+                    "part": "^",
+                    "flags": {
+                        "MatchStart": 1
+                    },
+                    "type": "Special"
+                },
+                {
+                    "part": {
+                        "part": [
+                            {
+                                "part": {
+                                    "part": [
+                                        {
+                                            "part": [
+                                                "\u0000",
+                                                "ሴ"
+                                            ],
+                                            "flags": {},
+                                            "type": "CharRange"
+                                        },
+                                        {
+                                            "part": [
+                                                "a",
+                                                "z"
+                                            ],
+                                            "flags": {},
+                                            "type": "CharRange"
+                                        },
+                                        {
+                                            "part": [
+                                                "A",
+                                                "Z"
+                                            ],
+                                            "flags": {},
+                                            "type": "CharRange"
+                                        },
+                                        {
+                                            "part": "d",
+                                            "flags": {
+                                                "MatchDigitChar": 1
+                                            },
+                                            "type": "Special"
+                                        },
+                                        {
+                                            "part": [
+                                                "-",
+                                                ".",
+                                                "*",
+                                                "+",
+                                                "?",
+                                                "^",
+                                                "$",
+                                                "{",
+                                                "}",
+                                                "(",
+                                                ")",
+                                                "|",
+                                                "[",
+                                                "]",
+                                                "/"
+                                            ],
+                                            "flags": {},
+                                            "type": "Chars"
+                                        },
+                                        {
+                                            "part": "\\",
+                                            "flags": {
+                                                "EscapeChar": 1
+                                            },
+                                            "type": "Special"
+                                        }
+                                    ],
+                                    "flags": {
+                                        "NotMatch": 1
+                                    },
+                                    "type": "CharGroup"
+                                },
+                                "flags": {
+                                    "MatchOneOrMore": 1,
+                                    "isGreedy": 1
+                                },
+                                "type": "Quantifier"
+                            }
+                        ],
+                        "flags": {},
+                        "type": "Sequence"
+                    },
+                    "flags": {
+                        "NotCaptured": 1,
+                        "GroupIndex": 1
+                    },
+                    "type": "Group"
+                }
+            ],
+            "flags": {},
+            "type": "Sequence"
+        },
+        {
+            "part": [
+                {
+                    "part": "abcdef",
+                    "flags": {},
+                    "type": "String"
+                },
+                {
+                    "part": {
+                        "part": "u1234",
+                        "flags": {
+                            "Char": "ሴ",
+                            "Code": "1234"
+                        },
+                        "type": "UnicodeChar"
+                    },
+                    "flags": {
+                        "part": "{1,}",
+                        "MatchMinimum": "1",
+                        "MatchMaximum": "unlimited",
+                        "StartRepeats": 1,
+                        "isGreedy": 1
+                    },
+                    "type": "Quantifier"
+                }
+            ],
+            "flags": {},
+            "type": "Sequence"
+        }
+    ],
+    "flags": {
+        "MatchEither": 1
+    },
+    "type": "Alternation"
+}
+================
+
