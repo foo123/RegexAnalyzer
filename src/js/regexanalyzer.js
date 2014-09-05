@@ -114,10 +114,12 @@
     };
     
     var getPeekChars = function(part) {
-        var peek = {}, negativepeek = {}, current, p, i, l, tmp, done;
+        var peek = {}, negativepeek = {}, current, p, i, l, 
+            tmp, done, type, ptype;
         
+        type = part.type;
         // walk the sequence
-        if ( "Alternation" == part.type )
+        if ( "Alternation" == type )
         {
             for (i=0, l=part.part.length; i<l; i++)
             {
@@ -127,14 +129,14 @@
             }
         }
         
-        else if ( "Group" == part.type )
+        else if ( "Group" == type )
         {
             tmp = getPeekChars( part.part );
             peek = concat( peek, tmp.peek );
             negativepeek = concat( negativepeek, tmp.negativepeek );
         }
         
-        else if ( "Sequence" == part.type )
+        else if ( "Sequence" == type )
         {
             i = 0;
             l = part.part.length;
@@ -174,30 +176,30 @@
             }
         }
         
-        else if ( "CharGroup" == part.type )
+        else if ( "CharGroup" == type )
         {
             current = ( part.flags.NotMatch ) ? negativepeek : peek;
             
             for (i=0, l=part.part.length; i<l; i++)
             {
                 p = part.part[i];
-                
-                if ( "Chars" == p.type )
+                ptype = p.type;
+                if ( "Chars" == ptype )
                 {
                     current = concat( current, p.part );
                 }
                 
-                else if ( "CharRange" == p.type )
+                else if ( "CharRange" == ptype )
                 {
                     current = concat( current, getCharRange(p.part) );
                 }
                 
-                else if ( "UnicodeChar" == p.type || "HexChar" == p.type )
+                else if ( "UnicodeChar" == ptype || "HexChar" == ptype )
                 {
                     current[p.flags.Char] = 1;
                 }
                 
-                else if ( "Special" == p.type )
+                else if ( "Special" == ptype )
                 {
                     if ('D' == p.part)
                     {
@@ -228,12 +230,12 @@
             }
         }
         
-        else if ( "String" == part.type )
+        else if ( "String" == type )
         {
             peek[part.part.charAt(0)] = 1;
         }
         
-        else if ( "Special" == part.type && !part.flags.MatchStart && !part.flags.MatchEnd )
+        else if ( "Special" == type && !part.flags.MatchStart && !part.flags.MatchEnd )
         {
             if ('D' == part.part)
             {
@@ -253,7 +255,7 @@
             }
         }
                 
-        else if ( "UnicodeChar" == part.type || "HexChar" == part.type )
+        else if ( "UnicodeChar" == type || "HexChar" == type )
         {
             peek[part.flags.Char] = 1;
         }

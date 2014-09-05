@@ -17,9 +17,9 @@
 
 SRC =[]
     
-    !tpl:umd-exports-header.tpl.js  # include a umd-header template
+    !tpl:umd-header-single.tpl.js  # include a umd-header template
     ./src/js/regexanalyzer.js
-    !tpl:umd-exports-footer.tpl.js  # include a umd-footer template
+    !tpl:umd-footer.tpl.js  # include a umd-footer template
     
 @ # end block
 
@@ -31,15 +31,11 @@ HEADER =
 
 REPLACE =[{}]
 
-    "@@EXPORTS@@" = "EXPORTS"
-    
-    "@@VERSION@@" = "0.3.1"
-    
+    "@@ROOT@@" = "this"
+    "@@EXPORTS@@" = "exports"
+    "@@VERSION@@" = "0.3.2"
     "@@MODULE_NAME@@" = "RegExAnalyzer"
     
-    "@@MODULE_DEPENDENCIES@@" = "null"
-    
-    "@@MODULE_ARGUMENTS@@"  = ""
     
 @ # end block
 

@@ -106,32 +106,32 @@ class RegExAnalyzer
         return $chars;
     }
     
-    private static function _getPeekChars( $part ) 
+    private static function GetPeekChars( $part ) 
     {
         $peek = array(); 
         $negativepeek = array(); 
         
-        
+        $type = $part['type'];
         // walk the sequence
-        if ( "Alternation" == $part['type'] )
+        if ( "Alternation" == $type )
         {
             $l = count($part['part']);
             for ($i=0; $i<$l; $i++)
             {
-                $tmp = self::getPeekChars( $part['part'][$i] );
+                $tmp = self::GetPeekChars( $part['part'][$i] );
                 $peek = self::concat( $peek, $tmp['peek'] );
                 $negativepeek = self::concat( $negativepeek, $tmp['negativepeek'] );
             }
         }
         
-        else if ( "Group" == $part['type'] )
+        else if ( "Group" == $type )
         {
-            $tmp = self::getPeekChars( $part['part'] );
+            $tmp = self::GetPeekChars( $part['part'] );
             $peek = self::concat( $peek, $tmp['peek'] );
             $negativepeek = self::concat( $negativepeek, $tmp['negativepeek'] );
         }
         
-        else if ( "Sequence" == $part['type'] )
+        else if ( "Sequence" == $type )
         {
             $i = 0;
             $l = count($part['part']);
@@ -142,7 +142,7 @@ class RegExAnalyzer
             );
             while ( !$done )
             {
-                $tmp = self::getPeekChars( $p['part'] );
+                $tmp = self::GetPeekChars( $p['part'] );
                 $peek = self::concat( $peek, $tmp['peek'] );
                 $negativepeek = self::concat( $negativepeek, $tmp['negativepeek'] );
                 
@@ -164,14 +164,14 @@ class RegExAnalyzer
                 
                 if ($p)
                 {
-                    $tmp = self::getPeekChars( $p );
+                    $tmp = self::GetPeekChars( $p );
                     $peek = self::concat( $peek, $tmp['peek'] );
                     $negativepeek = self::concat( $negativepeek, $tmp['negativepeek'] );
                 }
             }
         }
         
-        else if ( "CharGroup" == $part['type'] )
+        else if ( "CharGroup" == $type )
         {
             if ( isset($part['flags']['NotMatch']) )
                 $current =& $negativepeek;
@@ -182,23 +182,23 @@ class RegExAnalyzer
             for ($i=0; $i<$l; $i++)
             {
                 $p = $part['part'][$i];
-                
-                if ( "Chars" == $p['type'] )
+                $ptype = $p['type'];
+                if ( "Chars" == $ptype )
                 {
                     $current = self::concat( $current, $p['part'] );
                 }
                 
-                else if ( "CharRange" == $p['type'] )
+                else if ( "CharRange" == $ptype )
                 {
                     $current = self::concat( $current, self::getCharRange($p['part']) );
                 }
                 
-                else if ( "UnicodeChar" == $p['type'] || "HexChar" == $p['type'] )
+                else if ( "UnicodeChar" == $ptype || "HexChar" == $ptype )
                 {
                     $current[$p['flags']['Char']] = 1;
                 }
                 
-                else if ( "Special" == $p['type'] )
+                else if ( "Special" == $ptype )
                 {
                     if ('D' == $p['part'])
                     {
@@ -229,12 +229,12 @@ class RegExAnalyzer
             }
         }
         
-        else if ( "String" == $part['type'] )
+        else if ( "String" == $type )
         {
             $peek[$part['part'][0]] = 1;
         }
         
-        else if ( "Special" == $part['type'] && !isset($part['flags']['MatchStart']) && !isset($part['flags']['MatchEnd']) )
+        else if ( "Special" == $type && !isset($part['flags']['MatchStart']) && !isset($part['flags']['MatchEnd']) )
         {
             if ('D' == $part['part'])
             {
@@ -254,7 +254,7 @@ class RegExAnalyzer
             }
         }
                 
-        else if ( "UnicodeChar" == $part['type'] || "HexChar" == $part['type'] )
+        else if ( "UnicodeChar" == $type || "HexChar" == $type )
         {
             $peek[$part['flags']['Char']] = 1;
         }
@@ -273,7 +273,7 @@ class RegExAnalyzer
     public function getPeekChars( ) 
     {
         $isCaseInsensitive = $this->flags && isset($this->flags['i']);
-        $peek = self::_getPeekChars($this->parts);
+        $peek = self::GetPeekChars($this->parts);
         
         foreach ($peek as $n=>$p)
         {

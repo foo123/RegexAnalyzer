@@ -17,9 +17,9 @@
 
 SRC =[]
     
-    !tpl:umd-exports-header.tpl.js  # include a umd-header template
+    !tpl:umd-header-single.tpl.js  # include a umd-header template
     ./src/js/regexcomposer.js
-    !tpl:umd-exports-footer.tpl.js  # include a umd-footer template
+    !tpl:umd-footer.tpl.js  # include a umd-footer template
     
 @ # end block
 
@@ -31,15 +31,10 @@ HEADER =
 
 REPLACE =[{}]
 
-    "@@EXPORTS@@" = "EXPORTS"
-    
-    "@@VERSION@@" = "0.3.2"
-    
+    "@@ROOT@@" = "this"
+    "@@EXPORTS@@" = "exports"
+    "@@VERSION@@" = "0.3.3"
     "@@MODULE_NAME@@" = "RegExComposer"
-    
-    "@@MODULE_DEPENDENCIES@@" = "null"
-    
-    "@@MODULE_ARGUMENTS@@"  = ""
     
 @ # end block
 

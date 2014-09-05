@@ -11,205 +11,148 @@
 # needed imports
 import re
 
+def concat( p1, p2=None ):
+    if p2 and isinstance(p2, (list, tuple)):
+        l = len(p2)
+        for p in range(l): p1[ p2[ p ] ] = 1
+        
+    
+    else:
+        for p in p2:  p1[ p ] = 1;
+        
+    return p1
+
+
+# http://stackoverflow.com/questions/12376870/create-an-array-of-characters-from-specified-range
+def getCharRange( first=None, last=None ):
+    if first and isinstance(first, (list, tuple)):
+        last = first[1]
+        first = first[0]
+    
+    start = first[0] 
+    end = last[0]
+    
+    if end == start: return [ chr( start ) ]
+    
+    chars = []
+    for ch = start; ch <= end; ch+=1:
+        chars.append(chr( ch ))
+    
+    return chars
+
+
+def getPeekChars( part=None ):
+    peek = {}
+    negativepeek = {}
+    
+    if not part: return { 'peek': peek, 'negativepeek': negativepeek }
+    
+    type = part['type']
+    # walk the sequence
+    if "Alternation" == type:
+        for p in part['part']:
+            tmp = getPeekChars( p )
+            peek = concat( peek, tmp['peek'] )
+            negativepeek = concat( negativepeek, tmp['negativepeek'] )
+    
+    elif "Group" == type:
+        tmp = getPeekChars( part['part'] )
+        peek = concat( peek, tmp['peek'] )
+        negativepeek = concat( negativepeek, tmp['negativepeek'] )
+    
+    elif "Sequence" == type:
+        i = 0
+        l = len(part['part'])
+        p = part['part'][i]
+        done = ( 
+            i >= l or !p or "Quantifier" != p['type'] or 
+            ((('MatchZeroOrMore' not in p['flags']) and ('MatchZeroOrOne' not in p['flags']) and ('MatchMinimum' not in p['flags'])) or "0" != p['flags']['MatchMinimum'])
+        )
+        while not done:
+            tmp = getPeekChars( p['part'] )
+            peek = concat( peek, tmp['peek'] )
+            negativepeek = concat( negativepeek, tmp['negativepeek'] )
+            
+            i += 1
+            p = part['part'][i]
+            
+            done = ( 
+                i >= l or !p or "Quantifier" != p['type'] or 
+                ((('MatchZeroOrMore' not in p['flags']) and ('MatchZeroOrOne' not in p['flags']) and ('MatchMinimum' not in p['flags'])) or "0" != p['flags']['MatchMinimum'])
+            )
+        
+        if i < l:
+            p = part['part'][i]
+            
+            if "Special" == p['type'] and ('^'==p['part'] or '$'==p['part']):
+                p = part['part'][i+1] if (i+1 < l) else None
+            
+            if p and "Quantifier" == p['type']:
+                p = p['part']
+            
+            if p:
+                tmp = getPeekChars( p )
+                peek = concat( peek, tmp['peek'] )
+                negativepeek = concat( negativepeek, tmp['negativepeek'] )
+    
+    elif "CharGroup" == type:
+        if 'NotMatch' in part['flags']:
+            current = negativepeek
+        else:
+            current = peek
+        
+        for p in part['part']:
+            ptype = p['type']
+            if "Chars" == ptype:
+                current = concat( current, p['part'] )
+            
+            elif "CharRange" == ptype:
+                current = concat( current, getCharRange(p['part']) )
+            
+            elif "UnicodeChar" == ptype or "HexChar" == ptype:
+                current[p['flags']['Char']] = 1
+            
+            elif "Special" == ptype:
+                if 'D' == p['part']:
+                    if 'NotMatch' in part['flags']:
+                        peek[ '\\d' ] = 1
+                    else:
+                        negativepeek[ '\\d' ] = 1
+                elif 'W' == p['part']:
+                    if 'NotMatch' in part['flags']:
+                        peek[ '\\w' ] = 1
+                    else:
+                        negativepeek[ '\\W' ] = 1
+                elif 'S' == p['part']:
+                    if 'NotMatch' in part['flags']:
+                        peek[ '\\s' ] = 1
+                    else:
+                        negativepeek[ '\\s' ] = 1
+                else:
+                    current['\\' + p['part']] = 1
+    
+    elif "String" == type:
+        peek[part['part'][0]] = 1
+    
+    elif "Special" == type and ('MatchStart' not in part['flags']) and ('MatchEnd' not in part['flags']['MatchEnd']):
+        if 'D' == part['part']:
+            negativepeek[ '\\d' ] = 1
+        elif 'W' == part['part']:
+            negativepeek[ '\\W' ] = 1
+        elif 'S' == part['part']:
+            negativepeek[ '\\s' ] = 1
+        else:
+            peek['\\' + part['part']] = 1
+            
+    elif "UnicodeChar" == type or "HexChar" == type:
+        peek[part['flags']['Char']] = 1
+    
+    return {'peek': peek, 'negativepeek': negativepeek}
+
+
 class RegExAnalyzer:
     
     VERSION = "0.1"
-    
-    def concat(p1, p2=None):
-    
-        if p2 and isinstance(p2, (list, tuple)):
-        
-            l = len(p2)
-            for p in range(l):
-            
-                p1[ p2[ p ] ] = 1
-            
-        
-        else:
-        
-            for p in p2:
-            
-                p1[ p ] = 1;
-            
-        
-        return p1
-    
-    
-    # http://stackoverflow.com/questions/12376870/create-an-array-of-characters-from-specified-range
-    def getCharRange(first=None, last=None):
-    
-        if first and isinstance(first, (list, tuple)):
-            
-            last = first[1]
-            first = first[0]
-        
-        start = first[0] 
-        end = last[0]
-        
-        if end == start: return [ chr( start ) ]
-        
-        chars = []
-        for ch = start; ch <= end; ch+=1:
-            chars.append(chr( ch ))
-        
-        return chars
-    
-    
-    def _getPeekChars( part=None ):
-    
-        $peek = array(); 
-        $negativepeek = array(); 
-        
-        
-        # walk the sequence
-        if ( "Alternation" == $part['type'] )
-        {
-            $l = count($part['part']);
-            for ($i=0; $i<$l; $i++)
-            {
-                $tmp = self::getPeekChars( $part['part'][$i] );
-                $peek = self::concat( $peek, $tmp['peek'] );
-                $negativepeek = self::concat( $negativepeek, $tmp['negativepeek'] );
-            }
-        }
-        
-        else if ( "Group" == $part['type'] )
-        {
-            $tmp = self::getPeekChars( $part['part'] );
-            $peek = self::concat( $peek, $tmp['peek'] );
-            $negativepeek = self::concat( $negativepeek, $tmp['negativepeek'] );
-        }
-        
-        else if ( "Sequence" == $part['type'] )
-        {
-            $i = 0;
-            $l = count($part['part']);
-            $p = $part['part'][$i];
-            $done = ( 
-                $i >= $l || !$p || "Quantifier" != $p['type'] || 
-                ( !isset($p['flags']['MatchZeroOrMore']) && !isset($p['flags']['MatchZeroOrOne']) && (!isset($p['flags']['MatchMinimum']) || "0"!=$p['flags']['MatchMinimum']) ) 
-            );
-            while ( !$done )
-            {
-                $tmp = self::getPeekChars( $p['part'] );
-                $peek = self::concat( $peek, $tmp['peek'] );
-                $negativepeek = self::concat( $negativepeek, $tmp['negativepeek'] );
-                
-                $i++;
-                $p = $part['part'][$i];
-                
-                $done = ( 
-                    $i >= $l || !$p || "Quantifier" != $p['type'] || 
-                    ( !isset($p['flags']['MatchZeroOrMore']) && !isset($p['flags']['MatchZeroOrOne']) && (!isset($p['flags']['MatchMinimum']) || "0"!=$p['flags']['MatchMinimum']) ) 
-                );
-            }
-            if ( $i < $l )
-            {
-                $p = $part['part'][$i];
-                
-                if ("Special" == $p['type'] && ('^'==$p['part'] || '$'==$p['part'])) $p = $part['part'][$i+1] || null;
-                
-                if ($p && "Quantifier" == $p['type']) $p = $p['part'];
-                
-                if ($p)
-                {
-                    $tmp = self::getPeekChars( $p );
-                    $peek = self::concat( $peek, $tmp['peek'] );
-                    $negativepeek = self::concat( $negativepeek, $tmp['negativepeek'] );
-                }
-            }
-        }
-        
-        else if ( "CharGroup" == $part['type'] )
-        {
-            if ( isset($part['flags']['NotMatch']) )
-                $current =& $negativepeek;
-            else
-                $current =& $peek;
-            
-            $l = count($part['part']);
-            for ($i=0; $i<$l; $i++)
-            {
-                $p = $part['part'][$i];
-                
-                if ( "Chars" == $p['type'] )
-                {
-                    $current = self::concat( $current, $p['part'] );
-                }
-                
-                else if ( "CharRange" == $p['type'] )
-                {
-                    $current = self::concat( $current, self::getCharRange($p['part']) );
-                }
-                
-                else if ( "UnicodeChar" == $p['type'] || "HexChar" == $p['type'] )
-                {
-                    $current[$p['flags']['Char']] = 1;
-                }
-                
-                else if ( "Special" == $p['type'] )
-                {
-                    if ('D' == $p['part'])
-                    {
-                        if (isset($part['flags']['NotMatch']))
-                            $peek[ '\\d' ] = 1;
-                        else
-                            $negativepeek[ '\\d' ] = 1;
-                    }
-                    else if ('W' == $p['part'])
-                    {
-                        if (isset($part['flags']['NotMatch']))
-                            $peek[ '\\w' ] = 1;
-                        else
-                            $negativepeek[ '\\W' ] = 1;
-                    }
-                    else if ('S' == $p['part'])
-                    {
-                        if (isset($part['flags']['NotMatch']))
-                            $peek[ '\\s' ] = 1;
-                        else
-                            $negativepeek[ '\\s' ] = 1;
-                    }
-                    else
-                    {
-                        $current['\\' . $p['part']] = 1;
-                    }
-                }
-            }
-        }
-        
-        else if ( "String" == $part['type'] )
-        {
-            $peek[$part['part'][0]] = 1;
-        }
-        
-        else if ( "Special" == $part['type'] && !isset($part['flags']['MatchStart']) && !isset($part['flags']['MatchEnd']) )
-        {
-            if ('D' == $part['part'])
-            {
-                $negativepeek[ '\\d' ] = 1;
-            }
-            else if ('W' == $part['part'])
-            {
-                $negativepeek[ '\\W' ] = 1;
-            }
-            else if ('S' == $part['part'])
-            {
-                $negativepeek[ '\\s' ] = 1;
-            }
-            else
-            {
-                $peek['\\' . $part['part']] = 1;
-            }
-        }
-                
-        else if ( "UnicodeChar" == $part['type'] || "HexChar" == $part['type'] )
-        {
-            $peek[$part['flags']['Char']] = 1;
-        }
-        
-        return array( 'peek'=> $peek, 'negativepeek'=> $negativepeek );
-    
     
     # A simple (js-flavored) regular expression analyzer
     def __init__(self, regex=None, delim=None):
@@ -272,58 +215,53 @@ class RegExAnalyzer:
     def getPeekChars(self):
         
         isCaseInsensitive = self.flags and 'i' in self.flags
-        peek = RegExAnalyzer._getPeekChars(self.parts)
+        peek = getPeekChars(self.parts)
         
-        for ($peek as $n=>$p):
+        for n,p in peek.items():
         
-            $cases = array();
+            cases = {}
             
             # either peek or negativepeek
-            foreach ($p as $c=>$dummy):
+            for c,dummy in p.items():
             
-                if ('\\d' == $c):
+                if '\\d' == c:
                 
-                    unset( $p[$c] );
-                    $cases = self::concat($cases, self::getCharRange('0', '9'));
-                
-                
-                elif ('\\s' == $c):
-                
-                    unset( $p[$c] );
-                    $cases = self::concat($cases, array('\f','\n','\r','\t','\v','\u00A0','\u2028','\u2029'));
+                    del p[c]
+                    cases = concat(cases, getCharRange('0', '9'))
                 
                 
-                elif ('\\w' == $c):
+                elif '\\s' == c:
                 
-                    unset( $p[$c] );
-                    $cases = self::concat($cases, array_merge(
-                            array('_'), 
-                            self::getCharRange('0', '9'), 
-                            self::getCharRange('a', 'z'), 
-                            self::getCharRange('A', 'Z') 
-                        ));
+                    del p[c]
+                    cases = concat(cases, ['\f','\n','\r','\t','\v','\u00A0','\u2028','\u2029'])
                 
                 
-                elif ('\\.' == $c):
+                elif '\\w' == c:
                 
-                    unset( $p[$c] );
-                    $cases[ $this->specialChars['.'] ] = 1;
-                
-                
-                elif ( '\\' != $c[0] && $isCaseInsensitive ):
-                
-                    $cases[ strtolower($c) ] = 1;
-                    $cases[ strtoupper($c) ] = 1;
+                    del p[c]
+                    cases = concat(cases, ['_'] + getCharRange('0', '9') + getCharRange('a', 'z') + getCharRange('A', 'Z'))
                 
                 
-                elif ( '\\' == $c[0] ):
+                elif '\\.' == c:
                 
-                    unset( $p[$c] );
+                    del p[c]
+                    cases[ self.specialChars['.'] ] = 1
+                
+                
+                elif '\\' != c[0] and isCaseInsensitive:
+                
+                    cases[ c.lower() ] = 1
+                    cases[ c.upper() ] = 1
+                
+                
+                elif '\\' == c[0]:
+                
+                    del p[c]
                 
             
-            $peek[$n] = self::concat($p, $cases);
+            peek[n] = concat(p, cases)
         
-        return $peek
+        return peek
     
     def setRegex(self, regex=None, delim=None):
         if regex:
@@ -351,115 +289,84 @@ class RegExAnalyzer:
         return self
     
     
-    public function analyze( ) 
-    {
-        $word = ''; 
-        $alternation = array(); 
-        $sequence = array(); 
-        $escaped = false;
+    def analyze( self ):
+        word = ''
+        alternation = []
+        sequence = []
+        escaped = False
         
-        $this->pos = 0;
-        $this->groupIndex = 0;
+        self.pos = 0
+        self.groupIndex = 0
         
-        $l = strlen($this->regex);
-        while ( $this->pos < $l )
-        {
-            $ch = $this->regex[ $this->pos++ ];
+        l = len(self.regex)
+        while self.pos < l:
+            ch = self.regex[ self.pos ]
+            self.pos += 1
             
-            //   \\abc
-            $escaped = ($this->escapeChar == $ch) ? true : false;
-            if ( $this->pos < $l && $escaped )  $ch = $this->regex[ $this->pos++ ];
+            #   \\abc
+            escaped = True if (self.escapeChar == ch) else False
+            if self.pos < l and escaped:  
+                ch = self.regex[ self.pos ]
+                self.pos += 1
             
-            if ( $escaped )
-            {
-                // unicode character
-                if ( 'u' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
+            if escaped:
+                # unicode character
+                if 'u' == ch:
+                    if len(word):
+                        sequence.append( { 'part': word, 'flags': {}, 'type': "String"} )
+                        word = ''
                     preg_match($this->unicodeRegex, substr($this->regex, $this->pos-1 ), $match );
-                    $this->pos += strlen($match[0])-1;
-                    $sequence[] = array( 'part'=> $match[0], 'flags'=> array( "Char"=> chr(intval($match[1], 16)), "Code"=> $match[1] ), 'type'=> "UnicodeChar" );
-                }
+                    self.pos += len(match[0])-1
+                    sequence.append( {'part': match[0], 'flags': { "Char": chr(intval(match[1], 16)), "Code": match[1] }, 'type': "UnicodeChar"} )
                 
-                // hex character
-                else if ( 'x' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
+                # hex character
+                elif 'x' == ch:
+                    if len(word):
+                        sequence.append( { 'part': word, 'flags': {}, 'type': "String"} )
+                        word = ''
                     preg_match($this->hexRegex, substr($this->regex, $this->pos-1 ), $match );
-                    $this->pos += strlen($match[0])-1;
-                    $sequence[] = array( 'part'=> $match[0], 'flags'=> array( "Char"=> chr(intval($match[1], 16)), "Code"=> $match[1] ), 'type'=> "HexChar" );
-                }
+                    self.pos += len(match[0])-1;
+                    sequence.append( {'part': match[0], 'flags': { "Char": chr(intval($match[1], 16)), "Code": $match[1] }, 'type': "HexChar"} )
                 
-                else if ( isset($this->specialCharsEscaped[$ch]) && '/' != $ch)
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
-                    $flag = array();
-                    $flag[ $this->specialCharsEscaped[$ch] ] = 1;
-                    $sequence[] = array( 'part'=> $ch, 'flags'=> $flag, 'type'=> "Special" );
-                }
+                elif ch in self.specialCharsEscaped and '/' != ch:
+                    if len(word):
+                        sequence.append( { 'part': word, 'flags': {}, 'type': "String"} )
+                        word = ''
+                    flag = {}
+                    flag[ self.specialCharsEscaped[ch] ] = 1
+                    sequence.append( {'part': ch, 'flags': flag, 'type': "Special"} )
                 
-                else
-                {
-                    $word .= $ch;
-                }
-            }
+                else:
+                    word += ch
             
-            else
-            {
-                // parse alternation
-                if ( '|' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[]  = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
+            else:
+                # parse alternation
+                if '|' == ch:
+                    if len(word):
+                        sequence.append( { 'part': word, 'flags': {}, 'type': "String"} )
+                        word = ''
                     $alternation[] = array( 'part'=> $sequence, 'flags'=> array(), 'type'=> "Sequence" );
                     $sequence = array();
-                }
                 
-                // parse character group
-                else if ( '[' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
+                # parse character group
+                elif '[' == ch:
+                    if len(word):
+                        sequence.append( { 'part': word, 'flags': {}, 'type': "String"} )
+                        word = ''
                     $sequence[] = $this->chargroup();
-                }
                 
-                // parse sub-group
-                else if ( '(' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
+                # parse sub-group
+                elif '(' == ch:
+                    if len(word):
+                        sequence.append( { 'part': word, 'flags': {}, 'type': "String"} )
+                        word = ''
                     $sequence[] = $this->subgroup();
-                }
                 
-                // parse num repeats
-                else if ( '{' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
+                # parse num repeats
+                elif '{' == ch:
+                    if len(word):
+                        sequence.append( { 'part': word, 'flags': {}, 'type': "String"} )
+                        word = ''
                     preg_match($this->repeatsRegex, substr($this->regex, $this->pos-1 ), $match );
                     $this->pos += strlen($match[0])-1;
                     $flag = array( 'part'=> $match[0], "MatchMinimum"=> $match[1], "MatchMaximum"=> isset($match[2]) ? $match[2] : "unlimited" );
@@ -480,16 +387,12 @@ class RegExAnalyzer:
                         $prev['part'] = substr($prev['part'], -1);
                     }
                     $sequence[] = array( 'part'=> $prev, 'flags'=> $flag, 'type'=> "Quantifier" );
-                }
                 
-                // quantifiers
-                else if ( '*' == $ch || '+' == $ch || '?' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
+                # quantifiers
+                elif '*' == ch or '+' == ch or '?' == ch:
+                    if len(word):
+                        sequence.append( { 'part': word, 'flags': {}, 'type': "String"} )
+                        word = ''
                     $flag = array();
                     $flag[ $this->specialChars[$ch] ] = 1;
                     if ( $this->pos < $l && '?' == $this->regex[$this->pos] )
@@ -508,144 +411,103 @@ class RegExAnalyzer:
                         $prev['part'] = substr($prev['part'], -1);
                     }
                     $sequence[] = array( 'part'=> $prev, 'flags'=> $flag, 'type'=> "Quantifier" );
-                }
             
-                // special characters like ^, $, ., etc..
-                else if ( isset($this->specialChars[$ch]) )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
+                # special characters like ^, $, ., etc..
+                elif ( isset($this->specialChars[$ch]) ):
+                    if len(word):
+                        sequence.append( { 'part': word, 'flags': {}, 'type': "String"} )
+                        word = ''
                     $flag = array();
                     $flag[ $this->specialChars[$ch] ] = 1;
                     $sequence[] = array( 'part'=> $ch, 'flags'=> $flag, 'type'=> "Special" );
-                }
             
-                else
-                {
-                    $word .= $ch;
-                }
-            }
-        }
+                else:
+                    word += ch
         
-        if ( strlen($word) )
-        {
-            $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-            $word = '';
-        }
+        if len(word):
+            sequence.append( { 'part': word, 'flags': {}, 'type': "String"} )
+            word = ''
         
-        if ( count($alternation) )
-        {
+        if len(alternation):
             $alternation[] = array( 'part'=> $sequence, 'flags'=> array(), 'type'=> "Sequence" );
             $sequence = array();
             $flag = array();
             $flag[ $this->specialChars['|'] ] = 1;
             $this->parts = array( 'part'=> $alternation, 'flags'=> $flag, 'type'=> "Alternation" );
-        }
-        else
-        {
+        else:
             $this->parts = array( 'part'=> $sequence, 'flags'=> array(), 'type'=> "Sequence" );
-        }
         
-        return $this;
-    }
+        return self
 
-    public function subgroup() 
-    {
+    def subgroup(self):
+        word = ''
+        alternation = []
+        sequence = []
+        flags = {}
+        escaped = False
         
-        $word = ''; 
-        $alternation = array(); 
-        $sequence = array(); 
-        $flags = array(); 
-        $escaped = false;
+        pre = self.regex[self.pos:self.pos+2]
         
-        $pre = substr($this->regex, $this->pos, 2);
+        if "?:" == pre:
+            flags[ "NotCaptured" ] = 1
+            self.pos += 2
         
-        if ( "?:" == $pre )
-        {
-            $flags[ "NotCaptured" ] = 1;
-            $this->pos += 2;
-        }
+        elif "?=" == pre:
+            flags[ "LookAhead" ] = 1
+            self.pos += 2
         
-        else if ( "?=" == $pre )
-        {
-            $flags[ "LookAhead" ] = 1;
-            $this->pos += 2;
-        }
+        elif "?!" == pre:
+            flags[ "NegativeLookAhead" ] = 1
+            self.pos += 2
         
-        else if ( "?!" == $pre )
-        {
-            $flags[ "NegativeLookAhead" ] = 1;
-            $this->pos += 2;
-        }
-        
-        $flags[ "GroupIndex" ] = ++$this->groupIndex;
-        $l = strlen($this->regex);
-        while ( $this->pos < $l )
-        {
-            $ch = $this->regex[ $this->pos++ ];
+        self.groupIndex += 1
+        flags[ "GroupIndex" ] = self.groupIndex
+        l = len(self.regex)
+        while self.pos < l:
+            ch = self.regex[ self.pos ]
+            self.pos += 1
             
-            $escaped = ($this->escapeChar == $ch) ? true : false;
-            if ( $this->pos < $l && $escaped )  $ch = $this->regex[ $this->pos++ ];
+            escaped = True if (self.escapeChar == ch) else False
+            if self.pos < l and escaped:  
+                ch = self.regex[ self.pos ]
+                self.pos += 1
             
-            if ( $escaped )
-            {
-                // unicode character
-                if ( 'u' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
+            if escaped:
+                # unicode character
+                if 'u' == ch:
+                    if len(word):
+                        sequence.append( { 'part': word, 'flags': {}, 'type': "String"} )
+                        word = ''
                     preg_match($this->unicodeRegex, substr($this->regex, $this->pos-1 ), $match );
                     $this->pos += strlen($match[0])-1;
                     $sequence[] = array( 'part'=> $match[0], 'flags'=> array( "Char"=> chr(intval($match[1], 16)), "Code"=> $match[1] ), 'type'=> "UnicodeChar" );
-                }
                 
-                // hex character
-                else if ( 'x' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
+                # hex character
+                elif 'x' == ch:
+                    if len(word):
+                        sequence.append( { 'part': word, 'flags': {}, 'type': "String"} )
+                        word = ''
                     preg_match($this->hexRegex, substr($this->regex, $this->pos-1 ), $match );
                     $this->pos += strlen($match[0])-1;
                     $sequence[] = array( 'part'=> $match[0], 'flags'=> array( "Char"=> chr(intval($match[1], 16)), "Code"=> $match[1] ), 'type'=> "HexChar" );
-                }
                 
-                else if ( isset($this->specialCharsEscaped[$ch]) && '/' != $ch)
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
+                elif ( isset($this->specialCharsEscaped[$ch]) && '/' != $ch):
+                    if len(word):
+                        sequence.append( { 'part': word, 'flags': {}, 'type': "String"} )
+                        word = ''
                     $flag = array();
                     $flag[ $this->specialCharsEscaped[$ch] ] = 1;
                     $sequence[] = array( 'part'=> $ch, 'flags'=> $flag, 'type'=> "Special" );
-                }
                 
-                else
-                {
-                    $word .= $ch;
-                }
-            }
+                else:
+                    word += ch
             
-            else
-            {
-                // group end
-                if ( ')' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
+            else:
+                # group end
+                if ')' == ch:
+                    if len(word):
+                        sequence.append( { 'part': word, 'flags': {}, 'type': "String"} )
+                        word = ''
                     if ( count($alternation) )
                     {
                         $alternation[] = array( 'part'=> $sequence, 'flags'=> array(), 'type'=> "Sequence" );
@@ -658,50 +520,34 @@ class RegExAnalyzer:
                     {
                         return array( 'part'=> array( 'part'=> $sequence, 'flags'=> array(), 'type'=> "Sequence" ), 'flags'=> $flags, 'type'=> "Group" );
                     }
-                }
                 
-                // parse alternation
-                else if ( '|' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
+                # parse alternation
+                elif '|' == ch:
+                    if len(word):
+                        sequence.append( { 'part': word, 'flags': {}, 'type': "String"} )
+                        word = ''
                     $alternation[] = array( 'part'=> $sequence, 'flags'=> array(), 'type'=> "Sequence" );
                     $sequence = array();
-                }
                 
-                // parse character group
-                else if ( '[' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
+                # parse character group
+                elif '[' == ch:
+                    if len(word):
+                        sequence.append( { 'part': word, 'flags': {}, 'type': "String"} )
+                        word = ''
                     $sequence[] = $this->chargroup();
-                }
                 
-                // parse sub-group
-                else if ( '(' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
+                # parse sub-group
+                elif '(' == ch:
+                    if len(word):
+                        sequence.append( { 'part': word, 'flags': {}, 'type': "String"} )
+                        word = ''
                     $sequence[] = $this->subgroup();
-                }
                 
-                // parse num repeats
-                else if ( '{' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
+                # parse num repeats
+                elif '{' == ch:
+                    if len(word):
+                        sequence.append( { 'part': word, 'flags': {}, 'type': "String"} )
+                        word = ''
                     preg_match($thus->repeatsRegex, substr($this->regex, this.pos-1 ), $match );
                     $this->pos += strlen($match[0])-1;
                     $flag = array( 'part'=> $match[0], "MatchMinimum"=> $match[1], "MatchMaximum"=> isset($match[2]) ? $match[2] : "unlimited" );
@@ -722,16 +568,12 @@ class RegExAnalyzer:
                         $prev['part'] = substr($prev['part'], -1);
                     }
                     $sequence[] = array( 'part'=> $prev, 'flags'=> $flag, 'type'=> "Quantifier" );
-                }
                 
-                // quantifiers
-                else if ( '*' == $ch || '+' == $ch || '?' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
+                # quantifiers
+                elif '*' == ch or '+' == ch or '?' == ch:
+                    if len(word):
+                        sequence.append( { 'part': word, 'flags': {}, 'type': "String"} )
+                        word = ''
                     $flag = array();
                     $flag[ $this->specialChars[$ch] ] = 1;
                     if ( $this->pos < $l && '?' == $this->regex[$this->pos] )
@@ -750,159 +592,113 @@ class RegExAnalyzer:
                         $prev['part'] = substr($prev['part'], -1);
                     }
                     $sequence[] = array( 'part'=> $prev, 'flags'=> $flag, 'type'=> "Quantifier" );
-                }
             
-                // special characters like ^, $, ., etc..
-                else if ( isset($this->specialChars[$ch]) )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
+                # special characters like ^, $, ., etc..
+                elif ( isset($this->specialChars[$ch]) ):
+                    if len(word):
+                        sequence.append( { 'part': word, 'flags': {}, 'type': "String"} )
+                        word = ''
                     $flag = array();
                     $flag[ $this->specialChars[$ch] ] = 1;
                     $sequence[] = array( 'part'=> $ch, 'flags'=> $flag, 'type'=> "Special" );
-                }
             
-                else
-                {
-                    $word .= $ch;
-                }
-            }
-        }
-        if ( strlen($word) )
-        {
-            $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-            $word = '';
-        }
-        if ( count($alternation) )
-        {
+                else:
+                    word += ch
+                    
+        if len(word):
+            sequence.append( { 'part': word, 'flags': {}, 'type': "String"} )
+            word = ''
+        
+        if len(alternation):
             $alternation[] = array( 'part'=> $sequence, 'flags'=> array(), 'type'=> "Sequence" );
             $sequence = array();
             $flag = array();
             $flag[ $this->specialChars['|'] ] = 1;
             return array( 'part'=> array( 'part'=> $alternation, 'flags'=> $flag, 'type'=> "Alternation" ), 'flags'=> $flags, 'type'=> "Group" );
-        }
-        else
-        {
+        else:
             return array( 'part'=> array( 'part'=> $sequence, 'flags'=> array(), 'type'=> "Sequence" ), 'flags'=> $flags, 'type'=> "Group" );
-        }
-    }
     
-    public function chargroup() 
-    {
+    def chargroup(self):
+        sequence = []
+        chars = []
+        flags = {}
+        isRange = False
+        escaped = False
+        ch = ''
         
-        $sequence = array(); 
-        $chars = array(); 
-        $flags = array(); 
-        $isRange = false; 
-        $escaped = false;
-        $ch = '';
-        
-        if ( '^' == $this->regex[ $this->pos ] )
-        {
-            $flags[ "NotMatch" ] = 1;
-            $this->pos++;
-        }
-        $l = strlen($this->regex);        
-        while ( $this->pos < $l )
-        {
-            $isUnicode = false;
-            $prevch = $ch;
-            $ch = $this->regex[ $this->pos++ ];
+        if '^' == self.regex[ self.pos ]:
+            flags[ "NotMatch" ] = 1
+            self.pos += 1
+
+        l = len(self.regex)
+        while self.pos < l:
+            isUnicode = False
+            prevch = ch
+            ch = self.regex[ self.pos ]
+            self.pos += 1
             
-            $escaped = ($this->escapeChar == $ch) ? true : false;
-            if ( $this->pos < $l && $escaped )  $ch = $this->regex[ $this->pos++ ];
+            escaped = True if (self.escapeChar == ch) else False
+            if self.pos < l and escaped:  
+                ch = self.regex[ self.pos ]
+                self.pos += 1
             
-            if ( $escaped )
-            {
-                // unicode character
-                if ( 'u' == $ch )
-                {
+            if escaped:
+                # unicode character
+                if 'u' == ch:
                     preg_match($this->unicodeRegex, substr($this->regex, $this->pos-1 ), $match );
                     $this->pos += strlen($match[0])-1;
                     $ch = chr(intval($match[1], 16));
                     $isUnicode = true;
-                }
                 
-                // hex character
-                else if ( 'x' == $ch )
-                {
+                # hex character
+                elif 'x' == ch:
                     preg_match($this->hexRegex, substr($this->regex, $this->pos-1 ), $match );
                     $this->pos += strlen($match[0])-1;
                     $ch = chr(intval($match[1], 16));
                     $isUnicode = true;
-                }
-            }
             
-            if ( $isRange )
-            {
-                if ( count($chars) )
-                {
+            if isRange:
+                if len(chars):
                     $sequence[] = array( 'part'=> $chars, 'flags'=> array(), 'type'=> "Chars" );
                     $chars = array();
-                }
                 $range[1] = $ch;
                 $isRange = false;
                 $sequence[] = array( 'part'=> $range, 'flags'=> array(), 'type'=> "CharRange" );
-            }
-            else
-            {
-                if ( $escaped )
-                {
-                    if ( !$isUnicode && isset($this->specialCharsEscaped[$ch]) && '/' != $ch)
-                    {
-                        if ( count($chars) )
-                        {
+            else:
+                if escaped:
+                    if !isUnicode and isset($this->specialCharsEscaped[$ch]) && '/' != $ch:
+                        if len(chars):
                             $sequence[] = array( 'part'=> $chars, 'flags'=> array(), 'type'=> "Chars" );
                             $chars = array();
-                        }
                         $flag = array();
                         $flag[ $this->specialCharsEscaped[$ch] ] = 1;
                         $sequence[] = array( 'part'=> $ch, 'flags'=> $flag, 'type'=> "Special" );
-                    }
                     
-                    else
-                    {
-                        $chars[]  = $ch;
-                    }
-                }
+                    else:
+                        chars.append(ch)
                 
-                else
-                {
-                    // end of char group
-                    if ( ']' == $ch )
-                    {
+                else:
+                    # end of char group
+                    if ']' == ch:
                         if ( count($chars) )
                         {
                             $sequence[] = array( 'part'=> $chars, 'flags'=> array(), 'type'=> "Chars" );
                             $chars = array();
                         }
                         return array( 'part'=> $sequence, 'flags'=> $flags, 'type'=> "CharGroup" );
-                    }
                     
-                    else if ( '-' == $ch )
-                    {
+                    elif '-' == ch:
                         $range = array($prevch, '');
                         array_pop($chars);
-                        $isRange = true;
-                    }
+                        isRange = True
                     
-                    else
-                    {
-                        $chars[] = $ch;
-                    }
-                }
-            }
-        }
-        if ( count($chars) )
-        {
+                    else:
+                        chars.append(ch)
+        
+        if len(chars):
             $sequence[] = array( 'part'=> $chars, 'flags'=> array(), 'type'=> "Chars" );
             $chars = array();
-        }
         return array( 'part'=> $sequence, 'flags'=> $flags, 'type'=> "CharGroup" );
-    }
     
 # if used with 'import *'
 __all__ = ['RegExAnalyzer']

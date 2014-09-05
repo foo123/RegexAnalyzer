@@ -1,213 +1,42 @@
 /**
 *
 *   RegExComposer
-*   @version: 0.3.2
+*   @version: 0.3.3
 *
 *   A simple and intuitive Regular Expression Composer in JavaScript
 *   https://github.com/foo123/regex-analyzer
 *
-**/!function ( root, name, deps, factory, undef ) {
-
-    var isNode = (typeof global !== "undefined" && {}.toString.call(global) == '[object global]') ? 1 : 0,
-        isBrowser = (!isNode && typeof navigator !== "undefined") ? 1 : 0, 
-        isWorker = (typeof importScripts === "function" && navigator instanceof WorkerNavigator) ? 1 : 0,
-        A = Array, AP = A.prototype
-    ;
-    // Get current filename/path
-    var getCurrentPath = function() {
-            var file = null;
-            if ( isNode ) 
-            {
-                // http://nodejs.org/docs/latest/api/globals.html#globals_filename
-                // this should hold the current file in node
-                file = __filename;
-                return { path: __dirname, file: __filename };
-            }
-            else if ( isWorker )
-            {
-                // https://developer.mozilla.org/en-US/docs/Web/API/WorkerLocation
-                // this should hold the current url in a web worker
-                file = self.location.href;
-            }
-            else if ( isBrowser )
-            {
-                // get last script (should be the current one) in browser
-                var scripts;
-                if ((scripts = document.getElementsByTagName('script')) && scripts.length) 
-                    file  = scripts[scripts.length - 1].src;
-            }
-            
-            if ( file )
-                return { path: file.split('/').slice(0, -1).join('/'), file: file };
-            return { path: null, file: null };
-        },
-        thisPath = getCurrentPath(),
-        makePath = function(base, dep) {
-            if ( isNode )
-            {
-                //return require('path').join(base, dep);
-                return dep;
-            }
-            if ( "." == dep.charAt(0) ) 
-            {
-                base = base.split('/');
-                dep = dep.split('/'); 
-                var index = 0, index2 = 0, i, l = dep.length, l2 = base.length;
-                
-                for (i=0; i<l; i++)
-                {
-                    if ( /^\.\./.test( dep[i] ) )
-                    {
-                        index++;
-                        index2++;
-                    }
-                    else if ( /^\./.test( dep[i] ) )
-                    {
-                        index2++;
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-                index = ( index >= l2 ) ? 0 : l2-index;
-                dep = base.slice(0, index).concat( dep.slice( index2 ) ).join('/');
-            }
-            return dep;
-        }
-    ;
+**/!function( root, name, factory ) {
+    "use strict";
     
     //
-    // export the module in a umd-style generic way
-    deps = ( deps ) ? [].concat(deps) : [];
-    var i, dl = deps.length, ids = new A( dl ), paths = new A( dl ), fpaths = new A( dl ), mods = new A( dl ), _module_, head;
-        
-    for (i=0; i<dl; i++) { ids[i] = deps[i][0]; paths[i] = deps[i][1]; fpaths[i] = /\.js$/i.test(paths[i]) ? makePath(thisPath.path, paths[i]) : makePath(thisPath.path, paths[i]+'.js'); }
+    // export the module, umd-style (no other dependencies)
+    var isCommonJS = ("object" === typeof(module)) && module.exports, 
+        isAMD = ("function" === typeof(define)) && define.amd, m;
     
-    // node, commonjs, etc..
-    if ( 'object' == typeof( module ) && module.exports ) 
-    {
-        if ( undef === module.exports[name] )
-        {
-            for (i=0; i<dl; i++)  mods[i] = module.exports[ ids[i] ] || require( fpaths[i] )[ ids[i] ];
-            _module_ = factory.apply(root, mods );
-            // allow factory just to add to existing modules without returning a new module
-            module.exports[ name ] = _module_ || 1;
-        }
-    }
+    // CommonJS, node, etc..
+    if ( isCommonJS ) 
+        module.exports = (module.$deps = module.$deps || {})[ name ] = module.$deps[ name ] || (factory.call( root, {NODE:module} ) || 1);
     
-    // amd, etc..
-    else if ( 'function' == typeof( define ) && define.amd ) 
-    {
-        define( ['exports'].concat( paths ), function( exports ) {
-            if ( undef === exports[name] )
-            {
-                var args = AP.slice.call( arguments, 1 ), dl = args.length;
-                for (var i=0; i<dl; i++)   mods[i] = exports[ ids[i] ] || args[ i ];
-                _module_ = factory.apply(root, mods );
-                // allow factory just to add to existing modules without returning a new module
-                exports[ name ] = _module_ || 1;
-            }
-        });
-    }
+    // AMD, requireJS, etc..
+    else if ( isAMD && ("function" === typeof(require)) && ("function" === typeof(require.specified)) && require.specified(name) ) 
+        define( name, ['require', 'exports', 'module'], function( require, exports, module ){ return factory.call( root, {AMD:module} ); } );
     
-    // web worker
-    else if ( isWorker ) 
-    {
-        for (i=0; i<dl; i++)  
-        {
-            if ( !self[ ids[i] ] ) importScripts( fpaths[i] );
-            mods[i] = self[ ids[i] ];
-        }
-        _module_ = factory.apply(root, mods );
-        // allow factory just to add to existing modules without returning a new module
-        self[ name ] = _module_ || 1;
-    }
-    
-    // browsers, other loaders, etc..
-    else
-    {
-        if ( undef === root[name] )
-        {
-            /*
-            for (i=0; i<dl; i++)  mods[i] = root[ ids[i] ];
-            _module_ = factory.apply(root, mods );
-            // allow factory just to add to existing modules without returning a new module
-            root[name] = _module_ || 1;
-            */
-            
-            // load javascript async using <script> tags in browser
-            var loadJs = function(url, callback) {
-                head = head || document.getElementsByTagName("head")[0];
-                var done = 0, script = document.createElement('script');
-                
-                script.type = 'text/javascript';
-                script.language = 'javascript';
-                script.src = url;
-                script.onload = script.onreadystatechange = function() {
-                    if (!done && (!script.readyState || script.readyState == 'loaded' || script.readyState == 'complete'))
-                    {
-                        done = 1;
-                        script.onload = script.onreadystatechange = null;
-                        head.removeChild( script );
-                        script = null;
-                        if ( callback )  callback();
-                    }
-                }
-                // load it
-                head.appendChild( script );
-            };
-
-            var loadNext = function(id, url, callback) { 
-                    if ( !root[ id ] ) 
-                        loadJs( url, callback ); 
-                    else
-                        callback();
-                },
-                continueLoad = function( i ) {
-                    return function() {
-                        if ( i < dl )  mods[ i ] = root[ ids[ i ] ];
-                        if ( ++i < dl )
-                        {
-                            loadNext( ids[ i ], fpaths[ i ], continueLoad( i ) );
-                        }
-                        else
-                        {
-                            _module_ = factory.apply(root, mods );
-                            // allow factory just to add to existing modules without returning a new module
-                            root[ name ] = _module_ || 1;
-                        }
-                    };
-                }
-            ;
-            if ( dl ) 
-            {
-                loadNext( ids[ 0 ], fpaths[ 0 ], continueLoad( 0 ) );
-            }
-            else
-            {
-                _module_ = factory.apply(root, mods );
-                // allow factory just to add to existing modules without returning a new module
-                root[ name ] = _module_ || 1;
-            }
-        }
-    }
+    // browser, web worker, etc.. + AMD, other loaders
+    else if ( !(name in root) ) 
+        (root[ name ] = (m=factory.call( root, {} ) || 1)) && isAMD && define( name, [], function( ){ return m; } );
 
 
 }(  /* current root */          this, 
     /* module name */           "RegExComposer",
-    /* module dependencies */   null, 
-    /* module factory */        function(  ) {
-
-        /* custom exports object */
-        var EXPORTS = {};
+    /* module factory */        function( exports ) {
         
-        /* main code starts here */
+    /* main code starts here */
 
 /**
 *
 *   RegExComposer
-*   @version: 0.3.2
+*   @version: 0.3.3
 *
 *   A simple and intuitive Regular Expression Composer in JavaScript
 *   https://github.com/foo123/regex-analyzer
@@ -249,7 +78,7 @@
         this.reset();
     };
     
-    Composer.VERSION = "0.3.2";
+    Composer.VERSION = "0.3.3";
     
     Composer.prototype = {
         
@@ -472,10 +301,8 @@
     
     exports.RegExComposer = Composer;
     
-})(EXPORTS);
-
+})(exports);    
     /* main code ends here */
-    
-    /* export the module "RegExComposer" */
-    return EXPORTS["RegExComposer"];
+    /* export the module */
+    return exports["RegExComposer"];
 });
