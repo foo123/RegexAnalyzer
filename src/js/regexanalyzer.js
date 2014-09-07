@@ -916,6 +916,6 @@
     };
     
     
-    exports.RegExAnalyzer = Analyzer;
+    exports['@@MODULE_NAME@@'] = Analyzer;
     
 })(@@EXPORTS@@);

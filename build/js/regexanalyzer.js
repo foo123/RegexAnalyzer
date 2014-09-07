@@ -951,7 +951,7 @@
     };
     
     
-    exports.RegExAnalyzer = Analyzer;
+    exports['RegExAnalyzer'] = Analyzer;
     
 })(exports);    
     /* main code ends here */

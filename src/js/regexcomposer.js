@@ -264,6 +264,6 @@
     CP.nonCaptureSubGroup = CP.nonCaptureGroup;
     CP.lookAheadSubGroup = CP.lookAheadGroup;
     
-    exports.RegExComposer = Composer;
+    exports['@@MODULE_NAME@@'] = Composer;
     
 })(@@EXPORTS@@);

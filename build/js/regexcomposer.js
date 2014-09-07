@@ -299,7 +299,7 @@
     CP.nonCaptureSubGroup = CP.nonCaptureGroup;
     CP.lookAheadSubGroup = CP.lookAheadGroup;
     
-    exports.RegExComposer = Composer;
+    exports['RegExComposer'] = Composer;
     
 })(exports);    
     /* main code ends here */
