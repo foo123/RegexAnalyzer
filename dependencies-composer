@@ -33,7 +33,7 @@ REPLACE =[{}]
 
     "@@ROOT@@" = "this"
     "@@EXPORTS@@" = "exports"
-    "@@VERSION@@" = "0.3.3"
+    "@@VERSION@@" = "0.4"
     "@@MODULE_NAME@@" = "RegExComposer"
     
 @ # end block

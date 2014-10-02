@@ -6,47 +6,47 @@ var echo = console.log;
 echo("Testing Composer");
 echo("================");
 
-var Composer = require('../../build/js/regexcomposer.js').RegExComposer;
-var identifierSubRegex = new Composer()
+var Composer = require('../../build/js/regexcomposer.js');
+var identifierSubRegex = new Composer( )
                 
-                .characterGroup()
-                    .characters('_')
-                    .range('a', 'z')
-                .end()
+                .characterGroup( )
+                    .characters( '_' )
+                    .range( 'a', 'z' )
+                .end( )
                 
-                .characterGroup()
-                    .characters('_')
-                    .range('a', 'z')
-                    .range('0', '9')
-                .end()
+                .characterGroup( )
+                    .characters( '_' )
+                    .range( 'a', 'z' )
+                    .range( '0', '9' )
+                .end( )
                 
-                .zeroOrMore()
+                .zeroOrMore( )
             
-                .partial();
+                .partial( );
 
-var outregex = new Composer()
+var outregex = new Composer( )
                     
-                    .startOfLine()
+                    .startOfLine( )
                     
-                    .either()
+                    .either( )
                         
-                        .sub(identifierSubRegex)
+                        .sub( identifierSubRegex )
                         
-                        .match('**aabb**')
+                        .match( '**aabb**' )
                         
-                        .any()
+                        .any( )
                         
-                        .space()
+                        .space( )
                         
-                        .digit(false).oneOrMore()
+                        .digit( false ).oneOrMore( )
                     
-                    .end()
+                    .end( )
                     
-                    .zeroOrMore(false)
+                    .zeroOrMore( false )
                     
-                    .endOfLine()
+                    .endOfLine( )
                     
-                    .compose('i');
+                    .compose( 'i' );
     
 echo("Partial: " + identifierSubRegex);
 echo("Composed: " + outregex.toString());
@@ -57,21 +57,29 @@ echo();
 echo("Testing Analyzer");
 echo("================");
 
-var Analyzer = require('../../build/js/regexanalyzer.js').RegExAnalyzer;
-var inregex = process.argv[2] || /^(?:[^\u0000-\u1234a-zA-Z\d\-\.\*\+\?\^\$\{\}\(\)\|\[\]\/\\]+)|abcdef\u1234{1,}/gmi;
-var anal = new Analyzer(inregex);
+var Analyzer = require('../../build/js/regexanalyzer.js'),
+    anal, peekChars, sampleStr, inregex = process.argv[2] || /xyz[abc0-9]*/gmi
+;
 
 // test it
-anal.analyze();
+anal = new Analyzer( inregex );
+peekChars = anal.getPeekChars( );
+sampleStr = anal.generateSample( );
 
-echo("Input: " + inregex.toString());
+echo("Input: " + inregex.toString( ));
 echo();
-echo("Regular Expression: " + anal.regex);
+echo("Regular Expression: " + anal.$regex);
 echo();
 echo("Regular Expression Flags: ");
-echo(anal.flags);
+echo(anal.$flags);
 echo();
 echo("Regular Expression Parts: ");
-echo(JSON.stringify(anal.parts, null, 4));
+echo(JSON.stringify(anal.$parts, null, 4));
+echo();
+echo("Regular Expression Peek Characters: ");
+echo(JSON.stringify(peekChars, null, 4));
+echo();
+echo("Regular Expression Sample Match String: ");
+echo(sampleStr + ' -> ' + (inregex.test(sampleStr) ? 'Matched' : 'NOT Matched'));
 echo("================");
 echo();
