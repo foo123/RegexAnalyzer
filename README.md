@@ -1,8 +1,8 @@
 regex-analyzer and regex-composer
 =================================
 
-* A simple Regular Expression Analyzer for JavaScript / PHP / Python
-* A simple and intuitive Regular Expression Composer for JavaScript / PHP / Python
+* A simple Regular Expression Analyzer for PHP, Python, Node/JS
+* A simple and intuitive Regular Expression Composer for PHP, Python, Node/JS
 
 
 *PHP / Python implementations in progress*
@@ -13,7 +13,7 @@ These are used mostly as parts of other projects but uploaded here as standalone
 The analyzer needs a couple of extensions but overall works good.
 
 
-See /test/test.js under /test folder for examples of how to use
+See /test/js/test.js under /test folder for examples of how to use
 
 
 **RegExAnalyzer Live Example:**  
@@ -26,42 +26,61 @@ See /test/test.js under /test folder for examples of how to use
 [![Live Example](/test/screenshot2.png)](https://foo123.github.com/examples/regex-composer/)
 
 
-**RegExComposer Example:**  (see /test/test.js)
+**RegExComposer Example:**  (see /test/js/test.js)
 
 ```javascript
+var echo = console.log;
 
-// eg. in node
+echo("Testing Composer");
+echo("================");
 
-var Composer = require('../build/regexcomposer.js').RegExComposer;
-var outregex = new Composer()
+var Composer = require('../../src/js/regexcomposer.js');
+var identifierSubRegex = new Composer( )
+                
+                .characterGroup( )
+                    .characters( '_' )
+                    .range( 'a', 'z' )
+                .end( )
+                
+                .characterGroup( )
+                    .characters( '_' )
+                    .range( 'a', 'z' )
+                    .range( '0', '9' )
+                .end( )
+                
+                .zeroOrMore( )
+            
+                .partial( );
+
+var outregex = new Composer( )
                     
-                    .startOfLine()
+                    .startOfLine( )
                     
-                    .either()
+                    .either( )
                         
-                        .characterGroup(false)
-                            .characters('a', 'b', 'c', '.')
-                            .range('d', 'f')
-                        .end()
+                        .sub( identifierSubRegex )
                         
-                        .match('**aabb**')
+                        .match( '**aabb**' )
                         
-                        .any()
+                        .any( )
                         
-                        .space()
+                        .space( )
                         
-                        .digit(false).oneOrMore()
+                        .digit( false ).oneOrMore( )
                     
-                    .end()
+                    .end( )
                     
-                    .zeroOrMore(false)
+                    .zeroOrMore( false )
                     
-                    .endOfLine()
+                    .endOfLine( )
                     
-                    .compose('i');
+                    .compose( 'i' );
     
+echo("Partial: " + identifierSubRegex);
 echo("Composed: " + outregex.toString());
-echo("Expected: " + "/^([^abc\\.d-f]|\\*\\*aabb\\*\\*|.|\\s|\\D+)*?$/i");
+echo("Expected: " + "/^([_a-z][_a-z0-9]*|\\*\\*aabb\\*\\*|.|\\s|\\D+)*?$/i");
+echo("================");
+echo();
     
 ```
 

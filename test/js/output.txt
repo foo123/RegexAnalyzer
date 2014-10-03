@@ -67,6 +67,6 @@ Regular Expression Peek Characters:
 }
 
 Regular Expression Sample Match String: 
-XYZ5 -> Matched
+XYZ0 -> Matched
 ================
 

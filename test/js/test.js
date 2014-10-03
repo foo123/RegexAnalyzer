@@ -6,7 +6,7 @@ var echo = console.log;
 echo("Testing Composer");
 echo("================");
 
-var Composer = require('../../build/js/regexcomposer.js');
+var Composer = require('../../src/js/regexcomposer.js');
 var identifierSubRegex = new Composer( )
                 
                 .characterGroup( )
@@ -57,7 +57,7 @@ echo();
 echo("Testing Analyzer");
 echo("================");
 
-var Analyzer = require('../../build/js/regexanalyzer.js'),
+var Analyzer = require('../../src/js/regexanalyzer.js'),
     anal, peekChars, sampleStr, inregex = process.argv[2] || /xyz[abc0-9]*/gmi
 ;
 
