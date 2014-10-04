@@ -1,7 +1,7 @@
 /**
 *
 *   RegExAnalyzer
-*   @version: 0.4.1
+*   @version: 0.4.2
 *
 *   A simple Regular Expression Analyzer for PHP, Python, Node/JS
 *   https://github.com/foo123/regex-analyzer
@@ -34,9 +34,9 @@
         
     "use strict";
     /* main code starts here */
-    var __version__ = "0.4.1",
+    var __version__ = "0.4.2",
     
-        Obj = Object, Arr = Array, to_string = Obj.prototype.toString,
+        Obj = Object, Arr = Array, Keys = Obj.keys, to_string = Obj.prototype.toString,
         
         escapeChar = '\\',
         repeatsRegex = /^\{\s*(\d+)\s*,?\s*(\d+)?\s*\}/,
@@ -1090,6 +1090,10 @@
                 self.$needsRefresh = false;
             }
             return self;
+        },
+        
+        getRegex: function( ) {
+            return new RegExp(this.$regex, Keys(this.$flags).join(''));
         },
         
         getParts: function( ) {
