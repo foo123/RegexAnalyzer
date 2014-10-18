@@ -1,11 +1,11 @@
 regex-analyzer and regex-composer
 =================================
 
-* A simple Regular Expression Analyzer for PHP, Python, Node/JS
-* A simple and intuitive Regular Expression Composer for PHP, Python, Node/JS
+* A simple Regular Expression Analyzer for PHP, Python, Node/JS, ActionScript (TODO)
+* A simple and intuitive Regular Expression Composer for PHP, Python, Node/JS, ActionScript (TODO)
 
 
-*PHP / Python implementations in progress*
+*PHP / Python / ActionScript implementations in progress*
 
 
 These are used mostly as parts of other projects but uploaded here as standalone.
