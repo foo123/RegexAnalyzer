@@ -1,7 +1,7 @@
 /**
 *
 *   RegExComposer
-*   @version: 0.4.1
+*   @version: 0.4.3
 *
 *   A simple and intuitive Regular Expression Composer for PHP, Python, Node/JS
 *   https://github.com/foo123/regex-analyzer
@@ -34,8 +34,12 @@
         
     "use strict";
     /* main code starts here */
-    var __version__ = "0.4.1", OP = Object.prototype, AP = Array.prototype,
+    var __version__ = "0.4.3", 
+        
+        PROTO = 'prototype',
+        OP = Object[PROTO], AP = Array[PROTO],
         to_string = OP.toString, 
+        RE = function(s, f){ return new RegExp(s,f||''); },
         
         slice = function( a ) { return AP.slice.apply(a, AP.slice.call(arguments, 1)); },
 
@@ -61,12 +65,13 @@
 
 
     // A simple (js-flavored) regular expression composer
-    var Composer = function( ) {
+    var Composer = function Composer( ) {
+        if ( !(this instanceof Composer) ) return new Composer( );
         this.$regex = null;
         this.reset( );
     };
     Composer.VERSION = __version__;
-    Composer.prototype = {
+    Composer[PROTO] = {
         
         constructor: Composer,
 
@@ -91,7 +96,7 @@
 
         compose: function( /* flags */ ) {
             var self = this;
-            self.$regex = new RegExp(self.$parts[0].part.join(''), slice(arguments).join(''));
+            self.$regex = RE(self.$parts[0].part.join(''), slice(arguments).join(''));
             self.reset( );
             return self.$regex;
         },
@@ -106,7 +111,6 @@
             var self = this;
             if ( undef === min ) return self;
             var repeat = ( undef === max ) ? ('{'+min+'}') : ('{'+min+','+max+'}');
-            
             self.$parts[self.$level].part[self.$parts[self.$level].part.length-1] += (false===greedy) ? (repeat+'?') : repeat;
             return self;
         },
@@ -305,7 +309,7 @@
         }
     };
     // aliases
-    var CP = Composer.prototype;
+    var CP = Composer[PROTO];
     CP.startOfLine = CP.startOfInput;
     CP.endOfLine = CP.endOfInput;
     CP.match = CP.literal;

@@ -1,7 +1,7 @@
 /**
 *
 *   RegExAnalyzer
-*   @version: 0.4.2
+*   @version: 0.4.3
 *
 *   A simple Regular Expression Analyzer for PHP, Python, Node/JS
 *   https://github.com/foo123/regex-analyzer
@@ -34,15 +34,12 @@
         
     "use strict";
     /* main code starts here */
-    var __version__ = "0.4.2",
+    var __version__ = "0.4.3",
     
-        Obj = Object, Arr = Array, Keys = Obj.keys, to_string = Obj.prototype.toString,
+        PROTO = 'prototype', Obj = Object, Arr = Array, /*Str = String,*/ 
+        Keys = Obj.keys, to_string = Obj[PROTO].toString, fromCharCode = String.fromCharCode,
         
         escapeChar = '\\',
-        repeatsRegex = /^\{\s*(\d+)\s*,?\s*(\d+)?\s*\}/,
-        unicodeRegex = /^u([0-9a-fA-F]{4})/,
-        hexRegex = /^x([0-9a-fA-F]{2})/,
-
         specialChars = {
             "." : "MatchAnyChar",
             "|" : "MatchEither",
@@ -58,7 +55,6 @@
             "[" : "StartCharGroup",
             "]" : "EndCharGroup"
         },
-
         /*
             http://www.javascriptkit.com/javatutors/redev2.shtml
             
@@ -103,7 +99,7 @@
         rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
         
         // http://stackoverflow.com/questions/12376870/create-an-array-of-characters-from-specified-range
-        getCharRange = function(first, last) {
+        character_range = function(first, last) {
             if ( first && ( first instanceof Arr || "[object Array]" == to_string.call(first) ) )
             {
                 last = first[1];
@@ -111,53 +107,120 @@
             }
             var ch, chars, start = first.charCodeAt(0), end = last.charCodeAt(0);
             
-            if ( end == start ) return [ String.fromCharCode( start ) ];
+            if ( end == start ) return [ fromCharCode( start ) ];
             
             chars = [];
             for (ch = start; ch <= end; ++ch)
-                chars.push( String.fromCharCode( ch ) );
+                chars.push( fromCharCode( ch ) );
             
             return chars;
         },
         
-        BSPACES = "\r\n".split(""),
-        SPACES = " \t\v".split(""),
-        PUNCTS = "~!@#$%^&*()-+=[]{}\\|;:,./<>?".split(""),
-        DIGITS = "0123456789".split(""),
-        ALPHAS = ["_"].concat(getCharRange("a", "z")).concat(getCharRange("A", "Z")),
-        ALL = SPACES.concat(PUNCTS).concat(DIGITS).concat(ALPHAS),
-        punct = function( ){ return PUNCTS[rnd(0, PUNCTS.length-1)]; },
+        BSPACES = "\r\n",
+        SPACES = " \t\v",
+        PUNCTS = "~!@#$%^&*()-+=[]{}\\|;:,./<>?",
+        DIGITS = "0123456789",
+        HEXDIGITS = DIGITS+"abcdef"+"ABCDEF",
+        ALPHAS = "_"+(character_range("a", "z").join(""))+(character_range("A", "Z").join("")),
+        ALL = SPACES+PUNCTS+DIGITS+ALPHAS, ALL_ARY = ALL.split(""),
+        punct = function( ){ 
+            return PUNCTS.charAt(rnd(0, PUNCTS.length-1)); 
+        },
         space = function( positive ){ 
             return false !== positive 
-                ? SPACES[rnd(0, SPACES.length-1)]
-                : [punct(), digit(), alpha()][rnd(0,2)]
+                ? SPACES.charAt(rnd(0, SPACES.length-1))
+                : (punct()+digit()+alpha()).charAt(rnd(0,2))
             ; 
         },
         digit = function( positive ){ 
             return false !== positive 
-                ? DIGITS[rnd(0, DIGITS.length-1)]
-                : [punct(), space(), alpha()][rnd(0,2)]
+                ? DIGITS.charAt(rnd(0, DIGITS.length-1))
+                : (punct()+space()+alpha()).charAt(rnd(0,2))
             ; 
         },
         alpha = function( positive ){ 
             return false !== positive 
-                ? ALPHAS[rnd(0, ALPHAS.length-1)]
-                : [punct(), space(), digit()][rnd(0,2)]
+                ? ALPHAS.charAt(rnd(0, ALPHAS.length-1))
+                : (punct()+space()+digit()).charAt(rnd(0,2))
             ; 
         },
         word = function( positive ){ 
             return false !== positive 
-                ? ["_"].concat(ALPHAS).concat(DIGITS)[rnd(0, ALPHAS.length+DIGITS.length)]
-                : [punct(), space()][rnd(0,1)]
+                ? (ALPHAS+DIGITS).charAt(rnd(0, ALPHAS.length+DIGITS.length-1))
+                : (punct()+space()).charAt(rnd(0,1))
             ; 
         },
         any = function( ){ 
-            return ALL[rnd(0, ALL.length-1)]; 
+            return ALL.charAt(rnd(0, ALL.length-1));
         },
         character = function( chars, positive ){ 
             if ( false !== positive ) return chars.length ? chars[rnd(0, chars.length-1)] : ''; 
-            var choices = ALL.filter(function(c){ return 0 > chars.indexOf(c); }); 
+            var choices = ALL_ARY.filter(function(c){ return 0 > chars.indexOf(c); }); 
             return choices.length ? choices[rnd(0, choices.length-1)] : '';
+        },
+        
+        eat = function( CHARS, s, pos ) {
+            var l = pos || 0;
+            while ( l < s.length && -1 < CHARS.indexOf( s.charAt(l) ) ) l++;
+            return l-pos;
+        },
+        
+        //hexRegex = /^x([0-9a-fA-F]{2})/,
+        match_hex = function( s ) {
+            var m = false;
+            if ( s.length > 2 && 'x' === s.charAt(0) )
+            {
+                if ( 2 == eat(HEXDIGITS, s, 1) ) return [m=s.slice(0, 3), m.slice(1)];
+            }
+            return false
+        },
+        //unicodeRegex = /^u([0-9a-fA-F]{4})/,
+        match_unicode = function( s ) {
+            var m = false;
+            if ( s.length > 4 && 'u' === s.charAt(0) )
+            {
+                if ( 4 == eat(HEXDIGITS, s, 1) ) return [m=s.slice(0, 5), m.slice(1)];
+            }
+            return false
+        },
+        //repeatsRegex = /^\{\s*(\d+)\s*,?\s*(\d+)?\s*\}/,
+        match_repeats = function( s ) {
+            var l, pos = 0, m = false;
+            if ( s.length > 2 && '{' === s.charAt(pos) )
+            {
+                m = ['', '', null];
+                pos++;
+                if ( l = eat(SPACES, s, pos) ) pos += l;
+                if ( 1 <= (l=eat(DIGITS, s, pos)) ) 
+                {
+                    m[1] = s.slice(pos, pos+l);
+                    pos += l;
+                }
+                else
+                {
+                    return false;
+                }
+                if ( l = eat(SPACES, s, pos) ) pos += l;
+                if ( 1 == eat(',', s, pos) ) pos += 1;
+                if ( l = eat(SPACES, s, pos) ) pos += l;
+                if ( 1 <= (l=eat(DIGITS, s, pos)) ) 
+                {
+                    m[2] = s.slice(pos, pos+l);
+                    pos += l;
+                }
+                if ( l = eat(SPACES, s, pos) ) pos += l;
+                if ( '}' === s.charAt(pos) )
+                {
+                    pos++;
+                    m[0] = s.slice(0, pos);
+                    return m;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            return false
         },
         
         concat = function(p1, p2) {
@@ -178,7 +241,7 @@
             return p1;
         },
         
-        caseInsensitive = function( chars, asArray ) {
+        case_insensitive = function( chars, asArray ) {
             if ( asArray )
             {
                 if ( chars.charAt ) chars = chars.split('');
@@ -194,7 +257,7 @@
             }
         },
         
-        getPeekChars = function(part) {
+        peek_characters = function peek_characters( part ) {
             var peek = {}, negativepeek = {}, current, p, i, l, 
                 tmp, done, type, ptype;
             
@@ -204,7 +267,7 @@
             {
                 for (i=0, l=part.part.length; i<l; i++)
                 {
-                    tmp = getPeekChars( part.part[i] );
+                    tmp = peek_characters( part.part[i] );
                     peek = concat( peek, tmp.peek );
                     negativepeek = concat( negativepeek, tmp.negativepeek );
                 }
@@ -212,7 +275,7 @@
             
             else if ( "Group" == type )
             {
-                tmp = getPeekChars( part.part );
+                tmp = peek_characters( part.part );
                 peek = concat( peek, tmp.peek );
                 negativepeek = concat( negativepeek, tmp.negativepeek );
             }
@@ -228,7 +291,7 @@
                 );
                 while ( !done )
                 {
-                    tmp = getPeekChars( p.part );
+                    tmp = peek_characters( p.part );
                     peek = concat( peek, tmp.peek );
                     negativepeek = concat( negativepeek, tmp.negativepeek );
                     
@@ -250,7 +313,7 @@
                     
                     if (p)
                     {
-                        tmp = getPeekChars( p );
+                        tmp = peek_characters( p );
                         peek = concat( peek, tmp.peek );
                         negativepeek = concat( negativepeek, tmp.negativepeek );
                     }
@@ -272,7 +335,7 @@
                     
                     else if ( "CharRange" == ptype )
                     {
-                        current = concat( current, getCharRange(p.part) );
+                        current = concat( current, character_range(p.part) );
                     }
                     
                     else if ( "UnicodeChar" == ptype || "HexChar" == ptype )
@@ -344,7 +407,7 @@
             return { peek: peek, negativepeek: negativepeek };
         },
         
-        generate = function(part, isCaseInsensitive) {
+        generate = function generate( part, isCaseInsensitive ) {
             var sample = '', p, i, l, type;
             
             type = part.type;
@@ -407,17 +470,17 @@
                     ptype = p.type;
                     if ( "Chars" == ptype )
                     {
-                        chars = chars.concat( isCaseInsensitive ? caseInsensitive( p.part, true ) : p.part );
+                        chars = chars.concat( isCaseInsensitive ? case_insensitive( p.part, true ) : p.part );
                     }
                     
                     else if ( "CharRange" == ptype )
                     {
-                        chars = chars.concat( isCaseInsensitive ? caseInsensitive( getCharRange(p.part), true ) : getCharRange(p.part) );
+                        chars = chars.concat( isCaseInsensitive ? case_insensitive( character_range(p.part), true ) : character_range(p.part) );
                     }
                     
                     else if ( "UnicodeChar" == ptype || "HexChar" == ptype )
                     {
-                        chars.push( isCaseInsensitive ? caseInsensitive( p.flags.Char ): p.flags.Char );
+                        chars.push( isCaseInsensitive ? case_insensitive( p.flags.Char ): p.flags.Char );
                     }
                     
                     else if ( "Special" == ptype )
@@ -457,7 +520,7 @@
             
             else if ( "String" == type )
             {
-                sample += isCaseInsensitive ? caseInsensitive( part.part ) : part.part;
+                sample += isCaseInsensitive ? case_insensitive( part.part ) : part.part;
             }
             
             else if ( "Special" == type && !part.flags.MatchStart && !part.flags.MatchEnd )
@@ -498,13 +561,13 @@
                     
             else if ( "UnicodeChar" == type || "HexChar" == type )
             {
-                sample += isCaseInsensitive ? caseInsensitive( part.flags.Char ) : part.flags.Char;
+                sample += isCaseInsensitive ? case_insensitive( part.flags.Char ) : part.flags.Char;
             }
             
             return sample;
         },
 
-        subgroup = function( self ) {
+        subgroup = function subgroup( self ) {
             var ch, word = '', alternation = [], sequence = [], flags = {}, flag, match, escaped = false,
                 pre = self.regex.substr(self.pos, 2);
             
@@ -545,9 +608,9 @@
                             sequence.push( { part: word, flags: {}, type: "String" } );
                             word = '';
                         }
-                        match = unicodeRegex.exec( self.regex.substr( self.pos-1 ) );
+                        match = match_unicode( self.regex.substr( self.pos-1 ) );
                         self.pos += match[0].length-1;
-                        sequence.push( { part: match[0], flags: { "Char": String.fromCharCode(parseInt(match[1], 16)), "Code": match[1] }, type: "UnicodeChar" } );
+                        sequence.push( { part: match[0], flags: { "Char": fromCharCode(parseInt(match[1], 16)), "Code": match[1] }, type: "UnicodeChar" } );
                     }
                     
                     // hex character
@@ -558,9 +621,9 @@
                             sequence.push( { part: word, flags: {}, type: "String" } );
                             word = '';
                         }
-                        match = hexRegex.exec( self.regex.substr( self.pos-1 ) );
+                        match = match_hex( self.regex.substr( self.pos-1 ) );
                         self.pos += match[0].length-1;
-                        sequence.push( { part: match[0], flags: { "Char": String.fromCharCode(parseInt(match[1], 16)), "Code": match[1] }, type: "HexChar" } );
+                        sequence.push( { part: match[0], flags: { "Char": fromCharCode(parseInt(match[1], 16)), "Code": match[1] }, type: "HexChar" } );
                     }
                     
                     else if ( specialCharsEscaped[ch] && '/' != ch)
@@ -647,7 +710,7 @@
                             sequence.push( { part: word, flags: {}, type: "String" } );
                             word = '';
                         }
-                        match = repeatsRegex.exec( self.regex.substr( self.pos-1 ) );
+                        match = match_repeats( self.regex.substr( self.pos-1 ) );
                         self.pos += match[0].length-1;
                         flag = { part: match[0], "MatchMinimum": match[1], "MatchMaximum": match[2] || "unlimited" };
                         flag[ specialChars[ch] ] = 1;
@@ -735,7 +798,7 @@
             }
         },
         
-        chargroup = function( self ) {
+        chargroup = function chargroup( self ) {
             var sequence = [], chars = [], flags = {}, flag, ch, prevch, range, isRange = false, match, isUnicode, escaped = false;
             
             if ( '^' == self.regex.charAt( self.pos ) )
@@ -758,18 +821,18 @@
                     // unicode character
                     if ( 'u' == ch )
                     {
-                        match = unicodeRegex.exec( self.regex.substr( self.pos-1 ) );
+                        match = match_unicode( self.regex.substr( self.pos-1 ) );
                         self.pos += match[0].length-1;
-                        ch = String.fromCharCode(parseInt(match[1], 16));
+                        ch = fromCharCode(parseInt(match[1], 16));
                         isUnicode = true;
                     }
                     
                     // hex character
                     else if ( 'x' == ch )
                     {
-                        match = hexRegex.exec( self.regex.substr( self.pos-1 ) );
+                        match = match_hex( self.regex.substr( self.pos-1 ) );
                         self.pos += match[0].length-1;
-                        ch = String.fromCharCode(parseInt(match[1], 16));
+                        ch = fromCharCode(parseInt(match[1], 16));
                         isUnicode = true;
                     }
                 }
@@ -842,7 +905,7 @@
             return { part: sequence, flags: flags, type: "CharGroup" };
         },
         
-        analyze = function( regex ) {
+        analyze = function analyze( regex ) {
             var self = {pos: 0, groupIndex: 0, regex: regex};
             var ch, word = '', alternation = [], sequence = [], flag, match, escaped = false;
             
@@ -864,9 +927,9 @@
                             sequence.push( { part: word, flags: {}, type: "String" } );
                             word = '';
                         }
-                        match = unicodeRegex.exec( self.regex.substr( self.pos-1 ) );
+                        match = match_unicode( self.regex.substr( self.pos-1 ) );
                         self.pos += match[0].length-1;
-                        sequence.push( { part: match[0], flags: { "Char": String.fromCharCode(parseInt(match[1], 16)), "Code": match[1] }, type: "UnicodeChar" } );
+                        sequence.push( { part: match[0], flags: { "Char": fromCharCode(parseInt(match[1], 16)), "Code": match[1] }, type: "UnicodeChar" } );
                     }
                     
                     // hex character
@@ -877,9 +940,9 @@
                             sequence.push( { part: word, flags: {}, type: "String" } );
                             word = '';
                         }
-                        match = hexRegex.exec( self.regex.substr( self.pos-1 ) );
+                        match = match_hex( self.regex.substr( self.pos-1 ) );
                         self.pos += match[0].length-1;
-                        sequence.push( { part: match[0], flags: { "Char": String.fromCharCode(parseInt(match[1], 16)), "Code": match[1] }, type: "HexChar" } );
+                        sequence.push( { part: match[0], flags: { "Char": fromCharCode(parseInt(match[1], 16)), "Code": match[1] }, type: "HexChar" } );
                     }
                     
                     else if ( specialCharsEscaped[ch] && '/' != ch)
@@ -944,7 +1007,7 @@
                             sequence.push( { part: word, flags: {}, type: "String" } );
                             word = '';
                         }
-                        match = repeatsRegex.exec( self.regex.substr( self.pos-1 ) );
+                        match = match_repeats( self.regex.substr( self.pos-1 ) );
                         self.pos += match[0].length-1;
                         flag = { part: match[0], "MatchMinimum": match[1], "MatchMaximum": match[2] || "unlimited" };
                         flag[ specialChars[ch] ] = 1;
@@ -1036,12 +1099,13 @@
     ;
 
     // A simple (js-flavored) regular expression analyzer
-    var Analyzer = function( regex, delim ) {
+    var Analyzer = function Analyzer( regex, delim ) {
+        if ( !(this instanceof Analyzer) ) return new Analyzer(regex, delim);
         if ( regex ) this.regex( regex, delim );
     };
     Analyzer.VERSION = __version__;
-    Analyzer.getCharRange = getCharRange;
-    Analyzer.prototype = {
+    Analyzer.getCharRange = character_range;
+    Analyzer[PROTO] = {
         
         constructor: Analyzer,
 
@@ -1116,7 +1180,7 @@
             
             if ( self.$needsRefresh ) self.analyze( );
             
-            peek = getPeekChars( self.$parts );
+            peek = peek_characters( self.$parts );
             isCaseInsensitive = self.$flags && self.$flags.i;
             
             for (n in peek)
@@ -1129,7 +1193,7 @@
                     if ('\\d' == c)
                     {
                         delete p[c];
-                        cases = concat(cases, getCharRange('0', '9'));
+                        cases = concat(cases, character_range('0', '9'));
                     }
                     
                     else if ('\\s' == c)
@@ -1141,7 +1205,7 @@
                     else if ('\\w' == c)
                     {
                         delete p[c];
-                        cases = concat(cases, ['_'].concat(getCharRange('0', '9')).concat(getCharRange('a', 'z')).concat(getCharRange('A', 'Z')));
+                        cases = concat(cases, ['_'].concat(character_range('0', '9')).concat(character_range('a', 'z')).concat(character_range('A', 'Z')));
                     }
                     
                     else if ('\\.' == c)

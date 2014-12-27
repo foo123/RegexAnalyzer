@@ -3,11 +3,13 @@
 
 var echo = console.log;
 
-echo("Testing Composer");
-echo("================");
 
 var Composer = require('../../src/js/regexcomposer.js');
-var identifierSubRegex = new Composer( )
+
+echo("Testing Composer.VERSION = " + Composer.VERSION);
+echo("================");
+
+var identifierSubRegex = Composer( )
                 
                 .characterGroup( )
                     .characters( '_' )
@@ -24,7 +26,7 @@ var identifierSubRegex = new Composer( )
             
                 .partial( );
 
-var outregex = new Composer( )
+var outregex = Composer( )
                     
                     .startOfLine( )
                     
@@ -54,15 +56,15 @@ echo("Expected: " + "/^([_a-z][_a-z0-9]*|\\*\\*aabb\\*\\*|.|\\s|\\D+)*?$/i");
 echo("================");
 echo();
 
-echo("Testing Analyzer");
-echo("================");
-
 var Analyzer = require('../../src/js/regexanalyzer.js'),
-    anal, peekChars, sampleStr, inregex = process.argv[2] || /xyz[abc0-9]*/gmi
+    anal, peekChars, sampleStr, inregex = process.argv[2] || /xyz[abc0-9]{2,3}/gmi
 ;
 
+echo("Testing Analyzer.VERSION = " + Analyzer.VERSION);
+echo("================");
+
 // test it
-anal = new Analyzer( inregex );
+anal = Analyzer( inregex );
 peekChars = anal.getPeekChars( );
 sampleStr = anal.generateSample( );
 
