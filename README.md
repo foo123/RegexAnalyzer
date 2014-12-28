@@ -1,4 +1,4 @@
-regex-analyzer and regex-composer
+RegexAnalyzer and RegexComposer
 =================================
 
 * A simple Regular Expression Analyzer for PHP, Python, Node/JS, ActionScript (TODO)

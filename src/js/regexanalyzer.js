@@ -4,7 +4,7 @@
 *   @version: 0.4.3
 *
 *   A simple Regular Expression Analyzer for PHP, Python, Node/JS
-*   https://github.com/foo123/regex-analyzer
+*   https://github.com/foo123/RegexAnalyzer
 *
 **/
 !function( root, name, factory ) {
@@ -37,7 +37,9 @@
     var __version__ = "0.4.3",
     
         PROTO = 'prototype', Obj = Object, Arr = Array, /*Str = String,*/ 
-        Keys = Obj.keys, to_string = Obj[PROTO].toString, fromCharCode = String.fromCharCode,
+        Keys = Obj.keys, to_string = Obj[PROTO].toString, 
+        fromCharCode = String.fromCharCode, CHAR = 'charAt', CHARCODE = 'charCodeAt',
+        INF = Infinity,
         
         escapeChar = '\\',
         specialChars = {
@@ -97,134 +99,26 @@
         },
 
         rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
-        
+        char_code = function( c ) { return c[CHARCODE](0); },
+        char_code_range = function( s ) { return [s[CHARCODE](0), s[CHARCODE](s.length-1)]; },
+        //char_codes = function( s_or_a ) { return (s_or_a.substr ? s_or_a.split("") : s_or_a).map( char_code ); },
         // http://stackoverflow.com/questions/12376870/create-an-array-of-characters-from-specified-range
         character_range = function(first, last) {
-            if ( first && ( first instanceof Arr || "[object Array]" == to_string.call(first) ) )
+            if ( first && ('function' === typeof(first.push)) )
             {
                 last = first[1];
                 first = first[0];
             }
-            var ch, chars, start = first.charCodeAt(0), end = last.charCodeAt(0);
+            var ch, chars, start = first[CHARCODE](0), end = last[CHARCODE](0);
             
             if ( end == start ) return [ fromCharCode( start ) ];
             
             chars = [];
-            for (ch = start; ch <= end; ++ch)
-                chars.push( fromCharCode( ch ) );
-            
+            for (ch = start; ch <= end; ++ch) chars.push( fromCharCode( ch ) );
             return chars;
         },
-        
-        BSPACES = "\r\n",
-        SPACES = " \t\v",
-        PUNCTS = "~!@#$%^&*()-+=[]{}\\|;:,./<>?",
-        DIGITS = "0123456789",
-        HEXDIGITS = DIGITS+"abcdef"+"ABCDEF",
-        ALPHAS = "_"+(character_range("a", "z").join(""))+(character_range("A", "Z").join("")),
-        ALL = SPACES+PUNCTS+DIGITS+ALPHAS, ALL_ARY = ALL.split(""),
-        punct = function( ){ 
-            return PUNCTS.charAt(rnd(0, PUNCTS.length-1)); 
-        },
-        space = function( positive ){ 
-            return false !== positive 
-                ? SPACES.charAt(rnd(0, SPACES.length-1))
-                : (punct()+digit()+alpha()).charAt(rnd(0,2))
-            ; 
-        },
-        digit = function( positive ){ 
-            return false !== positive 
-                ? DIGITS.charAt(rnd(0, DIGITS.length-1))
-                : (punct()+space()+alpha()).charAt(rnd(0,2))
-            ; 
-        },
-        alpha = function( positive ){ 
-            return false !== positive 
-                ? ALPHAS.charAt(rnd(0, ALPHAS.length-1))
-                : (punct()+space()+digit()).charAt(rnd(0,2))
-            ; 
-        },
-        word = function( positive ){ 
-            return false !== positive 
-                ? (ALPHAS+DIGITS).charAt(rnd(0, ALPHAS.length+DIGITS.length-1))
-                : (punct()+space()).charAt(rnd(0,1))
-            ; 
-        },
-        any = function( ){ 
-            return ALL.charAt(rnd(0, ALL.length-1));
-        },
-        character = function( chars, positive ){ 
-            if ( false !== positive ) return chars.length ? chars[rnd(0, chars.length-1)] : ''; 
-            var choices = ALL_ARY.filter(function(c){ return 0 > chars.indexOf(c); }); 
-            return choices.length ? choices[rnd(0, choices.length-1)] : '';
-        },
-        
-        eat = function( CHARS, s, pos ) {
-            var l = pos || 0;
-            while ( l < s.length && -1 < CHARS.indexOf( s.charAt(l) ) ) l++;
-            return l-pos;
-        },
-        
-        //hexRegex = /^x([0-9a-fA-F]{2})/,
-        match_hex = function( s ) {
-            var m = false;
-            if ( s.length > 2 && 'x' === s.charAt(0) )
-            {
-                if ( 2 == eat(HEXDIGITS, s, 1) ) return [m=s.slice(0, 3), m.slice(1)];
-            }
-            return false
-        },
-        //unicodeRegex = /^u([0-9a-fA-F]{4})/,
-        match_unicode = function( s ) {
-            var m = false;
-            if ( s.length > 4 && 'u' === s.charAt(0) )
-            {
-                if ( 4 == eat(HEXDIGITS, s, 1) ) return [m=s.slice(0, 5), m.slice(1)];
-            }
-            return false
-        },
-        //repeatsRegex = /^\{\s*(\d+)\s*,?\s*(\d+)?\s*\}/,
-        match_repeats = function( s ) {
-            var l, pos = 0, m = false;
-            if ( s.length > 2 && '{' === s.charAt(pos) )
-            {
-                m = ['', '', null];
-                pos++;
-                if ( l = eat(SPACES, s, pos) ) pos += l;
-                if ( 1 <= (l=eat(DIGITS, s, pos)) ) 
-                {
-                    m[1] = s.slice(pos, pos+l);
-                    pos += l;
-                }
-                else
-                {
-                    return false;
-                }
-                if ( l = eat(SPACES, s, pos) ) pos += l;
-                if ( 1 == eat(',', s, pos) ) pos += 1;
-                if ( l = eat(SPACES, s, pos) ) pos += l;
-                if ( 1 <= (l=eat(DIGITS, s, pos)) ) 
-                {
-                    m[2] = s.slice(pos, pos+l);
-                    pos += l;
-                }
-                if ( l = eat(SPACES, s, pos) ) pos += l;
-                if ( '}' === s.charAt(pos) )
-                {
-                    pos++;
-                    m[0] = s.slice(0, pos);
-                    return m;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-            return false
-        },
-        
         concat = function(p1, p2) {
-            if ( p2 && ( p2 instanceof Arr || "[object Array]" == to_string.call(p2) ) )
+            if ( p2 && ( 'function' === typeof(p2.push) ) )
             {
                 for (var p=0, l=p2.length; p<l; p++)
                 {
@@ -241,88 +135,181 @@
             return p1;
         },
         
-        case_insensitive = function( chars, asArray ) {
-            if ( asArray )
+        BSPACES = "\r\n",
+        SPACES = " \t\v",
+        PUNCTS = "~!@#$%^&*()-+=[]{}\\|;:,./<>?",
+        DIGITS = "0123456789", DIGITS_RANGE = char_code_range(DIGITS),
+        HEXDIGITS_RANGES = [DIGITS_RANGE, [char_code("a"), char_code("f")], [char_code("A"), char_code("F")]],
+        ALPHAS = "_"+(character_range("a", "z").join(""))+(character_range("A", "Z").join("")),
+        ALL = SPACES+PUNCTS+DIGITS+ALPHAS, ALL_ARY = ALL.split(""),
+        
+        match_chars = function( CHARS, s, pos, minlen, maxlen ) {
+            pos = pos || 0;
+            minlen = minlen || 1;
+            maxlen = maxlen || INF;
+            var lp = pos, l = 0, ch;
+            while ( (lp < s.length) && (l <= maxlen) && -1 < CHARS.indexOf( ch=s[CHAR](lp) ) ) 
+            { 
+                lp++; l++; 
+            }
+            return l >= minlen ? l : false;
+        },
+        /*match_non_chars = function( CHARS, s, pos, minlen, maxlen ) {
+            pos = pos || 0;
+            minlen = minlen || 1;
+            maxlen = maxlen || INF;
+            var lp = pos, l = 0, ch;
+            while ( (lp < s.length) && (l <= maxlen) && 0 > CHARS.indexOf( ch=s[CHAR](lp) ) ) 
+            { 
+                lp++; l++; 
+            }
+            return l >= minlen ? l : false;
+        },*/
+        match_char_range = function( RANGE, s, pos, minlen, maxlen ) {
+            pos = pos || 0;
+            minlen = minlen || 1;
+            maxlen = maxlen || INF;
+            var lp = pos, l = 0, ch;
+            while ( (lp < s.length) && (l <= maxlen) && ((ch=s[CHARCODE](lp)) >= RANGE[0] && ch <= RANGE[1]) ) 
+            { 
+                lp++; l++;
+            }
+            return l >= minlen ? l : false;
+        },
+        /*match_non_char_range = function( RANGE, s, pos, minlen, maxlen ) {
+            pos = pos || 0;
+            minlen = minlen || 1;
+            maxlen = maxlen || INF;
+            var lp = pos, l = 0, ch;
+            while ( (lp < s.length) && (l <= maxlen) && ((ch=s[CHARCODE](lp)) < RANGE[0] || ch > RANGE[1]) ) 
+            { 
+                lp++; l++;
+            }
+            return l >= minlen ? l : false;
+        },*/
+        match_char_ranges = function( RANGES, s, pos, minlen, maxlen ) {
+            pos = pos || 0;
+            minlen = minlen || 1;
+            maxlen = maxlen || INF;
+            var lp = pos, l = 0, ch, i, Rl = RANGES.length, RANGE, notfound;
+            while ( (lp < s.length) && (l <= maxlen) ) 
+            { 
+                ch = s[CHARCODE](lp); notfound = true;
+                for (i=0; i<Rl; i++)
+                {
+                    RANGE = RANGES[i];
+                    if ( ch >= RANGE[0] && ch <= RANGE[1] )
+                    {
+                        lp++; l++; notfound = false;
+                        break;
+                    }
+                }
+                if ( notfound ) break;
+            }
+            return l >= minlen ? l : false;
+        },
+        /*match_non_char_ranges = function( RANGES, s, pos, minlen, maxlen ) {
+            pos = pos || 0;
+            minlen = minlen || 1;
+            maxlen = maxlen || INF;
+            var lp = pos, l = 0, ch, i, Rl = RANGES.length, RANGE, notfound;
+            while ( (lp < s.length) && (l <= maxlen) ) 
+            { 
+                ch = s[CHARCODE](lp); found = false;
+                for (i=0; i<Rl; i++)
+                {
+                    RANGE = RANGES[i];
+                    if ( ch >= RANGE[0] && ch <= RANGE[1] )
+                    {
+                        lp++; l++; found = true;
+                        break;
+                    }
+                }
+                if ( found ) break;
+            }
+            return l >= minlen ? l : false;
+        },*/
+        match_literal = function( lit, s, pos, caseInsensitive ) {
+            var lp = pos, l = 0, mlen = lit.length;
+            if ( caseInsensitive )
             {
-                if ( chars.charAt ) chars = chars.split('');
-                chars = chars.map(function(c){
-                    return rnd(0,1) ? c.toLowerCase( ) : c.toUpperCase( );
-                });
-                if ( !asArray ) chars = chars.join('');
-                return chars;
+                while ( (lp < s.length) && (l <= mlen) && (lit[CHAR](l).toLowerCase() === s[CHAR](lp).toLowerCase()) ) 
+                { 
+                    lp++; l++; 
+                }
             }
             else
             {
-                return rnd(0,1) ? chars.toLowerCase( ) : chars.toUpperCase( );
+                while ( (lp < s.length) && (l <= mlen) && (lit[CHAR](l) === s[CHAR](lp)) ) 
+                { 
+                    lp++; l++; 
+                }
             }
+            return l === mlen;
         },
-        
-        peek_characters = function peek_characters( part ) {
-            var peek = {}, negativepeek = {}, current, p, i, l, 
-                tmp, done, type, ptype;
+        // TODO, generate RE matcher for given RE and string
+        /*match = function match( s, pos, part, isCaseInsensitive ) {
+            var m = false, p, i, l, type;
             
             type = part.type;
             // walk the sequence
             if ( "Alternation" == type )
             {
-                for (i=0, l=part.part.length; i<l; i++)
+                for (i=0; i<part.part.length; i++)
                 {
-                    tmp = peek_characters( part.part[i] );
-                    peek = concat( peek, tmp.peek );
-                    negativepeek = concat( negativepeek, tmp.negativepeek );
+                    if ( m = match(s, pos, part.part[i], isCaseInsensitive) )
+                    {
+                        break;
+                    }
                 }
             }
             
             else if ( "Group" == type )
             {
-                tmp = peek_characters( part.part );
-                peek = concat( peek, tmp.peek );
-                negativepeek = concat( negativepeek, tmp.negativepeek );
+                m = match(s, pos, part.part, isCaseInsensitive);
             }
             
             else if ( "Sequence" == type )
             {
-                i = 0;
+                var repeat, mmin, mmax;
                 l = part.part.length;
                 p = part.part[i];
-                done = ( 
-                    i >= l || !p || "Quantifier" != p.type || 
-                    ( !p.flags.MatchZeroOrMore && !p.flags.MatchZeroOrOne && "0"!=p.flags.MatchMinimum ) 
-                );
-                while ( !done )
-                {
-                    tmp = peek_characters( p.part );
-                    peek = concat( peek, tmp.peek );
-                    negativepeek = concat( negativepeek, tmp.negativepeek );
-                    
-                    i++;
-                    p = part.part[i];
-                    
-                    done = ( 
-                        i >= l || !p || "Quantifier" != p.type || 
-                        ( !p.flags.MatchZeroOrMore && !p.flags.MatchZeroOrOne && "0"!=p.flags.MatchMinimum ) 
-                    );
-                }
-                if ( i < l )
+                for (i=0; i<l; i++)
                 {
                     p = part.part[i];
-                    
-                    if ("Special" == p.type && ('^'==p.part || '$'==p.part)) p = part.part[i+1] || null;
-                    
-                    if (p && "Quantifier" == p.type) p = p.part;
-                    
-                    if (p)
+                    if ( !p ) continue;
+                    repeat = 1;
+                    if ( "Quantifier" == p.type )
                     {
-                        tmp = peek_characters( p );
-                        peek = concat( peek, tmp.peek );
-                        negativepeek = concat( negativepeek, tmp.negativepeek );
+                        if ( p.flags.MatchZeroOrMore ) repeat = rnd(0, 10);
+                        else if ( p.flags.MatchZeroOrOne ) repeat = rnd(0, 1);
+                        else if ( p.flags.MatchOneOrMore ) repeat = rnd(1, 11);
+                        else 
+                        {
+                            mmin = parseInt(p.flags.MatchMinimum, 10);
+                            mmax = parseInt(p.flags.MatchMaximum, 10);
+                            repeat = rnd(mmin, isNaN(mmax) ? (mmin+10) : mmax);
+                        }
+                        while ( repeat > 0 ) 
+                        {
+                            repeat--;
+                            sample += generate( p.part, isCaseInsensitive );
+                        }
+                    }
+                    else if ( "Special" == p.type )
+                    {
+                        if ( p.flags.MatchAnyChar ) sample += any( );
+                    }
+                    else
+                    {
+                        sample += generate( p, isCaseInsensitive );
                     }
                 }
             }
             
             else if ( "CharGroup" == type )
             {
-                current = ( part.flags.NotMatch ) ? negativepeek : peek;
+                var chars = [], ptype;
                 
                 for (i=0, l=part.part.length; i<l; i++)
                 {
@@ -330,45 +317,48 @@
                     ptype = p.type;
                     if ( "Chars" == ptype )
                     {
-                        current = concat( current, p.part );
+                        m = match_chars(isCaseInsensitive ? p.part.toLowerCase()+p.part.toUpperCase() : p.part, s, pos);
                     }
                     
                     else if ( "CharRange" == ptype )
                     {
-                        current = concat( current, character_range(p.part) );
+                        m = match_char_range(char_code_range(p.part.join("")), s, pos);
                     }
                     
                     else if ( "UnicodeChar" == ptype || "HexChar" == ptype )
                     {
-                        current[p.flags.Char] = 1;
+                        m = match_chars(isCaseInsensitive ? p.flags.Char.toLowerCase()+p.flags.Char.toUpperCase() : p.flags.Char, s, pos);
                     }
                     
                     else if ( "Special" == ptype )
                     {
                         if ('D' == p.part)
                         {
-                            if (part.flags.NotMatch)
-                                peek[ '\\d' ] = 1;
-                            else
-                                negativepeek[ '\\d' ] = 1;
+                            m = match_non_char_range(DIGITS_RANGE, s, pos);
                         }
                         else if ('W' == p.part)
                         {
-                            if (part.flags.NotMatch)
-                                peek[ '\\w' ] = 1;
-                            else
-                                negativepeek[ '\\W' ] = 1;
+                            m = match_non_char_ranges(WORD_RANGES, s, pos);
                         }
                         else if ('S' == p.part)
                         {
-                            if (part.flags.NotMatch)
-                                peek[ '\\s' ] = 1;
-                            else
-                                negativepeek[ '\\s' ] = 1;
+                            m = match_non_chars(SPACES, s, pos);
+                        }
+                        else if ('d' == p.part)
+                        {
+                            m = match_char_range(DIGITS_RANGE, s, pos);
+                        }
+                        else if ('w' == p.part)
+                        {
+                            m = match_char_ranges(WORD_RANGES, s, pos);
+                        }
+                        else if ('s' == p.part)
+                        {
+                            m = match_chars(SPACES, s, pos);
                         }
                         else
                         {
-                            current['\\' + p.part] = 1;
+                            m = match_chars('\\' + p.part, s, pos);
                         }
                     }
                 }
@@ -376,37 +366,102 @@
             
             else if ( "String" == type )
             {
-                peek[part.part.charAt(0)] = 1;
+                m = match_literal( part.part, s, pos, isCaseInsensitive );
             }
             
             else if ( "Special" == type && !part.flags.MatchStart && !part.flags.MatchEnd )
             {
                 if ('D' == part.part)
                 {
-                    negativepeek[ '\\d' ] = 1;
+                    m = match_non_char_range(DIGITS_RANGE, s, pos);
                 }
                 else if ('W' == part.part)
                 {
-                    negativepeek[ '\\W' ] = 1;
+                    m = match_non_char_ranges(WORD_RANGES, s, pos);
                 }
                 else if ('S' == part.part)
                 {
-                    negativepeek[ '\\s' ] = 1;
+                    m = match_non_chars(SPACES, s, pos);
+                }
+                else if ('d' == part.part)
+                {
+                    m = match_char_range(DIGITS_RANGE, s, pos);
+                }
+                else if ('w' == part.part)
+                {
+                    m = match_char_ranges(WORD_RANGES, s, pos);
+                }
+                else if ('s' == part.part)
+                {
+                    m = match_chars(SPACES, s, pos);
+                }
+                else if ('.' == part.part)
+                {
+                    m = match_chars(ALL, s, pos);
                 }
                 else
                 {
-                    peek['\\' + part.part] = 1;
+                    m = match_chars('\\' + part.part, s, pos);
                 }
             }
                     
             else if ( "UnicodeChar" == type || "HexChar" == type )
             {
-                peek[part.flags.Char] = 1;
+                sample += isCaseInsensitive ? case_insensitive( part.flags.Char ) : part.flags.Char;
             }
             
-            return { peek: peek, negativepeek: negativepeek };
+            return m;
+        },*/
+
+        punct = function( ){ 
+            return PUNCTS[CHAR](rnd(0, PUNCTS.length-1)); 
         },
-        
+        space = function( positive ){ 
+            return false !== positive 
+                ? SPACES[CHAR](rnd(0, SPACES.length-1))
+                : (punct()+digit()+alpha())[CHAR](rnd(0,2))
+            ; 
+        },
+        digit = function( positive ){ 
+            return false !== positive 
+                ? DIGITS[CHAR](rnd(0, DIGITS.length-1))
+                : (punct()+space()+alpha())[CHAR](rnd(0,2))
+            ; 
+        },
+        alpha = function( positive ){ 
+            return false !== positive 
+                ? ALPHAS[CHAR](rnd(0, ALPHAS.length-1))
+                : (punct()+space()+digit())[CHAR](rnd(0,2))
+            ; 
+        },
+        word = function( positive ){ 
+            return false !== positive 
+                ? (ALPHAS+DIGITS)[CHAR](rnd(0, ALPHAS.length+DIGITS.length-1))
+                : (punct()+space())[CHAR](rnd(0,1))
+            ; 
+        },
+        any = function( ){ 
+            return ALL[CHAR](rnd(0, ALL.length-1));
+        },
+        character = function( chars, positive ){ 
+            if ( false !== positive ) return chars.length ? chars[rnd(0, chars.length-1)] : ''; 
+            var choices = ALL_ARY.filter(function(c){ return 0 > chars.indexOf(c); }); 
+            return choices.length ? choices[rnd(0, choices.length-1)] : '';
+        },
+        random_upper_or_lower = function( c ) { return rnd(0,1) ? c.toLowerCase( ) : c.toUpperCase( ); },
+        case_insensitive = function( chars, asArray ) {
+            if ( asArray )
+            {
+                if ( chars[CHAR] ) chars = chars.split('');
+                chars = chars.map( random_upper_or_lower );
+                //if ( !asArray ) chars = chars.join('');
+                return chars;
+            }
+            else
+            {
+                return random_upper_or_lower( chars );
+            }
+        },
         generate = function generate( part, isCaseInsensitive ) {
             var sample = '', p, i, l, type;
             
@@ -567,6 +622,213 @@
             return sample;
         },
 
+        peek_characters = function peek_characters( part ) {
+            var peek = {}, negativepeek = {}, current, p, i, l, 
+                tmp, done, type, ptype;
+            
+            type = part.type;
+            // walk the sequence
+            if ( "Alternation" == type )
+            {
+                for (i=0, l=part.part.length; i<l; i++)
+                {
+                    tmp = peek_characters( part.part[i] );
+                    peek = concat( peek, tmp.peek );
+                    negativepeek = concat( negativepeek, tmp.negativepeek );
+                }
+            }
+            
+            else if ( "Group" == type )
+            {
+                tmp = peek_characters( part.part );
+                peek = concat( peek, tmp.peek );
+                negativepeek = concat( negativepeek, tmp.negativepeek );
+            }
+            
+            else if ( "Sequence" == type )
+            {
+                i = 0;
+                l = part.part.length;
+                p = part.part[i];
+                done = ( 
+                    i >= l || !p || "Quantifier" != p.type || 
+                    ( !p.flags.MatchZeroOrMore && !p.flags.MatchZeroOrOne && "0"!=p.flags.MatchMinimum ) 
+                );
+                while ( !done )
+                {
+                    tmp = peek_characters( p.part );
+                    peek = concat( peek, tmp.peek );
+                    negativepeek = concat( negativepeek, tmp.negativepeek );
+                    
+                    i++;
+                    p = part.part[i];
+                    
+                    done = ( 
+                        i >= l || !p || "Quantifier" != p.type || 
+                        ( !p.flags.MatchZeroOrMore && !p.flags.MatchZeroOrOne && "0"!=p.flags.MatchMinimum ) 
+                    );
+                }
+                if ( i < l )
+                {
+                    p = part.part[i];
+                    
+                    if ("Special" == p.type && ('^'==p.part || '$'==p.part)) p = part.part[i+1] || null;
+                    
+                    if (p && "Quantifier" == p.type) p = p.part;
+                    
+                    if (p)
+                    {
+                        tmp = peek_characters( p );
+                        peek = concat( peek, tmp.peek );
+                        negativepeek = concat( negativepeek, tmp.negativepeek );
+                    }
+                }
+            }
+            
+            else if ( "CharGroup" == type )
+            {
+                current = ( part.flags.NotMatch ) ? negativepeek : peek;
+                
+                for (i=0, l=part.part.length; i<l; i++)
+                {
+                    p = part.part[i];
+                    ptype = p.type;
+                    if ( "Chars" == ptype )
+                    {
+                        current = concat( current, p.part );
+                    }
+                    
+                    else if ( "CharRange" == ptype )
+                    {
+                        current = concat( current, character_range(p.part) );
+                    }
+                    
+                    else if ( "UnicodeChar" == ptype || "HexChar" == ptype )
+                    {
+                        current[p.flags.Char] = 1;
+                    }
+                    
+                    else if ( "Special" == ptype )
+                    {
+                        if ('D' == p.part)
+                        {
+                            if (part.flags.NotMatch)
+                                peek[ '\\d' ] = 1;
+                            else
+                                negativepeek[ '\\d' ] = 1;
+                        }
+                        else if ('W' == p.part)
+                        {
+                            if (part.flags.NotMatch)
+                                peek[ '\\w' ] = 1;
+                            else
+                                negativepeek[ '\\W' ] = 1;
+                        }
+                        else if ('S' == p.part)
+                        {
+                            if (part.flags.NotMatch)
+                                peek[ '\\s' ] = 1;
+                            else
+                                negativepeek[ '\\s' ] = 1;
+                        }
+                        else
+                        {
+                            current['\\' + p.part] = 1;
+                        }
+                    }
+                }
+            }
+            
+            else if ( "String" == type )
+            {
+                peek[part.part[CHAR](0)] = 1;
+            }
+            
+            else if ( "Special" == type && !part.flags.MatchStart && !part.flags.MatchEnd )
+            {
+                if ('D' == part.part)
+                {
+                    negativepeek[ '\\d' ] = 1;
+                }
+                else if ('W' == part.part)
+                {
+                    negativepeek[ '\\W' ] = 1;
+                }
+                else if ('S' == part.part)
+                {
+                    negativepeek[ '\\s' ] = 1;
+                }
+                else
+                {
+                    peek['\\' + part.part] = 1;
+                }
+            }
+                    
+            else if ( "UnicodeChar" == type || "HexChar" == type )
+            {
+                peek[part.flags.Char] = 1;
+            }
+            
+            return { peek: peek, negativepeek: negativepeek };
+        },
+        
+        //hexRegex = /^x([0-9a-fA-F]{2})/,
+        match_hex = function( s ) {
+            var m = false;
+            if ( s.length > 2 && 'x' === s[CHAR](0) )
+            {
+                if ( match_char_ranges(HEXDIGITS_RANGES, s, 1, 2, 2) ) return [m=s.slice(0,3), m.slice(1)];
+            }
+            return false
+        },
+        //unicodeRegex = /^u([0-9a-fA-F]{4})/,
+        match_unicode = function( s ) {
+            var m = false;
+            if ( s.length > 4 && 'u' === s[CHAR](0) )
+            {
+                if ( match_char_ranges(HEXDIGITS_RANGES, s, 1, 4, 4) ) return [m=s.slice(0,5), m.slice(1)];
+            }
+            return false
+        },
+        //repeatsRegex = /^\{\s*(\d+)\s*,?\s*(\d+)?\s*\}/,
+        match_repeats = function( s ) {
+            var l, pos = 0, m = false, mch;
+            if ( s.length > 2 && '{' === s[CHAR](pos) )
+            {
+                m = ['', '', null];
+                pos++;
+                if ( l=match_chars(SPACES, s, pos) ) pos += l;
+                if ( l=match_char_range(DIGITS_RANGE, s, pos) ) 
+                {
+                    m[1] = s.slice(pos, pos+l);
+                    pos += l;
+                }
+                else
+                {
+                    return false;
+                }
+                if ( l=match_chars(SPACES, s, pos) ) pos += l;
+                if ( ',' === s[CHAR](pos) ) pos += 1;
+                if ( l=match_chars(SPACES, s, pos) ) pos += l;
+                if ( l=match_char_range(DIGITS_RANGE, s, pos) ) 
+                {
+                    m[2] = s.slice(pos, pos+l);
+                    pos += l;
+                }
+                if ( l=match_chars(SPACES, s, pos) ) pos += l;
+                if ( '}' === s[CHAR](pos) )
+                {
+                    pos++;
+                    m[0] = s.slice(0, pos);
+                    return m;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            return false
+        },
         subgroup = function subgroup( self ) {
             var ch, word = '', alternation = [], sequence = [], flags = {}, flag, match, escaped = false,
                 pre = self.regex.substr(self.pos, 2);
@@ -593,10 +855,10 @@
             
             while ( self.pos < self.regex.length )
             {
-                ch = self.regex.charAt( self.pos++ );
+                ch = self.regex[CHAR]( self.pos++ );
                 
                 escaped = (escapeChar == ch) ? true : false;
-                if ( escaped )  ch = self.regex.charAt( self.pos++ );
+                if ( escaped )  ch = self.regex[CHAR]( self.pos++ );
                 
                 if ( escaped )
                 {
@@ -714,7 +976,7 @@
                         self.pos += match[0].length-1;
                         flag = { part: match[0], "MatchMinimum": match[1], "MatchMaximum": match[2] || "unlimited" };
                         flag[ specialChars[ch] ] = 1;
-                        if ( '?' == self.regex.charAt(self.pos) )
+                        if ( '?' == self.regex[CHAR](self.pos) )
                         {
                             flag[ "isGreedy" ] = 0;
                             self.pos++;
@@ -742,7 +1004,7 @@
                         }
                         flag = {};
                         flag[ specialChars[ch] ] = 1;
-                        if ( '?' == self.regex.charAt(self.pos) )
+                        if ( '?' == self.regex[CHAR](self.pos) )
                         {
                             flag[ "isGreedy" ] = 0;
                             self.pos++;
@@ -801,7 +1063,7 @@
         chargroup = function chargroup( self ) {
             var sequence = [], chars = [], flags = {}, flag, ch, prevch, range, isRange = false, match, isUnicode, escaped = false;
             
-            if ( '^' == self.regex.charAt( self.pos ) )
+            if ( '^' == self.regex[CHAR]( self.pos ) )
             {
                 flags[ "NotMatch" ] = 1;
                 self.pos++;
@@ -811,10 +1073,10 @@
             {
                 isUnicode = false;
                 prevch = ch;
-                ch = self.regex.charAt( self.pos++ );
+                ch = self.regex[CHAR]( self.pos++ );
                 
                 escaped = (escapeChar == ch) ? true : false;
-                if ( escaped )  ch = self.regex.charAt( self.pos++ );
+                if ( escaped )  ch = self.regex[CHAR]( self.pos++ );
                 
                 if ( escaped )
                 {
@@ -911,11 +1173,11 @@
             
             while ( self.pos < self.regex.length )
             {
-                ch = self.regex.charAt( self.pos++ );
+                ch = self.regex[CHAR]( self.pos++ );
                 
                 //   \\abc
                 escaped = (escapeChar == ch) ? true : false;
-                if ( escaped )  ch = self.regex.charAt( self.pos++ );
+                if ( escaped )  ch = self.regex[CHAR]( self.pos++ );
                 
                 if ( escaped )
                 {
@@ -1011,7 +1273,7 @@
                         self.pos += match[0].length-1;
                         flag = { part: match[0], "MatchMinimum": match[1], "MatchMaximum": match[2] || "unlimited" };
                         flag[ specialChars[ch] ] = 1;
-                        if ( '?' == self.regex.charAt(self.pos) )
+                        if ( '?' == self.regex[CHAR](self.pos) )
                         {
                             flag[ "isGreedy" ] = 0;
                             self.pos++;
@@ -1039,7 +1301,7 @@
                         }
                         flag = {};
                         flag[ specialChars[ch] ] = 1;
-                        if ( '?' == self.regex.charAt(self.pos) )
+                        if ( '?' == self.regex[CHAR](self.pos) )
                         {
                             flag[ "isGreedy" ] = 0;
                             self.pos++;
@@ -1127,7 +1389,7 @@
             if ( regex )
             {
                 delim = delim || '/';
-                var flags = {}, r = regex.toString( ), l = r.length, ch = r.charAt(l-1);
+                var flags = {}, r = regex.toString( ), l = r.length, ch = r[CHAR](l-1);
                 
                 // parse regex flags
                 while ( delim !== ch )
@@ -1135,10 +1397,10 @@
                     flags[ ch ] = 1;
                     r = r.substr(0, l-1);
                     l = r.length;
-                    ch = r.charAt(l-1);
+                    ch = r[CHAR](l-1);
                 }
                 // remove regex delimiters
-                if ( delim == r.charAt(0) && delim == r.charAt(l-1) )  r = r.substr(1, l-2);
+                if ( delim == r[CHAR](0) && delim == r[CHAR](l-1) )  r = r.substr(1, l-2);
                 
                 if ( self.$regex !== r ) self.$needsRefresh = true;
                 self.$regex = r; self.$flags = flags;
@@ -1171,6 +1433,12 @@
             var self = this;
             if ( self.$needsRefresh ) self.analyze( );
             return generate( self.$parts, self.$flags && self.$flags.i );
+        },
+        
+        // experimental feature, implement (optimised) RE matching as well
+        match: function( str ) {
+            //return match( self.$parts, str, 0, self.$flags && self.$flags.i );
+            return false;
         },
         
         // experimental feature
@@ -1226,13 +1494,13 @@
                         cases[ specialChars['$'] ] = 1;
                     }*/
                     
-                    else if ( '\\' != c.charAt(0) && isCaseInsensitive )
+                    else if ( '\\' != c[CHAR](0) && isCaseInsensitive )
                     {
                         cases[ c.toLowerCase() ] = 1;
                         cases[ c.toUpperCase() ] = 1;
                     }
                     
-                    else if ( '\\' == c.charAt(0) )
+                    else if ( '\\' == c[CHAR](0) )
                     {
                         delete p[c];
                     }

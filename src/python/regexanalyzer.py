@@ -5,7 +5,7 @@
 #   @version: 0.1
 #
 #   A simple Regular Expression Analyzer in Python
-#   https://github.com/foo123/regex-analyzer
+#   https://github.com/foo123/RegexAnalyzer
 #
 ##
 # needed imports

@@ -70,6 +70,6 @@ Regular Expression Peek Characters:
 }
 
 Regular Expression Sample Match String: 
-xyzc6 -> Matched
+xyz08 -> Matched
 ================
 

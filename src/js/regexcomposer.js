@@ -4,7 +4,7 @@
 *   @version: 0.4.3
 *
 *   A simple and intuitive Regular Expression Composer for PHP, Python, Node/JS
-*   https://github.com/foo123/regex-analyzer
+*   https://github.com/foo123/RegexAnalyzer
 *
 **/
 !function( root, name, factory ) {
