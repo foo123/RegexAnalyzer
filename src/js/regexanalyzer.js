@@ -3,7 +3,7 @@
 *   RegExAnalyzer
 *   @version: 0.4.3
 *
-*   A simple Regular Expression Analyzer for PHP, Python, Node/JS
+*   A simple Regular Expression Analyzer for PHP, Python, Node/JS, ActionScript
 *   https://github.com/foo123/RegexAnalyzer
 *
 **/
@@ -39,7 +39,7 @@
         PROTO = 'prototype', Obj = Object, Arr = Array, /*Str = String,*/ 
         Keys = Obj.keys, to_string = Obj[PROTO].toString, 
         fromCharCode = String.fromCharCode, CHAR = 'charAt', CHARCODE = 'charCodeAt',
-        INF = Infinity,
+        INF = Infinity, HAS = 'hasOwnProperty',
         
         escapeChar = '\\',
         specialChars = {
@@ -147,8 +147,8 @@
             pos = pos || 0;
             minlen = minlen || 1;
             maxlen = maxlen || INF;
-            var lp = pos, l = 0, ch;
-            while ( (lp < s.length) && (l <= maxlen) && -1 < CHARS.indexOf( ch=s[CHAR](lp) ) ) 
+            var lp = pos, l = 0, sl = s.length, ch;
+            while ( (lp < sl) && (l <= maxlen) && -1 < CHARS.indexOf( ch=s[CHAR](lp) ) ) 
             { 
                 lp++; l++; 
             }
@@ -158,8 +158,8 @@
             pos = pos || 0;
             minlen = minlen || 1;
             maxlen = maxlen || INF;
-            var lp = pos, l = 0, ch;
-            while ( (lp < s.length) && (l <= maxlen) && 0 > CHARS.indexOf( ch=s[CHAR](lp) ) ) 
+            var lp = pos, l = 0, sl = s.length, ch;
+            while ( (lp < sl) && (l <= maxlen) && 0 > CHARS.indexOf( ch=s[CHAR](lp) ) ) 
             { 
                 lp++; l++; 
             }
@@ -169,8 +169,8 @@
             pos = pos || 0;
             minlen = minlen || 1;
             maxlen = maxlen || INF;
-            var lp = pos, l = 0, ch;
-            while ( (lp < s.length) && (l <= maxlen) && ((ch=s[CHARCODE](lp)) >= RANGE[0] && ch <= RANGE[1]) ) 
+            var lp = pos, l = 0, sl = s.length, ch;
+            while ( (lp < sl) && (l <= maxlen) && ((ch=s[CHARCODE](lp)) >= RANGE[0] && ch <= RANGE[1]) ) 
             { 
                 lp++; l++;
             }
@@ -180,8 +180,8 @@
             pos = pos || 0;
             minlen = minlen || 1;
             maxlen = maxlen || INF;
-            var lp = pos, l = 0, ch;
-            while ( (lp < s.length) && (l <= maxlen) && ((ch=s[CHARCODE](lp)) < RANGE[0] || ch > RANGE[1]) ) 
+            var lp = pos, l = 0, sl = s.length, ch;
+            while ( (lp < sl) && (l <= maxlen) && ((ch=s[CHARCODE](lp)) < RANGE[0] || ch > RANGE[1]) ) 
             { 
                 lp++; l++;
             }
@@ -191,29 +191,9 @@
             pos = pos || 0;
             minlen = minlen || 1;
             maxlen = maxlen || INF;
-            var lp = pos, l = 0, ch, i, Rl = RANGES.length, RANGE, notfound;
-            while ( (lp < s.length) && (l <= maxlen) ) 
-            { 
-                ch = s[CHARCODE](lp); notfound = true;
-                for (i=0; i<Rl; i++)
-                {
-                    RANGE = RANGES[i];
-                    if ( ch >= RANGE[0] && ch <= RANGE[1] )
-                    {
-                        lp++; l++; notfound = false;
-                        break;
-                    }
-                }
-                if ( notfound ) break;
-            }
-            return l >= minlen ? l : false;
-        },
-        /*match_non_char_ranges = function( RANGES, s, pos, minlen, maxlen ) {
-            pos = pos || 0;
-            minlen = minlen || 1;
-            maxlen = maxlen || INF;
-            var lp = pos, l = 0, ch, i, Rl = RANGES.length, RANGE, notfound;
-            while ( (lp < s.length) && (l <= maxlen) ) 
+            var lp = pos, l = 0, sl = s.length, ch, 
+                i, Rl = RANGES.length, RANGE, found = true;
+            while ( (lp < sl) && (l <= maxlen) && found ) 
             { 
                 ch = s[CHARCODE](lp); found = false;
                 for (i=0; i<Rl; i++)
@@ -225,28 +205,48 @@
                         break;
                     }
                 }
-                if ( found ) break;
+            }
+            return l >= minlen ? l : false;
+        },
+        /*match_non_char_ranges = function( RANGES, s, pos, minlen, maxlen ) {
+            pos = pos || 0;
+            minlen = minlen || 1;
+            maxlen = maxlen || INF;
+            var lp = pos, l = 0, sl = s.length, ch, 
+                i, Rl = RANGES.length, RANGE, notfound = true;
+            while ( (lp < sl) && (l <= maxlen) && notfound ) 
+            { 
+                ch = s[CHARCODE](lp);
+                for (i=0; i<Rl; i++)
+                {
+                    RANGE = RANGES[i];
+                    if ( ch >= RANGE[0] && ch <= RANGE[1] )
+                    {
+                        lp++; l++; notfound = false;
+                        break;
+                    }
+                }
             }
             return l >= minlen ? l : false;
         },*/
-        match_literal = function( lit, s, pos, caseInsensitive ) {
-            var lp = pos, l = 0, mlen = lit.length;
+        /*match_literal = function( lit, s, pos, caseInsensitive ) {
+            var lp = pos, l = 0, mlen = lit.length, sl = s.length;
             if ( caseInsensitive )
             {
-                while ( (lp < s.length) && (l <= mlen) && (lit[CHAR](l).toLowerCase() === s[CHAR](lp).toLowerCase()) ) 
+                while ( (lp < sl) && (l <= mlen) && (lit[CHAR](l).toLowerCase() === s[CHAR](lp).toLowerCase()) ) 
                 { 
                     lp++; l++; 
                 }
             }
             else
             {
-                while ( (lp < s.length) && (l <= mlen) && (lit[CHAR](l) === s[CHAR](lp)) ) 
+                while ( (lp < sl) && (l <= mlen) && (lit[CHAR](l) === s[CHAR](lp)) ) 
                 { 
                     lp++; l++; 
                 }
             }
             return l === mlen;
-        },
+        },*/
         // TODO, generate RE matcher for given RE and string
         /*match = function match( s, pos, part, isCaseInsensitive ) {
             var m = false, p, i, l, type;
@@ -540,33 +540,34 @@
                     
                     else if ( "Special" == ptype )
                     {
-                        if ('D' == p.part)
+                        var p_part = p.part;
+                        if ('D' == p_part)
                         {
                             chars.push( digit( false ) );
                         }
-                        else if ('W' == p.part)
+                        else if ('W' == p_part)
                         {
                             chars.push( word( false ) );
                         }
-                        else if ('S' == p.part)
+                        else if ('S' == p_part)
                         {
                             chars.push( space( false ) );
                         }
-                        else if ('d' == p.part)
+                        else if ('d' == p_part)
                         {
                             chars.push( digit( ) );
                         }
-                        else if ('w' == p.part)
+                        else if ('w' == p_part)
                         {
                             chars.push( word( ) );
                         }
-                        else if ('s' == p.part)
+                        else if ('s' == p_part)
                         {
                             chars.push( space( ) );
                         }
                         else
                         {
-                            chars.push( '\\' + p.part );
+                            chars.push( '\\' + p_part );
                         }
                     }
                 }
@@ -580,37 +581,38 @@
             
             else if ( "Special" == type && !part.flags.MatchStart && !part.flags.MatchEnd )
             {
-                if ('D' == part.part)
+                var p_part = part.part;
+                if ('D' == p_part)
                 {
                     sample += digit( false );
                 }
-                else if ('W' == part.part)
+                else if ('W' == p_part)
                 {
                     sample += word( false );
                 }
-                else if ('S' == part.part)
+                else if ('S' == p_part)
                 {
                     sample += space( false );
                 }
-                else if ('d' == part.part)
+                else if ('d' == p_part)
                 {
                     sample += digit( );
                 }
-                else if ('w' == part.part)
+                else if ('w' == p_part)
                 {
                     sample += word( );
                 }
-                else if ('s' == part.part)
+                else if ('s' == p_part)
                 {
                     sample += space( );
                 }
-                else if ('.' == part.part)
+                else if ('.' == p_part)
                 {
                     sample += any( );
                 }
                 else
                 {
-                    sample += '\\' + part.part;
+                    sample += '\\' + p_part;
                 }
             }
                     
@@ -710,21 +712,22 @@
                     
                     else if ( "Special" == ptype )
                     {
-                        if ('D' == p.part)
+                        var p_part = p.part;
+                        if ('D' == p_part)
                         {
                             if (part.flags.NotMatch)
                                 peek[ '\\d' ] = 1;
                             else
                                 negativepeek[ '\\d' ] = 1;
                         }
-                        else if ('W' == p.part)
+                        else if ('W' == p_part)
                         {
                             if (part.flags.NotMatch)
                                 peek[ '\\w' ] = 1;
                             else
                                 negativepeek[ '\\W' ] = 1;
                         }
-                        else if ('S' == p.part)
+                        else if ('S' == p_part)
                         {
                             if (part.flags.NotMatch)
                                 peek[ '\\s' ] = 1;
@@ -733,7 +736,7 @@
                         }
                         else
                         {
-                            current['\\' + p.part] = 1;
+                            current['\\' + p_part] = 1;
                         }
                     }
                 }
@@ -779,7 +782,7 @@
             {
                 if ( match_char_ranges(HEXDIGITS_RANGES, s, 1, 2, 2) ) return [m=s.slice(0,3), m.slice(1)];
             }
-            return false
+            return false;
         },
         //unicodeRegex = /^u([0-9a-fA-F]{4})/,
         match_unicode = function( s ) {
@@ -788,12 +791,12 @@
             {
                 if ( match_char_ranges(HEXDIGITS_RANGES, s, 1, 4, 4) ) return [m=s.slice(0,5), m.slice(1)];
             }
-            return false
+            return false;
         },
         //repeatsRegex = /^\{\s*(\d+)\s*,?\s*(\d+)?\s*\}/,
         match_repeats = function( s ) {
-            var l, pos = 0, m = false, mch;
-            if ( s.length > 2 && '{' === s[CHAR](pos) )
+            var l, sl = s.length, pos = 0, m = false;
+            if ( sl > 2 && '{' === s[CHAR](pos) )
             {
                 m = ['', '', null];
                 pos++;
@@ -808,7 +811,7 @@
                     return false;
                 }
                 if ( l=match_chars(SPACES, s, pos) ) pos += l;
-                if ( ',' === s[CHAR](pos) ) pos += 1;
+                if ( pos < sl && ',' === s[CHAR](pos) ) pos += 1;
                 if ( l=match_chars(SPACES, s, pos) ) pos += l;
                 if ( l=match_char_range(DIGITS_RANGE, s, pos) ) 
                 {
@@ -816,7 +819,7 @@
                     pos += l;
                 }
                 if ( l=match_chars(SPACES, s, pos) ) pos += l;
-                if ( '}' === s[CHAR](pos) )
+                if ( pos < sl && '}' === s[CHAR](pos) )
                 {
                     pos++;
                     m[0] = s.slice(0, pos);
@@ -827,11 +830,11 @@
                     return false;
                 }
             }
-            return false
+            return false;
         },
         subgroup = function subgroup( self ) {
             var ch, word = '', alternation = [], sequence = [], flags = {}, flag, match, escaped = false,
-                pre = self.regex.substr(self.pos, 2);
+                pre = self.regex.substr(self.pos, 2), lre;
             
             if ( "?:" == pre )
             {
@@ -853,7 +856,8 @@
             
             flags[ "GroupIndex" ] = ++self.groupIndex;
             
-            while ( self.pos < self.regex.length )
+            lre = self.regex.length;
+            while ( self.pos < lre )
             {
                 ch = self.regex[CHAR]( self.pos++ );
                 
@@ -888,7 +892,7 @@
                         sequence.push( { part: match[0], flags: { "Char": fromCharCode(parseInt(match[1], 16)), "Code": match[1] }, type: "HexChar" } );
                     }
                     
-                    else if ( specialCharsEscaped[ch] && '/' != ch)
+                    else if ( specialCharsEscaped[HAS](ch) && '/' != ch)
                     {
                         if ( word.length )
                         {
@@ -976,7 +980,7 @@
                         self.pos += match[0].length-1;
                         flag = { part: match[0], "MatchMinimum": match[1], "MatchMaximum": match[2] || "unlimited" };
                         flag[ specialChars[ch] ] = 1;
-                        if ( '?' == self.regex[CHAR](self.pos) )
+                        if ( self.pos < lre && '?' == self.regex[CHAR](self.pos) )
                         {
                             flag[ "isGreedy" ] = 0;
                             self.pos++;
@@ -1004,7 +1008,7 @@
                         }
                         flag = {};
                         flag[ specialChars[ch] ] = 1;
-                        if ( '?' == self.regex[CHAR](self.pos) )
+                        if ( self.pos < lre && '?' == self.regex[CHAR](self.pos) )
                         {
                             flag[ "isGreedy" ] = 0;
                             self.pos++;
@@ -1023,7 +1027,7 @@
                     }
                 
                     // special characters like ^, $, ., etc..
-                    else if ( specialChars[ch] )
+                    else if ( specialChars[HAS](ch) )
                     {
                         if ( word.length )
                         {
@@ -1061,7 +1065,8 @@
         },
         
         chargroup = function chargroup( self ) {
-            var sequence = [], chars = [], flags = {}, flag, ch, prevch, range, isRange = false, match, isUnicode, escaped = false;
+            var sequence = [], chars = [], flags = {}, flag, ch, lre,
+            prevch, range, isRange = false, match, isUnicode, escaped = false;
             
             if ( '^' == self.regex[CHAR]( self.pos ) )
             {
@@ -1069,7 +1074,8 @@
                 self.pos++;
             }
                     
-            while ( self.pos < self.regex.length )
+            lre = self.regex.length;
+            while ( self.pos < lre )
             {
                 isUnicode = false;
                 prevch = ch;
@@ -1114,7 +1120,7 @@
                 {
                     if ( escaped )
                     {
-                        if ( !isUnicode && specialCharsEscaped[ch] && '/' != ch)
+                        if ( !isUnicode && specialCharsEscaped[HAS](ch) && '/' != ch)
                         {
                             if ( chars.length )
                             {
@@ -1167,11 +1173,12 @@
             return { part: sequence, flags: flags, type: "CharGroup" };
         },
         
-        analyze = function analyze( regex ) {
-            var self = {pos: 0, groupIndex: 0, regex: regex};
+        analyze_re = function analyze_re( regex ) {
+            var self = {pos: 0, groupIndex: 0, regex: regex}, lre;
             var ch, word = '', alternation = [], sequence = [], flag, match, escaped = false;
             
-            while ( self.pos < self.regex.length )
+            lre = self.regex.length;
+            while ( self.pos < lre )
             {
                 ch = self.regex[CHAR]( self.pos++ );
                 
@@ -1207,7 +1214,7 @@
                         sequence.push( { part: match[0], flags: { "Char": fromCharCode(parseInt(match[1], 16)), "Code": match[1] }, type: "HexChar" } );
                     }
                     
-                    else if ( specialCharsEscaped[ch] && '/' != ch)
+                    else if ( specialCharsEscaped[HAS](ch) && '/' != ch)
                     {
                         if ( word.length )
                         {
@@ -1273,7 +1280,7 @@
                         self.pos += match[0].length-1;
                         flag = { part: match[0], "MatchMinimum": match[1], "MatchMaximum": match[2] || "unlimited" };
                         flag[ specialChars[ch] ] = 1;
-                        if ( '?' == self.regex[CHAR](self.pos) )
+                        if ( self.pos < lre && '?' == self.regex[CHAR](self.pos) )
                         {
                             flag[ "isGreedy" ] = 0;
                             self.pos++;
@@ -1301,7 +1308,7 @@
                         }
                         flag = {};
                         flag[ specialChars[ch] ] = 1;
-                        if ( '?' == self.regex[CHAR](self.pos) )
+                        if ( self.pos < lre && '?' == self.regex[CHAR](self.pos) )
                         {
                             flag[ "isGreedy" ] = 0;
                             self.pos++;
@@ -1320,7 +1327,7 @@
                     }
                 
                     // special characters like ^, $, ., etc..
-                    else if ( specialChars[ch] )
+                    else if ( specialChars[HAS](ch) )
                     {
                         if ( word.length )
                         {
@@ -1412,7 +1419,7 @@
             var self = this;
             if ( self.$needsRefresh )
             {
-                self.$parts = analyze( self.$regex );
+                self.$parts = analyze_re( self.$regex );
                 self.$needsRefresh = false;
             }
             return self;

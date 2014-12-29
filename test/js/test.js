@@ -57,7 +57,7 @@ echo("================");
 echo();
 
 var Analyzer = require('../../src/js/regexanalyzer.js'),
-    anal, peekChars, sampleStr, inregex = process.argv[2] || /xyz[abc0-9]{2,3}/gmi
+    anal, peekChars, sampleStr, inregex = process.argv[2] || /xyz[abc0-9]{2,3}/i
 ;
 
 echo("Testing Analyzer.VERSION = " + Analyzer.VERSION);

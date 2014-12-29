@@ -7,12 +7,12 @@ Expected: /^([_a-z][_a-z0-9]*|\*\*aabb\*\*|.|\s|\D+)*?$/i
 
 Testing Analyzer.VERSION = 0.4.3
 ================
-Input: /xyz[abc0-9]{2,3}/gim
+Input: /xyz[abc0-9]{2,3}/i
 
 Regular Expression: xyz[abc0-9]{2,3}
 
 Regular Expression Flags: 
-{ m: 1, i: 1, g: 1 }
+{ i: 1 }
 
 Regular Expression Parts: 
 {
@@ -70,6 +70,6 @@ Regular Expression Peek Characters:
 }
 
 Regular Expression Sample Match String: 
-xyz08 -> Matched
+xyzb8 -> Matched
 ================
 

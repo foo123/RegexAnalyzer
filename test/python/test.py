@@ -1,83 +1,54 @@
-#
-#
-# use as: node test.js "your_regex_here" > output.txt
+#!/usr/bin/env python
 
-function echo_($s="")
-{
-    echo $s . PHP_EOL;
-}
+import os, sys
+import pprint
 
-echo_("Testing Composer");
+# import the Dromeo.py engine (as a) module, probably you will want to place this in another dir/package
+import imp
+RAModulePath = os.path.join(os.path.dirname(__file__), '../../src/python/')
+try:
+    RAFp, RAPath, RADesc  = imp.find_module('regexanalyzer', [RAModulePath])
+    RegExAnalyzer = getattr( imp.load_module('regexanalyzer', RAFp, RAPath, RADesc), 'RegExAnalyzer' )
+except ImportError as exc:
+    RegExAnalyzer = None
+    sys.stderr.write("Error: failed to import module ({})".format(exc))
+finally:
+    if RAFp: RAFp.close()
+
+if not RegExAnalyzer:
+    print ('Could not load the RegExAnalyzer Module')
+    sys.exit(1)
+else:    
+    print ('RegExAnalyzer Module loaded succesfully')
+
+
+def echo_( o='' ):
+    print( str(o) + "\n" )
+
+echo_("Testing Analyzer.VERSION = " + RegExAnalyzer.VERSION)
 echo_("================");
 
-include('../../src/php/regexcomposer.php');
+# test it
+inregex = '/xyz[abc0-9]{2,3}/i'
+anal = RegExAnalyzer( inregex )
+peekChars = anal.getPeekChars( )
+sampleStr = anal.generateSample( )
+test_regex = anal.getRegex()
 
-$identifierSubRegex = new RegExComposer();
-$identifierSubRegex = $identifierSubRegex                
-                ->characterGroup()
-                    ->characters('_')
-                    ->range('a', 'z')
-                ->end()
-                
-                ->characterGroup()
-                    ->characters('_')
-                    ->range('a', 'z')
-                    ->range('0', '9')
-                ->end()
-                
-                ->zeroOrMore()
-            
-                ->partial();
-
-$outregex = new RegExComposer();
-$outregex = $outregex                    
-                    ->startOfInput()
-                    
-                    ->either()
-                        
-                        ->sub($identifierSubRegex)
-                        
-                        ->match('**aabb**')
-                        
-                        ->any()
-                        
-                        ->space()
-                        
-                        ->digit(false)->oneOrMore()
-                    
-                    ->end()
-                    
-                    ->zeroOrMore(false)
-                    
-                    ->endOfInput()
-                    
-                    ->compose('i');
-    
-echo_("Partial: " . $identifierSubRegex);
-echo_("Composed: " . $outregex);
-echo_("Expected: " . "/^([_a-z][_a-z0-9]*|\\*\\*aabb\\*\\*|.|\\s|\\D+)*?$/i");
-echo_("================");
-echo_();
-
-echo_("Testing Analyzer");
-echo_("================");
-
-include('../../src/php/regexanalyzer.php');
-
-$inregex = '/^(?:[^\\u0000-\\u1234a-zA-Z\\d\\-\\.\\*\\+\\?\\^\\$\\{\\}\\(\\)\\|\\[\\]\\/\\\\]+)|abcdef\\u1234{1,}/gmi';
-$anal = new RegExAnalyzer($inregex);
-
-// test it
-$anal->analyze();
-
-echo_("Input: " . $inregex);
-echo_();
-echo_("Regular Expression: " . $anal->regex);
-echo_();
-echo_("Regular Expression Flags: ");
-echo_(print_r($anal->flags, true));
-echo_();
-echo_("Regular Expression Parts: ");
-echo_(print_r($anal->parts, true));
-echo_("================");
-echo_();
+echo_("Input: " + inregex)
+echo_()
+echo_("Regular Expression: " + anal._regex)
+echo_()
+echo_("Regular Expression Flags: ")
+echo_(pprint.pformat(anal._flags, 4))
+echo_()
+echo_("Regular Expression Parts: ")
+echo_(pprint.pformat(anal._parts, 4))
+echo_()
+echo_("Regular Expression Peek Characters: ")
+echo_(pprint.pformat(peekChars, 4))
+echo_()
+echo_("Regular Expression Sample Match String: ")
+echo_(sampleStr + ' -> ' + ('Matched' if test_regex.match(sampleStr) else 'NOT Matched'))
+echo_("================")
+echo_()

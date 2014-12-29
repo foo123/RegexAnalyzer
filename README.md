@@ -5,7 +5,7 @@ RegexAnalyzer and RegexComposer
 * A simple and intuitive Regular Expression Composer for PHP, Python, Node/JS, ActionScript (TODO)
 
 
-*PHP / Python / ActionScript implementations in progress*
+*RegexComposer PHP / Python / ActionScript implementations in progress*
 
 
 These are used mostly as parts of other projects but uploaded here as standalone.
