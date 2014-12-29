@@ -7,6 +7,15 @@ RegexAnalyzer and RegexComposer
 
 *RegexComposer PHP / Python / ActionScript implementations in progress*
 
+**see also:**  
+
+* [Contemplate](https://github.com/foo123/Contemplate) a light-weight template engine for Node/JS, PHP, Python, ActionScript
+* [ModelView](https://github.com/foo123/modelview.js) a light-weight and flexible MVVM framework for JavaScript/HTML5
+* [ModelView MVC jQueryUI Widgets](https://github.com/foo123/modelview-widgets) plug-n-play, state-full, full-MVC widgets for jQueryUI using modelview.js (e.g calendars, datepickers, colorpickers, tables/grids, etc..) (in progress)
+* [Dromeo](https://github.com/foo123/Dromeo) a flexible routing framework for PHP, Python, Node/JS, ActionScript
+* [PublishSubscribe](https://github.com/foo123/PublishSubscribe) a flexible Publish-Subscribe implementation for Node/JS, PHP, Python, ActionScript
+* [Xpresion](https://github.com/foo123/https://github.com/foo123/Xpresion) a simple and flexible eXpression parser engine (with custom functions and variables support) for PHP, Python, Node/JS, ActionScript
+
 
 These are used mostly as parts of other projects but uploaded here as standalone.
 
