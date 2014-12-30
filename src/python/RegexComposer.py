@@ -1,24 +1,22 @@
-<?php
-/**
-*
-*   RegExComposer
-*   @version: 0.1
-*
-*   A simple and intuitive Regular Expression Composer in PHP
-*   https://github.com/foo123/RegexAnalyzer
-*
-**/
-if ( !class_exists('RegExComposer') )
-{
-class RegExComposer
-{
+# -*- coding: UTF-8 -*-
+##
+#
+#   RegexComposer
+#   @version: 0.1
+#
+#   A simple and intuitive Regular Expression Composer in Python
+#   https://github.com/foo123/RegexAnalyzer
+#
+##
+class RegexComposer:
+
     
-    const VERSION = "0.1";
+    VERSION = "0.1"
     
-    const T_SEQ = 2; 
-    const T_EITHER = 4; 
-    const T_GROUP = 8; 
-    const T_CHARGROUP = 16;
+    T_SEQ = 2
+    T_EITHER = 4
+    T_GROUP = 8
+    T_CHARGROUP = 16
     
     private $level = 0;
     public $regex = null;
@@ -279,5 +277,5 @@ class RegExComposer
         return $this;
     }
     
-}
-}
+# if used with 'import *'
+__all__ = ['RegexComposer']

@@ -1,18 +1,29 @@
 <?php
 /**
 *
-*   RegExAnalyzer
-*   @version: 0.4.3
+*   RegexAnalyzer
+*   @version: 0.4.4
 *
 *   A simple Regular Expression Analyzer for PHP, Python, Node/JS, ActionScript
 *   https://github.com/foo123/RegexAnalyzer
 *
 **/
-if ( !class_exists('RegExAnalyzer') )
+if ( !class_exists('RegexAnalyzer') )
 {
-class RegExAnalyzer
+class RegexAnalyzer
 {
-    const VERSION = "0.4.3";
+    const VERSION = "0.4.4";
+    const T_SEQUENCE = 1; 
+    const T_ALTERNATION = 2; 
+    const T_GROUP = 3;
+    const T_QUANTIFIER = 4; 
+    const T_UNICODECHAR = 5; 
+    const T_HEXCHAR = 6;
+    const T_SPECIAL = 7;
+    const T_CHARGROUP = 8; 
+    const T_CHARS = 9;
+    const T_CHARRANGE = 10; 
+    const T_STRING = 11;
     
     public static $escapeChar = null;
     public static $specialChars = null;
@@ -112,10 +123,7 @@ class RegExAnalyzer
         {
             if ( $p2 == array_values($p2) ) $arr = $p2;
             else $arr = array_keys($p2);
-            foreach ($arr as $p)
-            {
-                $p1[ $p ] = 1;
-            }
+            foreach ($arr as $p) $p1[ $p ] = 1;
         }
         return $p1;
     }
@@ -256,17 +264,17 @@ class RegExAnalyzer
         
         $type = $part['type'];
         // walk the sequence
-        if ( "Alternation" == $type )
+        if ( self::T_ALTERNATION === $type )
         {
             $sample .= self::generate( $part['part'][rand(0, count($part['part'])-1)], $isCaseInsensitive );
         }
         
-        elseif ( "Group" == $type )
+        elseif ( self::T_GROUP === $type )
         {
             $sample .= self::generate( $part['part'], $isCaseInsensitive );
         }
         
-        elseif ( "Sequence" == $type )
+        elseif ( self::T_SEQUENCE === $type )
         {
             $i = 0;
             $l = count($part['part']);
@@ -276,7 +284,7 @@ class RegExAnalyzer
                 $p = $part['part'][$i];
                 if ( !$p ) continue;
                 $repeat = 1;
-                if ( "Quantifier" == $p['type'] )
+                if ( self::T_QUANTIFIER === $p['type'] )
                 {
                     if ( isset($p['flags']['MatchZeroOrMore']) && $p['flags']['MatchZeroOrMore'] ) $repeat = rand(0, 10);
                     elseif ( isset($p['flags']['MatchZeroOrOne']) && $p['flags']['MatchZeroOrOne'] ) $repeat = rand(0, 1);
@@ -293,7 +301,7 @@ class RegExAnalyzer
                         $sample .= self::generate( $p['part'], $isCaseInsensitive );
                     }
                 }
-                else if ( "Special" == $p['type'] )
+                else if ( self::T_SPECIAL === $p['type'] )
                 {
                     if ( isset($p['flags']['MatchAnyChar']) && $p['flags']['MatchAnyChar'] ) $sample .= self::any( );
                 }
@@ -304,7 +312,7 @@ class RegExAnalyzer
             }
         }
         
-        elseif ( "CharGroup" == $type )
+        elseif ( self::T_CHARGROUP === $type )
         {
             $chars = array();
             $l = count($part['part']);
@@ -312,7 +320,7 @@ class RegExAnalyzer
             {
                 $p = $part['part'][$i];
                 $ptype = $p['type'];
-                if ( "Chars" == $ptype )
+                if ( self::T_CHARS === $ptype )
                 {
                     if ( $isCaseInsensitive )
                         $chars = array_merge($chars, self::case_insensitive( $p['part'], true ) );
@@ -320,7 +328,7 @@ class RegExAnalyzer
                         $chars = array_merge($chars, $p['part'] );
                 }
                 
-                elseif ( "CharRange" == $ptype )
+                elseif ( self::T_CHARRANGE === $ptype )
                 {
                     if ( $isCaseInsensitive )
                         $chars = array_merge($chars, self::case_insensitive( self::character_range($p['part']), true ) );
@@ -328,12 +336,12 @@ class RegExAnalyzer
                         $chars = array_merge($chars, self::character_range($p['part']) );
                 }
                 
-                elseif ( "UnicodeChar" == $ptype || "HexChar" == $ptype )
+                elseif ( self::T_UNICODECHAR === $ptype || self::T_HEXCHAR === $ptype )
                 {
                     $chars[] = $isCaseInsensitive ? self::case_insensitive( $p['flags']['Char'] ): $p['flags']['Char'];
                 }
                 
-                elseif ( "Special" == $ptype )
+                elseif ( self::T_SPECIAL === $ptype )
                 {
                     $p_part = $p['part'];
                     if ('D' == $p_part)
@@ -369,12 +377,12 @@ class RegExAnalyzer
             $sample .= self::character($chars, isset($part['flags']['NotMatch']) && $part['flags']['NotMatch'] ? false: true);
         }
         
-        elseif ( "String" == $type )
+        elseif ( self::T_STRING === $type )
         {
             $sample .= $isCaseInsensitive ? self::case_insensitive( $part['part'] ) : $part['part'];
         }
         
-        elseif ( "Special" == $type && 
+        elseif ( self::T_SPECIAL === $type && 
             (!isset($part['flags']['MatchStart']) || !$part['flags']['MatchStart']) && 
             (!isset($part['flags']['MatchEnd']) || !$part['flags']['MatchEnd']) )
         {
@@ -413,7 +421,7 @@ class RegExAnalyzer
             }
         }
                 
-        elseif ( "UnicodeChar" == $type || "HexChar" == $type )
+        elseif ( self::T_UNICODECHAR === $type || self::T_HEXCHAR === $type )
         {
             $sample .= $isCaseInsensitive ? self::case_insensitive( $part['flags']['Char'] ) : $part['flags']['Char'];
         }
@@ -428,7 +436,7 @@ class RegExAnalyzer
         
         $type = $part['type'];
         // walk the sequence
-        if ( "Alternation" == $type )
+        if ( self::T_ALTERNATION === $type )
         {
             $l = count($part['part']);
             for ($i=0; $i<$l; $i++)
@@ -439,20 +447,20 @@ class RegExAnalyzer
             }
         }
         
-        elseif ( "Group" == $type )
+        elseif ( self::T_GROUP === $type )
         {
             $tmp = self::peek_characters( $part['part'] );
             $peek = self::concat( $peek, $tmp['peek'] );
             $negativepeek = self::concat( $negativepeek, $tmp['negativepeek'] );
         }
         
-        elseif ( "Sequence" == $type )
+        elseif ( self::T_SEQUENCE === $type )
         {
             $i = 0;
             $l = count($part['part']);
             $p = $part['part'][$i];
             $done = ( 
-                $i >= $l || !$p || "Quantifier" != $p['type'] || 
+                $i >= $l || !$p || self::T_QUANTIFIER !== $p['type'] || 
                 ( !isset($p['flags']['MatchZeroOrMore']) && !isset($p['flags']['MatchZeroOrOne']) && (!isset($p['flags']['MatchMinimum']) || "0"!=$p['flags']['MatchMinimum']) ) 
             );
             while ( !$done )
@@ -465,7 +473,7 @@ class RegExAnalyzer
                 $p = $part['part'][$i];
                 
                 $done = ( 
-                    $i >= $l || !$p || "Quantifier" != $p['type'] || 
+                    $i >= $l || !$p || self::T_QUANTIFIER !== $p['type'] || 
                     ( !isset($p['flags']['MatchZeroOrMore']) && !isset($p['flags']['MatchZeroOrOne']) && (!isset($p['flags']['MatchMinimum']) || "0"!=$p['flags']['MatchMinimum']) ) 
                 );
             }
@@ -473,10 +481,10 @@ class RegExAnalyzer
             {
                 $p = $part['part'][$i];
                 
-                if ("Special" == $p['type'] && ('^'==$p['part'] || '$'==$p['part'])) 
+                if (self::T_SPECIAL === $p['type'] && ('^'==$p['part'] || '$'==$p['part'])) 
                     $p = isset($part['part'][$i+1]) ? $part['part'][$i+1] : null;
                 
-                if ($p && "Quantifier" == $p['type']) $p = $p['part'];
+                if ($p && self::T_QUANTIFIER === $p['type']) $p = $p['part'];
                 
                 if ($p)
                 {
@@ -487,7 +495,7 @@ class RegExAnalyzer
             }
         }
         
-        elseif ( "CharGroup" == $type )
+        elseif ( self::T_CHARGROUP === $type )
         {
             $isNegative = isset($part['flags']['NotMatch']) && $part['flags']['NotMatch'];
             $current = array();
@@ -497,22 +505,22 @@ class RegExAnalyzer
             {
                 $p = $part['part'][$i];
                 $ptype = $p['type'];
-                if ( "Chars" == $ptype )
+                if ( self::T_CHARS === $ptype )
                 {
                     $current = self::concat( $current, $p['part'] );
                 }
                 
-                elseif ( "CharRange" == $ptype )
+                elseif ( self::T_CHARRANGE === $ptype )
                 {
                     $current = self::concat( $current, self::character_range($p['part']) );
                 }
                 
-                elseif ( "UnicodeChar" == $ptype || "HexChar" == $ptype )
+                elseif ( self::T_UNICODECHAR === $ptype || self::T_HEXCHAR === $ptype )
                 {
                     $current[$p['flags']['Char']] = 1;
                 }
                 
-                elseif ( "Special" == $ptype )
+                elseif ( self::T_SPECIAL === $ptype )
                 {
                     $p_part = $p['part'];
                     if ('D' == $p_part)
@@ -548,12 +556,12 @@ class RegExAnalyzer
                 $peek = self::concat($peek, $current);
         }
         
-        elseif ( "String" == $type )
+        elseif ( self::T_STRING === $type )
         {
             $peek[$part['part'][0]] = 1;
         }
         
-        elseif ( "Special" == $type && 
+        elseif ( self::T_SPECIAL === $type && 
             (!isset($part['flags']['MatchStart']) || !$part['flags']['MatchStart']) && 
             (!isset($part['flags']['MatchEnd']) || !$part['flags']['MatchEnd']) )
         {
@@ -576,7 +584,7 @@ class RegExAnalyzer
             }
         }
                 
-        elseif ( "UnicodeChar" == $type || "HexChar" == $type )
+        elseif ( self::T_UNICODECHAR === $type || self::T_HEXCHAR === $type )
         {
             $peek[$part['flags']['Char']] = 1;
         }
@@ -643,444 +651,7 @@ class RegExAnalyzer
         }
         return false;
     }
-    private static function analyze_re( $regex ) 
-    {
-        $obj = (object)array(
-            'regex'=>$regex,
-            'pos'=>0,
-            'groupIndex'=>0
-        );
-        $word = ''; 
-        $alternation = array(); 
-        $sequence = array(); 
-        $escaped = false;
-        
-        $lre = strlen($obj->regex);
-        while ( $obj->pos < $lre )
-        {
-            $ch = $obj->regex[ $obj->pos++ ];
-            
-            //   \\abc
-            $escaped = (self::$escapeChar == $ch) ? true : false;
-            if ( $obj->pos < $lre && $escaped )  $ch = $obj->regex[ $obj->pos++ ];
-            
-            if ( $escaped )
-            {
-                // unicode character
-                if ( 'u' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
-                    $match = self::match_unicode(substr($obj->regex, $obj->pos-1));
-                    $obj->pos += strlen($match[0])-1;
-                    $sequence[] = array( 'part'=> $match[0], 'flags'=> array( "Char"=> chr(intval($match[1], 16)), "Code"=> $match[1] ), 'type'=> "UnicodeChar" );
-                }
-                
-                // hex character
-                else if ( 'x' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
-                    $match = self::match_hex(substr($obj->regex, $obj->pos-1));
-                    $obj->pos += strlen($match[0])-1;
-                    $sequence[] = array( 'part'=> $match[0], 'flags'=> array( "Char"=> chr(intval($match[1], 16)), "Code"=> $match[1] ), 'type'=> "HexChar" );
-                }
-                
-                else if ( isset(self::$specialCharsEscaped[$ch]) && '/' != $ch)
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
-                    $flag = array();
-                    $flag[ self::$specialCharsEscaped[$ch] ] = 1;
-                    $sequence[] = array( 'part'=> $ch, 'flags'=> $flag, 'type'=> "Special" );
-                }
-                
-                else
-                {
-                    $word .= $ch;
-                }
-            }
-            
-            else
-            {
-                // parse alternation
-                if ( '|' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[]  = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
-                    $alternation[] = array( 'part'=> $sequence, 'flags'=> array(), 'type'=> "Sequence" );
-                    $sequence = array();
-                }
-                
-                // parse character group
-                else if ( '[' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
-                    $sequence[] = self::chargroup( $obj );
-                }
-                
-                // parse sub-group
-                else if ( '(' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
-                    $sequence[] = self::subgroup( $obj );
-                }
-                
-                // parse num repeats
-                else if ( '{' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
-                    $match = self::match_repeats(substr($obj->regex, $obj->pos-1));
-                    $obj->pos += strlen($match[0])-1;
-                    $flag = array( 'part'=> $match[0], "MatchMinimum"=> $match[1], "MatchMaximum"=> isset($match[2]) ? $match[2] : "unlimited" );
-                    $flag[ self::$specialChars[$ch] ] = 1;
-                    if ( $obj->pos < $lre && '?' == $obj->regex[$obj->pos] )
-                    {
-                        $flag[ "isGreedy" ] = 0;
-                        $obj->pos++;
-                    }
-                    else
-                    {
-                        $flag[ "isGreedy" ] = 1;
-                    }
-                    $prev = array_pop($sequence);
-                    if ( "String" == $prev['type'] && strlen($prev['part']) > 1 )
-                    {
-                        $sequence[] = array( 'part'=> substr($prev['part'], 0, -1), 'flags'=> array(), 'type'=> "String" );
-                        $prev['part'] = substr($prev['part'], -1);
-                    }
-                    $sequence[] = array( 'part'=> $prev, 'flags'=> $flag, 'type'=> "Quantifier" );
-                }
-                
-                // quantifiers
-                else if ( '*' == $ch || '+' == $ch || '?' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
-                    $flag = array();
-                    $flag[ self::$specialChars[$ch] ] = 1;
-                    if ( $obj->pos < $lre && '?' == $obj->regex[$obj->pos] )
-                    {
-                        $flag[ "isGreedy" ] = 0;
-                        $obj->pos++;
-                    }
-                    else
-                    {
-                        $flag[ "isGreedy" ] = 1;
-                    }
-                    $prev = array_pop($sequence);
-                    if ( "String" == $prev['type'] && strlen($prev['part']) > 1 )
-                    {
-                        $sequence[] = array( 'part'=> substr($prev['part'], 0, -1), 'flags'=> array(), 'type'=> "String" );
-                        $prev['part'] = substr($prev['part'], -1);
-                    }
-                    $sequence[] = array( 'part'=> $prev, 'flags'=> $flag, 'type'=> "Quantifier" );
-                }
-            
-                // special characters like ^, $, ., etc..
-                else if ( isset(self::$specialChars[$ch]) )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
-                    $flag = array();
-                    $flag[ self::$specialChars[$ch] ] = 1;
-                    $sequence[] = array( 'part'=> $ch, 'flags'=> $flag, 'type'=> "Special" );
-                }
-            
-                else
-                {
-                    $word .= $ch;
-                }
-            }
-        }
-        
-        if ( strlen($word) )
-        {
-            $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-            $word = '';
-        }
-        
-        if ( count($alternation) )
-        {
-            $alternation[] = array( 'part'=> $sequence, 'flags'=> array(), 'type'=> "Sequence" );
-            $sequence = array();
-            $flag = array();
-            $flag[ self::$specialChars['|'] ] = 1;
-            return array( 'part'=> $alternation, 'flags'=> $flag, 'type'=> "Alternation" );
-        }
-        else
-        {
-            return array( 'part'=> $sequence, 'flags'=> array(), 'type'=> "Sequence" );
-        }
-    }
-    private static function subgroup( &$obj ) 
-    {
-        
-        $word = ''; 
-        $alternation = array(); 
-        $sequence = array(); 
-        $flags = array(); 
-        $escaped = false;
-        
-        $pre = substr($obj->regex, $obj->pos, 2);
-        
-        if ( "?:" == $pre )
-        {
-            $flags[ "NotCaptured" ] = 1;
-            $obj->pos += 2;
-        }
-        
-        else if ( "?=" == $pre )
-        {
-            $flags[ "LookAhead" ] = 1;
-            $obj->pos += 2;
-        }
-        
-        else if ( "?!" == $pre )
-        {
-            $flags[ "NegativeLookAhead" ] = 1;
-            $obj->pos += 2;
-        }
-        
-        $flags[ "GroupIndex" ] = ++$obj->groupIndex;
-        $lre = strlen($obj->regex);
-        while ( $obj->pos < $lre )
-        {
-            $ch = $obj->regex[ $obj->pos++ ];
-            
-            $escaped = (self::$escapeChar == $ch) ? true : false;
-            if ( $obj->pos < $l && $escaped )  $ch = $obj->regex[ $obj->pos++ ];
-            
-            if ( $escaped )
-            {
-                // unicode character
-                if ( 'u' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
-                    $match = self::match_unicode(substr($obj->regex, $obj->pos-1));
-                    $obj->pos += strlen($match[0])-1;
-                    $sequence[] = array( 'part'=> $match[0], 'flags'=> array( "Char"=> chr(intval($match[1], 16)), "Code"=> $match[1] ), 'type'=> "UnicodeChar" );
-                }
-                
-                // hex character
-                else if ( 'x' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
-                    $match = self::match_hex(substr($obj->regex, $obj->pos-1));
-                    $obj->pos += strlen($match[0])-1;
-                    $sequence[] = array( 'part'=> $match[0], 'flags'=> array( "Char"=> chr(intval($match[1], 16)), "Code"=> $match[1] ), 'type'=> "HexChar" );
-                }
-                
-                else if ( isset(self::$specialCharsEscaped[$ch]) && '/' != $ch)
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
-                    $flag = array();
-                    $flag[ self::$specialCharsEscaped[$ch] ] = 1;
-                    $sequence[] = array( 'part'=> $ch, 'flags'=> $flag, 'type'=> "Special" );
-                }
-                
-                else
-                {
-                    $word .= $ch;
-                }
-            }
-            
-            else
-            {
-                // group end
-                if ( ')' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
-                    if ( count($alternation) )
-                    {
-                        $alternation[] = array( 'part'=> $sequence, 'flags'=> array(), 'type'=> "Sequence" );
-                        $sequence = array();
-                        $flag = array();
-                        $flag[ self::$specialChars['|'] ] = 1;
-                        return array( 'part'=> array( 'part'=> $alternation, 'flags'=> $flag, 'type'=> "Alternation" ), 'flags'=> $flags, 'type'=> "Group" );
-                    }
-                    else
-                    {
-                        return array( 'part'=> array( 'part'=> $sequence, 'flags'=> array(), 'type'=> "Sequence" ), 'flags'=> $flags, 'type'=> "Group" );
-                    }
-                }
-                
-                // parse alternation
-                else if ( '|' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
-                    $alternation[] = array( 'part'=> $sequence, 'flags'=> array(), 'type'=> "Sequence" );
-                    $sequence = array();
-                }
-                
-                // parse character group
-                else if ( '[' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
-                    $sequence[] = self::chargroup( $obj );
-                }
-                
-                // parse sub-group
-                else if ( '(' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
-                    $sequence[] = self::subgroup( $obj );
-                }
-                
-                // parse num repeats
-                else if ( '{' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
-                    $match = self::match_repeats(substr($obj->regex, $obj->pos-1));
-                    $obj->pos += strlen($match[0])-1;
-                    $flag = array( 'part'=> $match[0], "MatchMinimum"=> $match[1], "MatchMaximum"=> isset($match[2]) ? $match[2] : "unlimited" );
-                    $flag[ self::$specialChars[$ch] ] = 1;
-                    if ( $obj->pos < $lre && '?' == $obj->regex[$obj->pos] )
-                    {
-                        $flag[ "isGreedy" ] = 0;
-                        $obj->pos++;
-                    }
-                    else
-                    {
-                        $flag[ "isGreedy" ] = 1;
-                    }
-                    $prev = array_pop($sequence);
-                    if ( "String" == $prev['type'] && strlen($prev['part']) > 1 )
-                    {
-                        $sequence[] = array( 'part'=> substr($prev['part'], 0, -1), 'flags'=> array(), 'type'=> "String" );
-                        $prev['part'] = substr($prev['part'], -1);
-                    }
-                    $sequence[] = array( 'part'=> $prev, 'flags'=> $flag, 'type'=> "Quantifier" );
-                }
-                
-                // quantifiers
-                else if ( '*' == $ch || '+' == $ch || '?' == $ch )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
-                    $flag = array();
-                    $flag[ self::$specialChars[$ch] ] = 1;
-                    if ( $obj->pos < $lre && '?' == $obj->regex[$obj->pos] )
-                    {
-                        $flag[ "isGreedy" ] = 0;
-                        $obj->pos++;
-                    }
-                    else
-                    {
-                        $flag[ "isGreedy" ] = 1;
-                    }
-                    $prev = array_pop($sequence);
-                    if ( "String" == $prev['type'] && strlen($prev['part']) > 1 )
-                    {
-                        $sequence[] = array( 'part'=> substr($prev['part'], 0, -1), 'flags'=> array(), 'type'=> "String" );
-                        $prev['part'] = substr($prev['part'], -1);
-                    }
-                    $sequence[] = array( 'part'=> $prev, 'flags'=> $flag, 'type'=> "Quantifier" );
-                }
-            
-                // special characters like ^, $, ., etc..
-                else if ( isset(self::$specialChars[$ch]) )
-                {
-                    if ( strlen($word) )
-                    {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-                        $word = '';
-                    }
-                    $flag = array();
-                    $flag[ self::$specialChars[$ch] ] = 1;
-                    $sequence[] = array( 'part'=> $ch, 'flags'=> $flag, 'type'=> "Special" );
-                }
-            
-                else
-                {
-                    $word .= $ch;
-                }
-            }
-        }
-        if ( strlen($word) )
-        {
-            $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'type'=> "String" );
-            $word = '';
-        }
-        if ( count($alternation) )
-        {
-            $alternation[] = array( 'part'=> $sequence, 'flags'=> array(), 'type'=> "Sequence" );
-            $sequence = array();
-            $flag = array();
-            $flag[ self::$specialChars['|'] ] = 1;
-            return array( 'part'=> array( 'part'=> $alternation, 'flags'=> $flag, 'type'=> "Alternation" ), 'flags'=> $flags, 'type'=> "Group" );
-        }
-        else
-        {
-            return array( 'part'=> array( 'part'=> $sequence, 'flags'=> array(), 'type'=> "Sequence" ), 'flags'=> $flags, 'type'=> "Group" );
-        }
-    }
-    private static function chargroup( &$obj ) 
+    private static function chargroup( &$re_obj ) 
     {
         
         $sequence = array(); 
@@ -1090,38 +661,38 @@ class RegExAnalyzer
         $escaped = false;
         $ch = '';
         
-        if ( '^' == $obj->regex[ $obj->pos ] )
+        if ( '^' == $re_obj->re[ $re_obj->pos ] )
         {
             $flags[ "NotMatch" ] = 1;
-            $obj->pos++;
+            $re_obj->pos++;
         }
-        $lre = strlen($obj->regex);
-        while ( $obj->pos < $lre )
+        $lre = $re_obj->len;
+        while ( $re_obj->pos < $lre )
         {
             $isUnicode = false;
             $prevch = $ch;
-            $ch = $obj->regex[ $obj->pos++ ];
+            $ch = $re_obj->re[ $re_obj->pos++ ];
             
             $escaped = (self::$escapeChar == $ch) ? true : false;
-            if ( $obj->pos < $lre && $escaped )  $ch = $obj->regex[ $obj->pos++ ];
+            if ( $re_obj->pos < $lre && $escaped )  $ch = $re_obj->re[ $re_obj->pos++ ];
             
             if ( $escaped )
             {
                 // unicode character
                 if ( 'u' == $ch )
                 {
-                    $match = self::match_unicode(substr($obj->regex, $obj->pos-1));
-                    $obj->pos += strlen($match[0])-1;
-                    $ch = chr(intval($match[1], 16));
+                    $m = self::match_unicode(substr($re_obj->re, $re_obj->pos-1));
+                    $re_obj->pos += strlen($m[0])-1;
+                    $ch = chr(intval($m[1], 16));
                     $isUnicode = true;
                 }
                 
                 // hex character
                 else if ( 'x' == $ch )
                 {
-                    $match = self::match_hex(substr($obj->regex, $obj->pos-1));
-                    $obj->pos += strlen($match[0])-1;
-                    $ch = chr(intval($match[1], 16));
+                    $m = self::match_hex(substr($re_obj->re, $re_obj->pos-1));
+                    $re_obj->pos += strlen($m[0])-1;
+                    $ch = chr(intval($m[1], 16));
                     $isUnicode = true;
                 }
             }
@@ -1130,12 +701,12 @@ class RegExAnalyzer
             {
                 if ( count($chars) )
                 {
-                    $sequence[] = array( 'part'=> $chars, 'flags'=> array(), 'type'=> "Chars" );
+                    $sequence[] = array( 'part'=> $chars, 'flags'=> array(), 'typeName'=> "Chars", 'type'=> self::T_CHARS );
                     $chars = array();
                 }
                 $range[1] = $ch;
                 $isRange = false;
-                $sequence[] = array( 'part'=> $range, 'flags'=> array(), 'type'=> "CharRange" );
+                $sequence[] = array( 'part'=> $range, 'flags'=> array(), 'typeName'=> "CharRange", 'type'=> self::T_CHARRANGE );
             }
             else
             {
@@ -1145,12 +716,12 @@ class RegExAnalyzer
                     {
                         if ( count($chars) )
                         {
-                            $sequence[] = array( 'part'=> $chars, 'flags'=> array(), 'type'=> "Chars" );
+                            $sequence[] = array( 'part'=> $chars, 'flags'=> array(), 'typeName'=> "Chars", 'type'=> self::T_CHARS );
                             $chars = array();
                         }
                         $flag = array();
                         $flag[ self::$specialCharsEscaped[$ch] ] = 1;
-                        $sequence[] = array( 'part'=> $ch, 'flags'=> $flag, 'type'=> "Special" );
+                        $sequence[] = array( 'part'=> $ch, 'flags'=> $flag, 'typeName'=> "Special", 'type'=> self::T_SPECIAL );
                     }
                     
                     else
@@ -1166,10 +737,10 @@ class RegExAnalyzer
                     {
                         if ( count($chars) )
                         {
-                            $sequence[] = array( 'part'=> $chars, 'flags'=> array(), 'type'=> "Chars" );
+                            $sequence[] = array( 'part'=> $chars, 'flags'=> array(), 'typeName'=> "Chars", 'type'=> self::T_CHARS );
                             $chars = array();
                         }
-                        return array( 'part'=> $sequence, 'flags'=> $flags, 'type'=> "CharGroup" );
+                        return array( 'part'=> $sequence, 'flags'=> $flags, 'typeName'=> "CharGroup", 'type'=> self::T_CHARGROUP );
                     }
                     
                     else if ( '-' == $ch )
@@ -1188,10 +759,264 @@ class RegExAnalyzer
         }
         if ( count($chars) )
         {
-            $sequence[] = array( 'part'=> $chars, 'flags'=> array(), 'type'=> "Chars" );
+            $sequence[] = array( 'part'=> $chars, 'flags'=> array(), 'typeName'=> "Chars", 'type'=> self::T_CHARS );
             $chars = array();
         }
-        return array( 'part'=> $sequence, 'flags'=> $flags, 'type'=> "CharGroup" );
+        return array( 'part'=> $sequence, 'flags'=> $flags, 'typeName'=> "CharGroup", 'type'=> self::T_CHARGROUP );
+    }
+    private static function analyze_re( &$re_obj ) 
+    {
+        $word = ''; $wordlen = 0;
+        $alternation = array(); 
+        $sequence = array(); 
+        $flags = array();
+        $escaped = false;
+        
+        if ( $re_obj->inGroup > 0 )
+        {
+            $pre = substr($re_obj->re, $re_obj->pos, 2);
+            
+            if ( "?:" == $pre )
+            {
+                $flags[ "NotCaptured" ] = 1;
+                $re_obj->pos += 2;
+            }
+            
+            else if ( "?=" == $pre )
+            {
+                $flags[ "LookAhead" ] = 1;
+                $re_obj->pos += 2;
+            }
+            
+            else if ( "?!" == $pre )
+            {
+                $flags[ "NegativeLookAhead" ] = 1;
+                $re_obj->pos += 2;
+            }
+            
+            $flags[ "GroupIndex" ] = ++$re_obj->groupIndex;
+        }
+        $lre = $re_obj->len;
+        while ( $re_obj->pos < $lre )
+        {
+            $ch = $re_obj->re[ $re_obj->pos++ ];
+            
+            //   \\abc
+            $escaped = (self::$escapeChar == $ch) ? true : false;
+            if ( $re_obj->pos < $lre && $escaped )  $ch = $re_obj->re[ $re_obj->pos++ ];
+            
+            if ( $escaped )
+            {
+                // unicode character
+                if ( 'u' == $ch )
+                {
+                    if ( $wordlen )
+                    {
+                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'typeName'=> "String", 'type'=> self::T_STRING );
+                        $word = '';
+                        $wordlen = 0;
+                    }
+                    $m = self::match_unicode(substr($re_obj->re, $re_obj->pos-1));
+                    $re_obj->pos += strlen($m[0])-1;
+                    $sequence[] = array( 'part'=> $m[0], 'flags'=> array( "Char"=> chr(intval($m[1], 16)), "Code"=> $m[1] ), 'typeName'=> "UnicodeChar", 'type'=> self::T_UNICODECHAR );
+                }
+                
+                // hex character
+                else if ( 'x' == $ch )
+                {
+                    if ( $wordlen )
+                    {
+                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'typeName'=> "String", 'type'=> self::T_STRING );
+                        $word = '';
+                        $wordlen = 0;
+                    }
+                    $m = self::match_hex(substr($re_obj->re, $re_obj->pos-1));
+                    $re_obj->pos += strlen($m[0])-1;
+                    $sequence[] = array( 'part'=> $m[0], 'flags'=> array( "Char"=> chr(intval($m[1], 16)), "Code"=> $m[1] ), 'typeName'=> "HexChar", 'type'=> self::T_HEXCHAR );
+                }
+                
+                else if ( isset(self::$specialCharsEscaped[$ch]) && '/' != $ch)
+                {
+                    if ( $wordlen )
+                    {
+                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'typeName'=> "String", 'type'=> self::T_STRING );
+                        $word = '';
+                        $wordlen = 0;
+                    }
+                    $flag = array();
+                    $flag[ self::$specialCharsEscaped[$ch] ] = 1;
+                    $sequence[] = array( 'part'=> $ch, 'flags'=> $flag, 'typeName'=> "Special", 'type'=> self::T_SPECIAL );
+                }
+                
+                else
+                {
+                    $word .= $ch;
+                    $wordlen += 1;
+                }
+            }
+            
+            else
+            {
+                // group end
+                if ( $re_obj->inGroup > 0 && ')' == $ch )
+                {
+                    if ( $wordlen )
+                    {
+                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'typeName'=> "String", 'type'=> self::T_STRING );
+                        $word = '';
+                        $wordlen = 0;
+                    }
+                    if ( count($alternation) )
+                    {
+                        $alternation[] = array( 'part'=> $sequence, 'flags'=> array(), 'typeName'=> "Sequence", 'type'=> self::T_SEQUENCE );
+                        $sequence = array();
+                        $flag = array();
+                        $flag[ self::$specialChars['|'] ] = 1;
+                        return array( 'part'=> array( 'part'=> $alternation, 'flags'=> $flag, 'typeName'=> "Alternation", 'type'=> self::T_ALTERNATION ), 'flags'=> $flags, 'typeName'=> "Group", 'type'=> self::T_GROUP );
+                    }
+                    else
+                    {
+                        return array( 'part'=> array( 'part'=> $sequence, 'flags'=> array(), 'typeName'=> "Sequence", 'type'=> self::T_SEQUENCE ), 'flags'=> $flags, 'typeName'=> "Group", 'type'=> self::T_GROUP );
+                    }
+                }
+                
+                // parse alternation
+                elseif ( '|' == $ch )
+                {
+                    if ( $wordlen )
+                    {
+                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'typeName'=> "String", 'type'=> self::T_STRING );
+                        $word = '';
+                        $wordlen = 0;
+                    }
+                    $alternation[] = array( 'part'=> $sequence, 'flags'=> array(), 'typeName'=> "Sequence", 'type'=> self::T_SEQUENCE );
+                    $sequence = array();
+                }
+                
+                // parse character group
+                else if ( '[' == $ch )
+                {
+                    if ( $wordlen )
+                    {
+                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'typeName'=> "String", 'type'=> self::T_STRING );
+                        $word = '';
+                        $wordlen = 0;
+                    }
+                    $sequence[] = self::chargroup( $re_obj );
+                }
+                
+                // parse sub-group
+                else if ( '(' == $ch )
+                {
+                    if ( $wordlen )
+                    {
+                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'typeName'=> "String", 'type'=> self::T_STRING );
+                        $word = '';
+                        $wordlen = 0;
+                    }
+                    $re_obj->inGroup+=1;
+                    $sequence[] = self::analyze_re( $re_obj );
+                    $re_obj->inGroup-=1;
+                }
+                
+                // parse num repeats
+                else if ( '{' == $ch )
+                {
+                    if ( $wordlen )
+                    {
+                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'typeName'=> "String", 'type'=> self::T_STRING );
+                        $word = '';
+                        $wordlen = 0;
+                    }
+                    $m = self::match_repeats(substr($re_obj->re, $re_obj->pos-1));
+                    $re_obj->pos += strlen($m[0])-1;
+                    $flag = array( 'part'=> $m[0], "MatchMinimum"=> $m[1], "MatchMaximum"=> isset($m[2]) ? $m[2] : "unlimited" );
+                    $flag[ self::$specialChars[$ch] ] = 1;
+                    if ( $re_obj->pos < $lre && '?' == $re_obj->re[$re_obj->pos] )
+                    {
+                        $flag[ "isGreedy" ] = 0;
+                        $re_obj->pos++;
+                    }
+                    else
+                    {
+                        $flag[ "isGreedy" ] = 1;
+                    }
+                    $prev = array_pop($sequence);
+                    if ( self::T_STRING === $prev['type'] && strlen($prev['part']) > 1 )
+                    {
+                        $sequence[] = array( 'part'=> substr($prev['part'], 0, -1), 'flags'=> array(), 'typeName'=> "String", 'type'=> self::T_STRING );
+                        $prev['part'] = substr($prev['part'], -1);
+                    }
+                    $sequence[] = array( 'part'=> $prev, 'flags'=> $flag, 'typeName'=> "Quantifier", 'type'=> self::T_QUANTIFIER );
+                }
+                
+                // quantifiers
+                else if ( '*' == $ch || '+' == $ch || '?' == $ch )
+                {
+                    if ( $wordlen )
+                    {
+                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'typeName'=> "String", 'type'=> self::T_STRING );
+                        $word = '';
+                        $wordlen = 0;
+                    }
+                    $flag = array();
+                    $flag[ self::$specialChars[$ch] ] = 1;
+                    if ( $re_obj->pos < $lre && '?' == $re_obj->re[$re_obj->pos] )
+                    {
+                        $flag[ "isGreedy" ] = 0;
+                        $re_obj->pos++;
+                    }
+                    else
+                    {
+                        $flag[ "isGreedy" ] = 1;
+                    }
+                    $prev = array_pop($sequence);
+                    if ( self::T_STRING === $prev['type'] && strlen($prev['part']) > 1 )
+                    {
+                        $sequence[] = array( 'part'=> substr($prev['part'], 0, -1), 'flags'=> array(), 'typeName'=> "String", 'type'=> self::T_STRING );
+                        $prev['part'] = substr($prev['part'], -1);
+                    }
+                    $sequence[] = array( 'part'=> $prev, 'flags'=> $flag, 'typeName'=> "Quantifier", 'type'=> self::T_QUANTIFIER );
+                }
+            
+                // special characters like ^, $, ., etc..
+                else if ( isset(self::$specialChars[$ch]) )
+                {
+                    if ( $wordlen )
+                    {
+                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'typeName'=> "String", 'type'=> self::T_STRING );
+                        $word = '';
+                        $wordlen = 0;
+                    }
+                    $flag = array();
+                    $flag[ self::$specialChars[$ch] ] = 1;
+                    $sequence[] = array( 'part'=> $ch, 'flags'=> $flag, 'typeName'=> "Special", 'type'=> self::T_SPECIAL );
+                }
+            
+                else
+                {
+                    $word .= $ch;
+                    $wordlen += 1;
+                }
+            }
+        }
+        
+        if ( $wordlen )
+        {
+            $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'typeName'=> "String", 'type'=> self::T_STRING );
+            $word = '';
+            $wordlen = 0;
+        }
+        
+        if ( count($alternation) )
+        {
+            $alternation[] = array( 'part'=> $sequence, 'flags'=> array(), 'typeName'=> "Sequence", 'type'=> self::T_SEQUENCE );
+            $sequence = array();
+            $flag = array();
+            $flag[ self::$specialChars['|'] ] = 1;
+            return array( 'part'=> $alternation, 'flags'=> $flag, 'typeName'=> "Alternation", 'type'=> self::T_ALTERNATION );
+        }
+        return array( 'part'=> $sequence, 'flags'=> array(), 'typeName'=> "Sequence", 'type'=> self::T_SEQUENCE );
     }
     
     
@@ -1199,7 +1024,7 @@ class RegExAnalyzer
     public $_regex = null;
     public $_flags = null;
     public $_parts = null;
-    public $_needsRefresh = true;
+    public $_needsRefresh = false;
     
     public function __construct( $regex=null, $delim=null )
     {
@@ -1214,7 +1039,7 @@ class RegExAnalyzer
         return $this;
     }
         
-    public function regex($regex=null, $delim=null) 
+    public function regex($regex, $delim=null) 
     {
         if ( $regex )
         {
@@ -1242,19 +1067,9 @@ class RegExAnalyzer
         return $this;
     }
     
-    public function analyze( ) 
-    {
-        if ( $this->_needsRefresh )
-        {
-            $this->_parts = self::analyze_re( $this->_regex );
-            $this->_needsRefresh = false;
-        }
-        return $this;
-    }
-    
     public function getRegex( ) 
     {
-        return '/' . $this->_regex . '/' . implode("", array_keys($this->_flags));
+        return '/' . str_replace('/', '\\/', $this->_regex) . '/' . implode("", array_keys($this->_flags));
     }
     
     public function getParts( ) 
@@ -1263,8 +1078,25 @@ class RegExAnalyzer
         return $this->_parts;
     }
     
+    public function analyze( ) 
+    {
+        if ( $this->_needsRefresh )
+        {
+            $re_obj = (object)array(
+                're'=>          $this->_regex,
+                'len'=>         strlen($this->_regex),
+                'pos'=>         0,
+                'groupIndex'=>  0,
+                'inGroup'=>     0
+            );
+            $this->_parts = self::analyze_re( $re_obj );
+            $this->_needsRefresh = false;
+        }
+        return $this;
+    }
+    
     // experimental feature
-    public function generateSample( ) 
+    public function sample( ) 
     {
         if ( $this->_needsRefresh ) $this->analyze( );
         return self::generate( $this->_parts, isset($this->_flags['i']) );
@@ -1278,7 +1110,7 @@ class RegExAnalyzer
     }
         
     // experimental feature
-    public function getPeekChars( ) 
+    public function peek( ) 
     {
         if ( $this->_needsRefresh ) $this->analyze( );
         $isCaseInsensitive = isset($this->_flags['i']);

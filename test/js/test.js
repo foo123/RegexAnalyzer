@@ -4,7 +4,7 @@
 var echo = console.log;
 
 
-var Composer = require('../../src/js/regexcomposer.js');
+var Composer = require('../../src/js/RegexComposer.js');
 
 echo("Testing Composer.VERSION = " + Composer.VERSION);
 echo("================");
@@ -56,8 +56,8 @@ echo("Expected: " + "/^([_a-z][_a-z0-9]*|\\*\\*aabb\\*\\*|.|\\s|\\D+)*?$/i");
 echo("================");
 echo();
 
-var Analyzer = require('../../src/js/regexanalyzer.js'),
-    anal, peekChars, sampleStr, inregex = process.argv[2] || /xyz[abc0-9]{2,3}/i
+var Analyzer = require('../../src/js/RegexAnalyzer.js'),
+    anal, peekChars, sampleStr, inregex = process.argv[2] || /xyz([abc0-9]){2,3}/i
 ;
 
 echo("Testing Analyzer.VERSION = " + Analyzer.VERSION);
@@ -65,18 +65,18 @@ echo("================");
 
 // test it
 anal = Analyzer( inregex );
-peekChars = anal.getPeekChars( );
-sampleStr = anal.generateSample( );
+peekChars = anal.peek( );
+sampleStr = anal.sample( );
 
 echo("Input: " + inregex.toString( ));
 echo();
-echo("Regular Expression: " + anal.$regex);
+echo("Regular Expression: " + anal._regex);
 echo();
 echo("Regular Expression Flags: ");
-echo(anal.$flags);
+echo(anal._flags);
 echo();
 echo("Regular Expression Parts: ");
-echo(JSON.stringify(anal.$parts, null, 4));
+echo(JSON.stringify(anal._parts, null, 4));
 echo();
 echo("Regular Expression Peek Characters: ");
 echo(JSON.stringify(peekChars, null, 4));

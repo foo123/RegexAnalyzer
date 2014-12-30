@@ -5,11 +5,11 @@ Composed: /^([_a-z][_a-z0-9]*|\*\*aabb\*\*|.|\s|\D+)*?$/i
 Expected: /^([_a-z][_a-z0-9]*|\*\*aabb\*\*|.|\s|\D+)*?$/i
 ================
 
-Testing Analyzer.VERSION = 0.4.3
+Testing Analyzer.VERSION = 0.4.4
 ================
-Input: /xyz[abc0-9]{2,3}/i
+Input: /xyz([abc0-9]){2,3}/i
 
-Regular Expression: xyz[abc0-9]{2,3}
+Regular Expression: xyz([abc0-9]){2,3}
 
 Regular Expression Flags: 
 Array
@@ -30,7 +30,8 @@ Array
                         (
                         )
 
-                    [type] => String
+                    [typeName] => String
+                    [type] => 11
                 )
 
             [1] => Array
@@ -39,44 +40,72 @@ Array
                         (
                             [part] => Array
                                 (
-                                    [0] => Array
+                                    [part] => Array
                                         (
-                                            [part] => Array
+                                            [0] => Array
                                                 (
-                                                    [0] => a
-                                                    [1] => b
-                                                    [2] => c
+                                                    [part] => Array
+                                                        (
+                                                            [0] => Array
+                                                                (
+                                                                    [part] => Array
+                                                                        (
+                                                                            [0] => a
+                                                                            [1] => b
+                                                                            [2] => c
+                                                                        )
+
+                                                                    [flags] => Array
+                                                                        (
+                                                                        )
+
+                                                                    [typeName] => Chars
+                                                                    [type] => 9
+                                                                )
+
+                                                            [1] => Array
+                                                                (
+                                                                    [part] => Array
+                                                                        (
+                                                                            [0] => 0
+                                                                            [1] => 9
+                                                                        )
+
+                                                                    [flags] => Array
+                                                                        (
+                                                                        )
+
+                                                                    [typeName] => CharRange
+                                                                    [type] => 10
+                                                                )
+
+                                                        )
+
+                                                    [flags] => Array
+                                                        (
+                                                        )
+
+                                                    [typeName] => CharGroup
+                                                    [type] => 8
                                                 )
 
-                                            [flags] => Array
-                                                (
-                                                )
-
-                                            [type] => Chars
                                         )
 
-                                    [1] => Array
+                                    [flags] => Array
                                         (
-                                            [part] => Array
-                                                (
-                                                    [0] => 0
-                                                    [1] => 9
-                                                )
-
-                                            [flags] => Array
-                                                (
-                                                )
-
-                                            [type] => CharRange
                                         )
 
+                                    [typeName] => Sequence
+                                    [type] => 1
                                 )
 
                             [flags] => Array
                                 (
+                                    [GroupIndex] => 1
                                 )
 
-                            [type] => CharGroup
+                            [typeName] => Group
+                            [type] => 3
                         )
 
                     [flags] => Array
@@ -88,7 +117,8 @@ Array
                             [isGreedy] => 1
                         )
 
-                    [type] => Quantifier
+                    [typeName] => Quantifier
+                    [type] => 4
                 )
 
         )
@@ -97,7 +127,8 @@ Array
         (
         )
 
-    [type] => Sequence
+    [typeName] => Sequence
+    [type] => 1
 )
 
 
@@ -118,6 +149,6 @@ Array
 
 
 Regular Expression Sample Match String: 
-XYZ93 -> Matched
+XYZ56B -> Matched
 ================
 

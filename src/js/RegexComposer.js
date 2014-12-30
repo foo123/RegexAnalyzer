@@ -1,7 +1,7 @@
 /**
 *
-*   RegExComposer
-*   @version: 0.4.3
+*   RegexComposer
+*   @version: 0.4.4
 *
 *   A simple and intuitive Regular Expression Composer for PHP, Python, Node/JS
 *   https://github.com/foo123/RegexAnalyzer
@@ -29,12 +29,12 @@
 
 
 }(  /* current root */          this, 
-    /* module name */           "RegExComposer",
+    /* module name */           "RegexComposer",
     /* module factory */        function( exports, undef ) {
         
     "use strict";
     /* main code starts here */
-    var __version__ = "0.4.3", 
+    var __version__ = "0.4.4", 
         
         PROTO = 'prototype',
         OP = Object[PROTO], AP = Array[PROTO],

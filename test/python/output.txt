@@ -1,13 +1,13 @@
 RegExAnalyzer Module loaded succesfully
-Testing Analyzer.VERSION = 0.4.3
+Testing Analyzer.VERSION = 0.4.4
 
 ================
 
-Input: /xyz[abc0-9]{2,3}/i
+Input: /xyz([abc0-9]){2,3}/i
 
 
 
-Regular Expression: xyz[abc0-9]{2,3}
+Regular Expression: xyz([abc0-9]){2,3}
 
 
 
@@ -20,22 +20,39 @@ Regular Expression Flags:
 Regular Expression Parts: 
 
 {   'flags': {},
-    'part': [   {'flags': {}, 'part': 'xyz', 'type': 'String'},
+    'part': [   {   'flags': {},
+                    'part': 'xyz',
+                    'type': 11,
+                    'typeName': 'String'},
                 {   'flags': {   'MatchMaximum': '3',
                                  'MatchMinimum': '2',
                                  'StartRepeats': 1,
                                  'isGreedy': 1,
                                  'part': '{2,3}'},
-                    'part': {   'flags': {},
-                                'part': [   {   'flags': {},
-                                                'part': ['a', 'b', 'c'],
-                                                'type': 'Chars'},
-                                            {   'flags': {},
-                                                'part': ['0', '9'],
-                                                'type': 'CharRange'}],
-                                'type': 'CharGroup'},
-                    'type': 'Quantifier'}],
-    'type': 'Sequence'}
+                    'part': {   'flags': {'GroupIndex': 1},
+                                'part': {   'flags': {},
+                                            'part': [   {   'flags': {},
+                                                            'part': [   {   'flags': {   },
+                                                                            'part': [   'a',
+                                                                                        'b',
+                                                                                        'c'],
+                                                                            'type': 9,
+                                                                            'typeName': 'Chars'},
+                                                                        {   'flags': {   },
+                                                                            'part': [   '0',
+                                                                                        '9'],
+                                                                            'type': 10,
+                                                                            'typeName': 'CharRange'}],
+                                                            'type': 8,
+                                                            'typeName': 'CharGroup'}],
+                                            'type': 1,
+                                            'typeName': 'Sequence'},
+                                'type': 3,
+                                'typeName': 'Group'},
+                    'type': 4,
+                    'typeName': 'Quantifier'}],
+    'type': 1,
+    'typeName': 'Sequence'}
 
 
 
@@ -47,7 +64,7 @@ Regular Expression Peek Characters:
 
 Regular Expression Sample Match String: 
 
-xyz29a -> Matched
+XYZ414 -> Matched
 
 ================
 

@@ -1,7 +1,7 @@
 /**
 *
-*   RegExAnalyzer
-*   @version: 0.4.3
+*   RegexAnalyzer
+*   @version: 0.4.4
 *
 *   A simple Regular Expression Analyzer for PHP, Python, Node/JS, ActionScript
 *   https://github.com/foo123/RegexAnalyzer
@@ -29,12 +29,12 @@
 
 
 }(  /* current root */          this, 
-    /* module name */           "RegExAnalyzer",
+    /* module name */           "RegexAnalyzer",
     /* module factory */        function( exports, undef ) {
         
     "use strict";
     /* main code starts here */
-    var __version__ = "0.4.3",
+    var __version__ = "0.4.4",
     
         PROTO = 'prototype', Obj = Object, Arr = Array, /*Str = String,*/ 
         Keys = Obj.keys, to_string = Obj[PROTO].toString, 
@@ -97,7 +97,11 @@
             "d" : "MatchDigitChar",
             "D" : "MatchNonDigitChar"
         },
-
+        T_SEQUENCE = 1, T_ALTERNATION = 2, T_GROUP = 3,
+        T_QUANTIFIER = 4, T_UNICODECHAR = 5, T_HEXCHAR = 6,
+        T_SPECIAL = 7, T_CHARGROUP = 8, T_CHARS = 9,
+        T_CHARRANGE = 10, T_STRING = 11,
+        
         rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
         char_code = function( c ) { return c[CHARCODE](0); },
         char_code_range = function( s ) { return [s[CHARCODE](0), s[CHARCODE](s.length-1)]; },
@@ -118,18 +122,22 @@
             return chars;
         },
         concat = function(p1, p2) {
-            if ( p2 && ( 'function' === typeof(p2.push) ) )
+            if ( p2 )
             {
-                for (var p=0, l=p2.length; p<l; p++)
+                var p, l;
+                if ( 'function' === typeof(p2.push) )
                 {
-                    p1[p2[p]] = 1;
+                    for (p=0,l=p2.length; p<l; p++)
+                    {
+                        p1[p2[p]] = 1;
+                    }
                 }
-            }
-            else
-            {
-                for (var p in p2)
+                else
                 {
-                    p1[p] = 1;
+                    for (p in p2)
+                    {
+                        if ( p2[HAS](p) ) p1[p] = 1;
+                    }
                 }
             }
             return p1;
@@ -467,17 +475,17 @@
             
             type = part.type;
             // walk the sequence
-            if ( "Alternation" == type )
+            if ( T_ALTERNATION === type )
             {
                 sample += generate( part.part[rnd(0, part.part.length-1)], isCaseInsensitive );
             }
             
-            else if ( "Group" == type )
+            else if ( T_GROUP === type )
             {
                 sample += generate( part.part, isCaseInsensitive );
             }
             
-            else if ( "Sequence" == type )
+            else if ( T_SEQUENCE === type )
             {
                 var repeat, mmin, mmax;
                 l = part.part.length;
@@ -487,7 +495,7 @@
                     p = part.part[i];
                     if ( !p ) continue;
                     repeat = 1;
-                    if ( "Quantifier" == p.type )
+                    if ( T_QUANTIFIER === p.type )
                     {
                         if ( p.flags.MatchZeroOrMore ) repeat = rnd(0, 10);
                         else if ( p.flags.MatchZeroOrOne ) repeat = rnd(0, 1);
@@ -504,7 +512,7 @@
                             sample += generate( p.part, isCaseInsensitive );
                         }
                     }
-                    else if ( "Special" == p.type )
+                    else if ( T_SPECIAL === p.type )
                     {
                         if ( p.flags.MatchAnyChar ) sample += any( );
                     }
@@ -515,7 +523,7 @@
                 }
             }
             
-            else if ( "CharGroup" == type )
+            else if ( T_CHARGROUP === type )
             {
                 var chars = [], ptype;
                 
@@ -523,22 +531,22 @@
                 {
                     p = part.part[i];
                     ptype = p.type;
-                    if ( "Chars" == ptype )
+                    if ( T_CHARS === ptype )
                     {
                         chars = chars.concat( isCaseInsensitive ? case_insensitive( p.part, true ) : p.part );
                     }
                     
-                    else if ( "CharRange" == ptype )
+                    else if ( T_CHARRANGE === ptype )
                     {
                         chars = chars.concat( isCaseInsensitive ? case_insensitive( character_range(p.part), true ) : character_range(p.part) );
                     }
                     
-                    else if ( "UnicodeChar" == ptype || "HexChar" == ptype )
+                    else if ( T_UNICODECHAR === ptype || T_HEXCHAR === ptype )
                     {
                         chars.push( isCaseInsensitive ? case_insensitive( p.flags.Char ): p.flags.Char );
                     }
                     
-                    else if ( "Special" == ptype )
+                    else if ( T_SPECIAL === ptype )
                     {
                         var p_part = p.part;
                         if ('D' == p_part)
@@ -574,12 +582,12 @@
                 sample += character(chars, !part.flags.NotMatch);
             }
             
-            else if ( "String" == type )
+            else if ( T_STRING === type )
             {
                 sample += isCaseInsensitive ? case_insensitive( part.part ) : part.part;
             }
             
-            else if ( "Special" == type && !part.flags.MatchStart && !part.flags.MatchEnd )
+            else if ( T_SPECIAL === type && !part.flags.MatchStart && !part.flags.MatchEnd )
             {
                 var p_part = part.part;
                 if ('D' == p_part)
@@ -616,7 +624,7 @@
                 }
             }
                     
-            else if ( "UnicodeChar" == type || "HexChar" == type )
+            else if ( T_UNICODECHAR === type || T_HEXCHAR === type )
             {
                 sample += isCaseInsensitive ? case_insensitive( part.flags.Char ) : part.flags.Char;
             }
@@ -630,7 +638,7 @@
             
             type = part.type;
             // walk the sequence
-            if ( "Alternation" == type )
+            if ( T_ALTERNATION === type )
             {
                 for (i=0, l=part.part.length; i<l; i++)
                 {
@@ -640,20 +648,20 @@
                 }
             }
             
-            else if ( "Group" == type )
+            else if ( T_GROUP === type )
             {
                 tmp = peek_characters( part.part );
                 peek = concat( peek, tmp.peek );
                 negativepeek = concat( negativepeek, tmp.negativepeek );
             }
             
-            else if ( "Sequence" == type )
+            else if ( T_SEQUENCE === type )
             {
                 i = 0;
                 l = part.part.length;
                 p = part.part[i];
                 done = ( 
-                    i >= l || !p || "Quantifier" != p.type || 
+                    i >= l || !p || T_QUANTIFIER != p.type || 
                     ( !p.flags.MatchZeroOrMore && !p.flags.MatchZeroOrOne && "0"!=p.flags.MatchMinimum ) 
                 );
                 while ( !done )
@@ -666,7 +674,7 @@
                     p = part.part[i];
                     
                     done = ( 
-                        i >= l || !p || "Quantifier" != p.type || 
+                        i >= l || !p || T_QUANTIFIER != p.type || 
                         ( !p.flags.MatchZeroOrMore && !p.flags.MatchZeroOrOne && "0"!=p.flags.MatchMinimum ) 
                     );
                 }
@@ -674,9 +682,9 @@
                 {
                     p = part.part[i];
                     
-                    if ("Special" == p.type && ('^'==p.part || '$'==p.part)) p = part.part[i+1] || null;
+                    if (T_SPECIAL === p.type && ('^'==p.part || '$'==p.part)) p = part.part[i+1] || null;
                     
-                    if (p && "Quantifier" == p.type) p = p.part;
+                    if (p && T_QUANTIFIER === p.type) p = p.part;
                     
                     if (p)
                     {
@@ -687,7 +695,7 @@
                 }
             }
             
-            else if ( "CharGroup" == type )
+            else if ( T_CHARGROUP === type )
             {
                 current = ( part.flags.NotMatch ) ? negativepeek : peek;
                 
@@ -695,22 +703,22 @@
                 {
                     p = part.part[i];
                     ptype = p.type;
-                    if ( "Chars" == ptype )
+                    if ( T_CHARS === ptype )
                     {
                         current = concat( current, p.part );
                     }
                     
-                    else if ( "CharRange" == ptype )
+                    else if ( T_CHARRANGE === ptype )
                     {
                         current = concat( current, character_range(p.part) );
                     }
                     
-                    else if ( "UnicodeChar" == ptype || "HexChar" == ptype )
+                    else if ( T_UNICODECHAR === ptype || T_HEXCHAR === ptype )
                     {
                         current[p.flags.Char] = 1;
                     }
                     
-                    else if ( "Special" == ptype )
+                    else if ( T_SPECIAL === ptype )
                     {
                         var p_part = p.part;
                         if ('D' == p_part)
@@ -742,12 +750,12 @@
                 }
             }
             
-            else if ( "String" == type )
+            else if ( T_STRING === type )
             {
                 peek[part.part[CHAR](0)] = 1;
             }
             
-            else if ( "Special" == type && !part.flags.MatchStart && !part.flags.MatchEnd )
+            else if ( T_SPECIAL === type && !part.flags.MatchStart && !part.flags.MatchEnd )
             {
                 if ('D' == part.part)
                 {
@@ -767,7 +775,7 @@
                 }
             }
                     
-            else if ( "UnicodeChar" == type || "HexChar" == type )
+            else if ( T_UNICODECHAR === type || T_HEXCHAR === type )
             {
                 peek[part.flags.Char] = 1;
             }
@@ -832,275 +840,43 @@
             }
             return false;
         },
-        subgroup = function subgroup( self ) {
-            var ch, word = '', alternation = [], sequence = [], flags = {}, flag, match, escaped = false,
-                pre = self.regex.substr(self.pos, 2), lre;
-            
-            if ( "?:" == pre )
-            {
-                flags[ "NotCaptured" ] = 1;
-                self.pos += 2;
-            }
-            
-            else if ( "?=" == pre )
-            {
-                flags[ "LookAhead" ] = 1;
-                self.pos += 2;
-            }
-            
-            else if ( "?!" == pre )
-            {
-                flags[ "NegativeLookAhead" ] = 1;
-                self.pos += 2;
-            }
-            
-            flags[ "GroupIndex" ] = ++self.groupIndex;
-            
-            lre = self.regex.length;
-            while ( self.pos < lre )
-            {
-                ch = self.regex[CHAR]( self.pos++ );
-                
-                escaped = (escapeChar == ch) ? true : false;
-                if ( escaped )  ch = self.regex[CHAR]( self.pos++ );
-                
-                if ( escaped )
-                {
-                    // unicode character
-                    if ( 'u' == ch )
-                    {
-                        if ( word.length )
-                        {
-                            sequence.push( { part: word, flags: {}, type: "String" } );
-                            word = '';
-                        }
-                        match = match_unicode( self.regex.substr( self.pos-1 ) );
-                        self.pos += match[0].length-1;
-                        sequence.push( { part: match[0], flags: { "Char": fromCharCode(parseInt(match[1], 16)), "Code": match[1] }, type: "UnicodeChar" } );
-                    }
-                    
-                    // hex character
-                    else if ( 'x' == ch )
-                    {
-                        if ( word.length )
-                        {
-                            sequence.push( { part: word, flags: {}, type: "String" } );
-                            word = '';
-                        }
-                        match = match_hex( self.regex.substr( self.pos-1 ) );
-                        self.pos += match[0].length-1;
-                        sequence.push( { part: match[0], flags: { "Char": fromCharCode(parseInt(match[1], 16)), "Code": match[1] }, type: "HexChar" } );
-                    }
-                    
-                    else if ( specialCharsEscaped[HAS](ch) && '/' != ch)
-                    {
-                        if ( word.length )
-                        {
-                            sequence.push( { part: word, flags: {}, type: "String" } );
-                            word = '';
-                        }
-                        flag = {};
-                        flag[ specialCharsEscaped[ch] ] = 1;
-                        sequence.push( { part: ch, flags: flag, type: "Special" } );
-                    }
-                    
-                    else
-                    {
-                        word += ch;
-                    }
-                }
-                
-                else
-                {
-                    // group end
-                    if ( ')' == ch )
-                    {
-                        if ( word.length )
-                        {
-                            sequence.push( { part: word, flags: {}, type: "String" } );
-                            word = '';
-                        }
-                        if ( alternation.length )
-                        {
-                            alternation.push( { part: sequence, flags: {}, type: "Sequence" } );
-                            sequence = [];
-                            flag = {};
-                            flag[ specialChars['|'] ] = 1;
-                            return { part: { part: alternation, flags: flag, type: "Alternation" }, flags: flags, type: "Group" };
-                        }
-                        else
-                        {
-                            return { part: { part: sequence, flags: {}, type: "Sequence" }, flags: flags, type: "Group" };
-                        }
-                    }
-                    
-                    // parse alternation
-                    else if ( '|' == ch )
-                    {
-                        if ( word.length )
-                        {
-                            sequence.push( { part: word, flags: {}, type: "String" } );
-                            word = '';
-                        }
-                        alternation.push( { part: sequence, flags: {}, type: "Sequence" } );
-                        sequence = [];
-                    }
-                    
-                    // parse character group
-                    else if ( '[' == ch )
-                    {
-                        if ( word.length )
-                        {
-                            sequence.push( { part: word, flags: {}, type: "String" } );
-                            word = '';
-                        }
-                        sequence.push( chargroup( self ) );
-                    }
-                    
-                    // parse sub-group
-                    else if ( '(' == ch )
-                    {
-                        if ( word.length )
-                        {
-                            sequence.push( { part: word, flags: {}, type: "String" } );
-                            word = '';
-                        }
-                        sequence.push( subgroup( self ) );
-                    }
-                    
-                    // parse num repeats
-                    else if ( '{' == ch )
-                    {
-                        if ( word.length )
-                        {
-                            sequence.push( { part: word, flags: {}, type: "String" } );
-                            word = '';
-                        }
-                        match = match_repeats( self.regex.substr( self.pos-1 ) );
-                        self.pos += match[0].length-1;
-                        flag = { part: match[0], "MatchMinimum": match[1], "MatchMaximum": match[2] || "unlimited" };
-                        flag[ specialChars[ch] ] = 1;
-                        if ( self.pos < lre && '?' == self.regex[CHAR](self.pos) )
-                        {
-                            flag[ "isGreedy" ] = 0;
-                            self.pos++;
-                        }
-                        else
-                        {
-                            flag[ "isGreedy" ] = 1;
-                        }
-                        var prev = sequence.pop();
-                        if ( "String" == prev.type && prev.part.length > 1 )
-                        {
-                            sequence.push( { part: prev.part.slice(0, -1), flags: {}, type: "String" } );
-                            prev.part = prev.part.slice(-1);
-                        }
-                        sequence.push( { part: prev, flags: flag, type: "Quantifier" } );
-                    }
-                    
-                    // quantifiers
-                    else if ( '*' == ch || '+' == ch || '?' == ch )
-                    {
-                        if ( word.length )
-                        {
-                            sequence.push( { part: word, flags: {}, type: "String" } );
-                            word = '';
-                        }
-                        flag = {};
-                        flag[ specialChars[ch] ] = 1;
-                        if ( self.pos < lre && '?' == self.regex[CHAR](self.pos) )
-                        {
-                            flag[ "isGreedy" ] = 0;
-                            self.pos++;
-                        }
-                        else
-                        {
-                            flag[ "isGreedy" ] = 1;
-                        }
-                        var prev = sequence.pop();
-                        if ( "String" == prev.type && prev.part.length > 1 )
-                        {
-                            sequence.push( { part: prev.part.slice(0, -1), flags: {}, type: "String" } );
-                            prev.part = prev.part.slice(-1);
-                        }
-                        sequence.push( { part: prev, flags: flag, type: "Quantifier" } );
-                    }
-                
-                    // special characters like ^, $, ., etc..
-                    else if ( specialChars[HAS](ch) )
-                    {
-                        if ( word.length )
-                        {
-                            sequence.push( { part: word, flags: {}, type: "String" } );
-                            word = '';
-                        }
-                        flag = {};
-                        flag[ specialChars[ch] ] = 1;
-                        sequence.push( { part: ch, flags: flag, type: "Special" } );
-                    }
-                
-                    else
-                    {
-                        word += ch;
-                    }
-                }
-            }
-            if ( word.length )
-            {
-                sequence.push( { part: word, flags: {}, type: "String" } );
-                word = '';
-            }
-            if ( alternation.length )
-            {
-                alternation.push( { part: sequence, flags: {}, type: "Sequence" } );
-                sequence = [];
-                flag = {};
-                flag[ specialChars['|'] ] = 1;
-                return { part: { part: alternation, flags: flag, type: "Alternation" }, flags: flags, type: "Group" };
-            }
-            else
-            {
-                return { part: { part: sequence, flags: {}, type: "Sequence" }, flags: flags, type: "Group" };
-            }
-        },
-        
-        chargroup = function chargroup( self ) {
+        chargroup = function chargroup( re_obj ) {
             var sequence = [], chars = [], flags = {}, flag, ch, lre,
-            prevch, range, isRange = false, match, isUnicode, escaped = false;
+            prevch, range, isRange = false, m, isUnicode, escaped = false;
             
-            if ( '^' == self.regex[CHAR]( self.pos ) )
+            if ( '^' == re_obj.re[CHAR]( re_obj.pos ) )
             {
                 flags[ "NotMatch" ] = 1;
-                self.pos++;
+                re_obj.pos++;
             }
                     
-            lre = self.regex.length;
-            while ( self.pos < lre )
+            lre = re_obj.len;
+            while ( re_obj.pos < lre )
             {
                 isUnicode = false;
                 prevch = ch;
-                ch = self.regex[CHAR]( self.pos++ );
+                ch = re_obj.re[CHAR]( re_obj.pos++ );
                 
                 escaped = (escapeChar == ch) ? true : false;
-                if ( escaped )  ch = self.regex[CHAR]( self.pos++ );
+                if ( escaped ) ch = re_obj.re[CHAR]( re_obj.pos++ );
                 
                 if ( escaped )
                 {
                     // unicode character
                     if ( 'u' == ch )
                     {
-                        match = match_unicode( self.regex.substr( self.pos-1 ) );
-                        self.pos += match[0].length-1;
-                        ch = fromCharCode(parseInt(match[1], 16));
+                        m = match_unicode( re_obj.re.substr( re_obj.pos-1 ) );
+                        re_obj.pos += m[0].length-1;
+                        ch = fromCharCode(parseInt(m[1], 16));
                         isUnicode = true;
                     }
                     
                     // hex character
                     else if ( 'x' == ch )
                     {
-                        match = match_hex( self.regex.substr( self.pos-1 ) );
-                        self.pos += match[0].length-1;
-                        ch = fromCharCode(parseInt(match[1], 16));
+                        m = match_hex( re_obj.re.substr( re_obj.pos-1 ) );
+                        re_obj.pos += m[0].length-1;
+                        ch = fromCharCode(parseInt(m[1], 16));
                         isUnicode = true;
                     }
                 }
@@ -1109,12 +885,12 @@
                 {
                     if ( chars.length )
                     {
-                        sequence.push( { part: chars, flags: {}, type: "Chars" } );
+                        sequence.push( { part: chars, flags: {}, typeName: "Chars", type: T_CHARS } );
                         chars = [];
                     }
                     range[1] = ch;
                     isRange = false;
-                    sequence.push( { part: range, flags: {}, type: "CharRange" } );
+                    sequence.push( { part: range, flags: {}, typeName: "CharRange", type: T_CHARRANGE } );
                 }
                 else
                 {
@@ -1124,12 +900,12 @@
                         {
                             if ( chars.length )
                             {
-                                sequence.push( { part: chars, flags: {}, type: "Chars" } );
+                                sequence.push( { part: chars, flags: {}, typeName: "Chars", type: T_CHARS } );
                                 chars = [];
                             }
                             flag = {};
                             flag[ specialCharsEscaped[ch] ] = 1;
-                            sequence.push( { part: ch, flags: flag, type: "Special" } );
+                            sequence.push( { part: ch, flags: flag, typeName: "Special", type: T_SPECIAL } );
                         }
                         
                         else
@@ -1145,10 +921,10 @@
                         {
                             if ( chars.length )
                             {
-                                sequence.push( { part: chars, flags: {}, type: "Chars" } );
+                                sequence.push( { part: chars, flags: {}, typeName: "Chars", type: T_CHARS } );
                                 chars = [];
                             }
-                            return { part: sequence, flags: flags, type: "CharGroup" };
+                            return { part: sequence, flags: flags, typeName: "CharGroup", type: T_CHARGROUP };
                         }
                         
                         else if ( '-' == ch )
@@ -1167,203 +943,263 @@
             }
             if ( chars.length )
             {
-                sequence.push( { part: chars, flags: {}, type: "Chars" } );
+                sequence.push( { part: chars, flags: {}, typeName: "Chars", type: T_CHARS } );
                 chars = [];
             }
-            return { part: sequence, flags: flags, type: "CharGroup" };
+            return { part: sequence, flags: flags, typeName: "CharGroup", type: T_CHARGROUP };
         },
         
-        analyze_re = function analyze_re( regex ) {
-            var self = {pos: 0, groupIndex: 0, regex: regex}, lre;
-            var ch, word = '', alternation = [], sequence = [], flag, match, escaped = false;
+        analyze_re = function analyze_re( re_obj ) {
+            var lre, ch, m, word = '', wordlen = 0,
+                alternation = [], sequence = [], flags = {},
+                flag, escaped = false, pre;
             
-            lre = self.regex.length;
-            while ( self.pos < lre )
+            if ( re_obj.inGroup > 0 )
             {
-                ch = self.regex[CHAR]( self.pos++ );
+                pre = re_obj.re.substr(re_obj.pos, 2);
+                
+                if ( "?:" == pre )
+                {
+                    flags[ "NotCaptured" ] = 1;
+                    re_obj.pos += 2;
+                }
+                
+                else if ( "?=" == pre )
+                {
+                    flags[ "LookAhead" ] = 1;
+                    re_obj.pos += 2;
+                }
+                
+                else if ( "?!" == pre )
+                {
+                    flags[ "NegativeLookAhead" ] = 1;
+                    re_obj.pos += 2;
+                }
+                
+                flags[ "GroupIndex" ] = ++re_obj.groupIndex;
+            }
+            
+            lre = re_obj.len;
+            while ( re_obj.pos < lre )
+            {
+                ch = re_obj.re[CHAR]( re_obj.pos++ );
                 
                 //   \\abc
                 escaped = (escapeChar == ch) ? true : false;
-                if ( escaped )  ch = self.regex[CHAR]( self.pos++ );
+                if ( escaped ) ch = re_obj.re[CHAR]( re_obj.pos++ );
                 
                 if ( escaped )
                 {
                     // unicode character
                     if ( 'u' == ch )
                     {
-                        if ( word.length )
+                        if ( wordlen )
                         {
-                            sequence.push( { part: word, flags: {}, type: "String" } );
+                            sequence.push( { part: word, flags: {}, typeName: "String", type: T_STRING } );
                             word = '';
+                            wordlen = 0;
                         }
-                        match = match_unicode( self.regex.substr( self.pos-1 ) );
-                        self.pos += match[0].length-1;
-                        sequence.push( { part: match[0], flags: { "Char": fromCharCode(parseInt(match[1], 16)), "Code": match[1] }, type: "UnicodeChar" } );
+                        m = match_unicode( re_obj.re.substr( re_obj.pos-1 ) );
+                        re_obj.pos += m[0].length-1;
+                        sequence.push( { part: m[0], flags: { "Char": fromCharCode(parseInt(m[1], 16)), "Code": m[1] }, typeName: "UnicodeChar", type: T_UNICODECHAR } );
                     }
                     
                     // hex character
                     else if ( 'x' == ch )
                     {
-                        if ( word.length )
+                        if ( wordlen )
                         {
-                            sequence.push( { part: word, flags: {}, type: "String" } );
+                            sequence.push( { part: word, flags: {}, typeName: "String", type: T_STRING } );
                             word = '';
+                            wordlen = 0;
                         }
-                        match = match_hex( self.regex.substr( self.pos-1 ) );
-                        self.pos += match[0].length-1;
-                        sequence.push( { part: match[0], flags: { "Char": fromCharCode(parseInt(match[1], 16)), "Code": match[1] }, type: "HexChar" } );
+                        m = match_hex( re_obj.re.substr( re_obj.pos-1 ) );
+                        re_obj.pos += m[0].length-1;
+                        sequence.push( { part: m[0], flags: { "Char": fromCharCode(parseInt(m[1], 16)), "Code": m[1] }, typeName: "HexChar", type: T_HEXCHAR } );
                     }
                     
                     else if ( specialCharsEscaped[HAS](ch) && '/' != ch)
                     {
-                        if ( word.length )
+                        if ( wordlen )
                         {
-                            sequence.push( { part: word, flags: {}, type: "String" } );
+                            sequence.push( { part: word, flags: {}, typeName: "String", type: T_STRING } );
                             word = '';
+                            wordlen = 0;
                         }
                         flag = {};
                         flag[ specialCharsEscaped[ch] ] = 1;
-                        sequence.push( { part: ch, flags: flag, type: "Special" } );
+                        sequence.push( { part: ch, flags: flag, typeName: "Special", type: T_SPECIAL } );
                     }
                     
                     else
                     {
                         word += ch;
+                        wordlen += 1;
                     }
                 }
                 
                 else
                 {
-                    // parse alternation
-                    if ( '|' == ch )
+                    // group end
+                    if ( re_obj.inGroup > 0 && ')' == ch )
                     {
-                        if ( word.length )
+                        if ( wordlen )
                         {
-                            sequence.push( { part: word, flags: {}, type: "String" } );
+                            sequence.push( { part: word, flags: {}, typeName: "String", type: T_STRING } );
                             word = '';
+                            wordlen = 0;
                         }
-                        alternation.push( { part: sequence, flags: {}, type: "Sequence" } );
+                        if ( alternation.length )
+                        {
+                            alternation.push( { part: sequence, flags: {}, typeName: "Sequence", type: T_SEQUENCE } );
+                            sequence = [];
+                            flag = {};
+                            flag[ specialChars['|'] ] = 1;
+                            return { part: { part: alternation, flags: flag, typeName: "Alternation", type: T_ALTERNATION }, flags: flags, typeName: "Group", type: T_GROUP };
+                        }
+                        else
+                        {
+                            return { part: { part: sequence, flags: {}, typeName: "Sequence", type: T_SEQUENCE }, flags: flags, typeName: "Group", type: T_GROUP };
+                        }
+                    }
+                    
+                    // parse alternation
+                    else if ( '|' == ch )
+                    {
+                        if ( wordlen )
+                        {
+                            sequence.push( { part: word, flags: {}, typeName: "String", type: T_STRING } );
+                            word = '';
+                            wordlen = 0;
+                        }
+                        alternation.push( { part: sequence, flags: {}, typeName: "Sequence", type: T_SEQUENCE } );
                         sequence = [];
                     }
                     
                     // parse character group
                     else if ( '[' == ch )
                     {
-                        if ( word.length )
+                        if ( wordlen )
                         {
-                            sequence.push( { part: word, flags: {}, type: "String" } );
+                            sequence.push( { part: word, flags: {}, typeName: "String", type: T_STRING } );
                             word = '';
+                            wordlen = 0;
                         }
-                        sequence.push( chargroup( self ) );
+                        sequence.push( chargroup( re_obj ) );
                     }
                     
                     // parse sub-group
                     else if ( '(' == ch )
                     {
-                        if ( word.length )
+                        if ( wordlen )
                         {
-                            sequence.push( { part: word, flags: {}, type: "String" } );
+                            sequence.push( { part: word, flags: {}, typeName: "String", type: T_STRING } );
                             word = '';
+                            wordlen = 0;
                         }
-                        sequence.push( subgroup( self ) );
+                        re_obj.inGroup+=1;
+                        sequence.push( analyze_re( re_obj ) );
+                        re_obj.inGroup-=1;
                     }
                     
                     // parse num repeats
                     else if ( '{' == ch )
                     {
-                        if ( word.length )
+                        if ( wordlen )
                         {
-                            sequence.push( { part: word, flags: {}, type: "String" } );
+                            sequence.push( { part: word, flags: {}, typeName: "String", type: T_STRING } );
                             word = '';
+                            wordlen = 0;
                         }
-                        match = match_repeats( self.regex.substr( self.pos-1 ) );
-                        self.pos += match[0].length-1;
-                        flag = { part: match[0], "MatchMinimum": match[1], "MatchMaximum": match[2] || "unlimited" };
+                        m = match_repeats( re_obj.re.substr( re_obj.pos-1 ) );
+                        re_obj.pos += m[0].length-1;
+                        flag = { part: m[0], "MatchMinimum": m[1], "MatchMaximum": m[2] || "unlimited" };
                         flag[ specialChars[ch] ] = 1;
-                        if ( self.pos < lre && '?' == self.regex[CHAR](self.pos) )
+                        if ( re_obj.pos < lre && '?' == re_obj.re[CHAR](re_obj.pos) )
                         {
                             flag[ "isGreedy" ] = 0;
-                            self.pos++;
+                            re_obj.pos++;
                         }
                         else
                         {
                             flag[ "isGreedy" ] = 1;
                         }
                         var prev = sequence.pop();
-                        if ( "String" == prev.type && prev.part.length > 1 )
+                        if ( T_STRING === prev.type && prev.part.length > 1 )
                         {
-                            sequence.push( { part: prev.part.slice(0, -1), flags: {}, type: "String" } );
+                            sequence.push( { part: prev.part.slice(0, -1), flags: {}, typeName: "String", type: T_STRING } );
                             prev.part = prev.part.slice(-1);
                         }
-                        sequence.push( { part: prev, flags: flag, type: "Quantifier" } );
+                        sequence.push( { part: prev, flags: flag, typeName: "Quantifier", type: T_QUANTIFIER } );
                     }
                     
                     // quantifiers
                     else if ( '*' == ch || '+' == ch || '?' == ch )
                     {
-                        if ( word.length )
+                        if ( wordlen )
                         {
-                            sequence.push( { part: word, flags: {}, type: "String" } );
+                            sequence.push( { part: word, flags: {}, typeName: "String", type: T_STRING } );
                             word = '';
+                            wordlen = 0;
                         }
                         flag = {};
                         flag[ specialChars[ch] ] = 1;
-                        if ( self.pos < lre && '?' == self.regex[CHAR](self.pos) )
+                        if ( re_obj.pos < lre && '?' == re_obj.re[CHAR](re_obj.pos) )
                         {
                             flag[ "isGreedy" ] = 0;
-                            self.pos++;
+                            re_obj.pos++;
                         }
                         else
                         {
                             flag[ "isGreedy" ] = 1;
                         }
                         var prev = sequence.pop();
-                        if ( "String" == prev.type && prev.part.length > 1 )
+                        if ( T_STRING === prev.type && prev.part.length > 1 )
                         {
-                            sequence.push( { part: prev.part.slice(0, -1), flags: {}, type: "String" } );
+                            sequence.push( { part: prev.part.slice(0, -1), flags: {}, typeName: "String", type: T_STRING } );
                             prev.part = prev.part.slice(-1);
                         }
-                        sequence.push( { part: prev, flags: flag, type: "Quantifier" } );
+                        sequence.push( { part: prev, flags: flag, typeName: "Quantifier", type: T_QUANTIFIER } );
                     }
                 
                     // special characters like ^, $, ., etc..
                     else if ( specialChars[HAS](ch) )
                     {
-                        if ( word.length )
+                        if ( wordlen )
                         {
-                            sequence.push( { part: word, flags: {}, type: "String" } );
+                            sequence.push( { part: word, flags: {}, typeName: "String", type: T_STRING } );
                             word = '';
+                            wordlen = 0;
                         }
                         flag = {};
                         flag[ specialChars[ch] ] = 1;
-                        sequence.push( { part: ch, flags: flag, type: "Special" } );
+                        sequence.push( { part: ch, flags: flag, typeName: "Special", type: T_SPECIAL } );
                     }
                 
                     else
                     {
                         word += ch;
+                        wordlen += 1;
                     }
                 }
             }
             
-            if ( word.length )
+            if ( wordlen )
             {
-                sequence.push( { part: word, flags: {}, type: "String" } );
+                sequence.push( { part: word, flags: {}, typeName: "String", type: T_STRING } );
                 word = '';
+                wordlen = 0;
             }
             
             if ( alternation.length )
             {
-                alternation.push( { part: sequence, flags: {}, type: "Sequence" } );
+                alternation.push( { part: sequence, flags: {}, typeName: "Sequence", type: T_SEQUENCE } );
                 sequence = [];
                 flag = {};
-                flag[ specialChars['|'] ] = 1;
-                return { part: alternation, flags: flag, type: "Alternation" };
+                flags[ specialChars['|'] ] = 1;
+                return { part: alternation, flags: flag, typeName: "Alternation", type: T_ALTERNATION };
             }
-            else
-            {
-                return { part: sequence, flags: {}, type: "Sequence" };
-            }
+            return { part: sequence, flags: {}, typeName: "Sequence", type: T_SEQUENCE };
         }
     ;
 
@@ -1378,16 +1214,16 @@
         
         constructor: Analyzer,
 
-        $regex: null,
-        $flags: null,
-        $parts: null,
-        $needsRefresh: true,
+        _regex: null,
+        _flags: null,
+        _parts: null,
+        _needsRefresh: false,
 
         dispose: function( ) {
             var self = this;
-            self.$regex = null;
-            self.$flags = null;
-            self.$parts = null;
+            self._regex = null;
+            self._flags = null;
+            self._parts = null;
             return self;
         },
         
@@ -1402,61 +1238,61 @@
                 while ( delim !== ch )
                 {
                     flags[ ch ] = 1;
-                    r = r.substr(0, l-1);
+                    r = r.slice(0, -1);
                     l = r.length;
                     ch = r[CHAR](l-1);
                 }
                 // remove regex delimiters
-                if ( delim == r[CHAR](0) && delim == r[CHAR](l-1) )  r = r.substr(1, l-2);
+                if ( delim == r[CHAR](0) && delim == r[CHAR](l-1) )  r = r.slice(1, -1);
                 
-                if ( self.$regex !== r ) self.$needsRefresh = true;
-                self.$regex = r; self.$flags = flags;
-            }
-            return self;
-        },
-        
-        analyze: function( ) {
-            var self = this;
-            if ( self.$needsRefresh )
-            {
-                self.$parts = analyze_re( self.$regex );
-                self.$needsRefresh = false;
+                if ( self._regex !== r ) self._needsRefresh = true;
+                self._regex = r; self._flags = flags;
             }
             return self;
         },
         
         getRegex: function( ) {
-            return new RegExp(this.$regex, Keys(this.$flags).join(''));
+            return new RegExp(this._regex, Keys(this._flags).join(''));
         },
         
         getParts: function( ) {
             var self = this;
-            if ( self.$needsRefresh ) self.analyze( );
-            return self.$parts;
+            if ( self._needsRefresh ) self.analyze( );
+            return self._parts;
+        },
+        
+        analyze: function( ) {
+            var self = this;
+            if ( self._needsRefresh )
+            {
+                self._parts = analyze_re( {re: self._regex, len: self._regex.length, pos: 0, groupIndex: 0, inGroup: 0} );
+                self._needsRefresh = false;
+            }
+            return self;
         },
         
         // experimental feature
-        generateSample: function( ) {
+        sample: function( ) {
             var self = this;
-            if ( self.$needsRefresh ) self.analyze( );
-            return generate( self.$parts, self.$flags && self.$flags.i );
+            if ( self._needsRefresh ) self.analyze( );
+            return generate( self._parts, self._flags && self._flags.i );
         },
         
         // experimental feature, implement (optimised) RE matching as well
         match: function( str ) {
-            //return match( self.$parts, str, 0, self.$flags && self.$flags.i );
+            //return match( self._parts, str, 0, self._flags && self._flags.i );
             return false;
         },
         
         // experimental feature
-        getPeekChars: function( ) {
+        peek: function( ) {
             var self = this, isCaseInsensitive,
                 peek, n, c, p, cases;
             
-            if ( self.$needsRefresh ) self.analyze( );
+            if ( self._needsRefresh ) self.analyze( );
             
-            peek = peek_characters( self.$parts );
-            isCaseInsensitive = self.$flags && self.$flags.i;
+            peek = peek_characters( self._parts );
+            isCaseInsensitive = self._flags && self._flags.i;
             
             for (n in peek)
             {
@@ -1517,7 +1353,10 @@
             return peek;
         }
     };
-
+    // aliases
+    Analyzer[PROTO].getPeekChars = Analyzer[PROTO].peek;
+    Analyzer[PROTO].generateSample = Analyzer[PROTO].sample;
+    
     /* main code ends here */
     /* export the module */
     return Analyzer;

@@ -25,17 +25,17 @@ The analyzer needs a couple of extensions but overall works good.
 See /test/js/test.js under /test folder for examples of how to use
 
 
-**RegExAnalyzer Live Example:**  
+**RegexAnalyzer Live Example:**  
 
 [![Live Example](/test/screenshot.png)](https://foo123.github.com/examples/regex-analyzer/)
 
 
-**RegExComposer Live Example:**  
+**RegexComposer Live Example:**  
 
 [![Live Example](/test/screenshot2.png)](https://foo123.github.com/examples/regex-composer/)
 
 
-**RegExComposer Example:**  (see /test/js/test.js)
+**RegexComposer Example:**  (see /test/js/test.js)
 
 ```javascript
 var echo = console.log;
@@ -43,7 +43,7 @@ var echo = console.log;
 echo("Testing Composer");
 echo("================");
 
-var Composer = require('../../src/js/regexcomposer.js');
+var Composer = require('../../src/js/RegexComposer.js');
 var identifierSubRegex = new Composer( )
                 
                 .characterGroup( )
