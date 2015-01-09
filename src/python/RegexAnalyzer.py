@@ -2,7 +2,7 @@
 ##
 #
 #   RegexAnalyzer
-#   @version: 0.4.4
+#   @version: 0.4.5
 #
 #   A simple Regular Expression Analyzer for PHP, Python, Node/JS, ActionScript
 #   https://github.com/foo123/RegexAnalyzer
@@ -111,6 +111,66 @@ class _G():
     ALPHAS = ALPHAS
     ALL = ALL
 
+class RE_OBJ():
+    def __init__(self, regex):
+        self.re = regex
+        self.len = len(regex)
+        self.pos = 0
+        self.groupIndex = 0
+        self.inGroup = 0
+        
+ 
+
+class Node():
+    def toObjectStatic( v ):
+        if isinstance(v,Node):
+            return {
+                'type': v.typeName,
+                'value': Node.toObjectStatic(v.val),
+                'flags': v.flags
+            } 
+        elif isinstance(v,(list,tuple)):
+            return list(map(Node.toObjectStatic, v))
+        return v
+    
+    def __init__(self, type, value, flags=None):
+        self.type = type
+        self.val = value
+        self.flags = flags if flags else {}
+        if T_SEQUENCE == type: 
+            self.typeName = "Sequence"
+        elif T_ALTERNATION == type: 
+            self.typeName = "Alternation"
+        elif T_GROUP == type: 
+            self.typeName = "Group"
+        elif T_CHARGROUP == type: 
+            self.typeName = "CharacterGroup"
+        elif T_CHARS == type: 
+            self.typeName = "Characters"
+        elif T_CHARRANGE == type: 
+            self.typeName = "CharacterRange"
+        elif T_STRING == type: 
+            self.typeName = "String"
+        elif T_QUANTIFIER == type: 
+            self.typeName = "Quantifier"
+        elif T_UNICODECHAR == type: 
+            self.typeName = "UnicodeChar"
+        elif T_HEXCHAR == type: 
+            self.typeName = "HexChar"
+        elif T_SPECIAL == type: 
+            self.typeName = "Special"
+    
+    def dispose(self):
+        self.val = None
+        self.flags = None
+        self.type = None
+        self.typeName = None
+        return self
+    
+    def toObject(self):
+        return Node.toObjectStatic(self)
+
+
 def match_chars( CHARS, s, pos=0, minlen=1, maxlen=100 ):
     #if maxlen < 0: maxlen = float("inf")
     lp = pos
@@ -218,47 +278,47 @@ def case_insensitive( chars, asArray=False ):
         return random_upper_or_lower( chars )
     
 
-def generate( part, isCaseInsensitive=False ):
+def generate( node, isCaseInsensitive=False ):
     sample = ''
 
-    type = part['type']
+    type = node.type
     # walk the sequence
     if T_ALTERNATION == type:
     
-        sample += generate( part['part'][rnd(0, len(part['part'])-1)], isCaseInsensitive )
+        sample += generate( node.val[rnd(0, len(node.val)-1)], isCaseInsensitive )
     
 
     elif T_GROUP == type:
     
-        sample += generate( part['part'], isCaseInsensitive )
+        sample += generate( node.val, isCaseInsensitive )
     
 
     elif T_SEQUENCE == type:
     
-        for p in part['part']:
+        for p in node.val:
         
             if not p: continue
             repeat = 1
-            if T_QUANTIFIER == p['type']:
+            if T_QUANTIFIER == p.type:
             
-                if 'MatchZeroOrMore' in p['flags']: repeat = rnd(0, 10)
-                elif 'MatchZeroOrOne' in p['flags']: repeat = rnd(0, 1)
-                elif 'MatchOneOrMore' in p['flags']: repeat = rnd(1, 11)
+                if 'MatchZeroOrMore' in p.flags: repeat = rnd(0, 10)
+                elif 'MatchZeroOrOne' in p.flags: repeat = rnd(0, 1)
+                elif 'MatchOneOrMore' in p.flags: repeat = rnd(1, 11)
                 else: 
                 
-                    mmin = int(p['flags']['MatchMinimum'], 10)
-                    mmax = int(p['flags']['MatchMaximum'], 10)
+                    mmin = int(p.flags['MatchMinimum'], 10)
+                    mmax = int(p.flags['MatchMaximum'], 10)
                     repeat = rnd(mmin, (mmin+10) if is_nan(mmax) else mmax)
                 
                 while repeat > 0:
                 
                     repeat-=1
-                    sample += generate( p['part'], isCaseInsensitive )
+                    sample += generate( p.val, isCaseInsensitive )
                 
             
-            elif T_SPECIAL == p['type']:
+            elif T_SPECIAL == p.type:
             
-                if 'MatchAnyChar' in p['flags']: sample += any( )
+                if 'MatchAnyChar' in p.flags: sample += any( )
             
             else:
             
@@ -270,30 +330,30 @@ def generate( part, isCaseInsensitive=False ):
     elif T_CHARGROUP == type:
     
         chars = []
-        #l = len(part['part']);
-        for p in part['part']:
+        #l = len(node.val);
+        for p in node.val:
         
-            ptype = p['type']
+            ptype = p.type
             if T_CHARS == ptype:
             
-                if isCaseInsensitive: chars = chars + list(case_insensitive( list(p['part']), True ))
-                else: chars = chars + list(p['part'])
+                if isCaseInsensitive: chars = chars + list(case_insensitive( list(p.val), True ))
+                else: chars = chars + list(p.val)
             
             
             elif T_CHARRANGE == ptype:
             
-                if isCaseInsensitive: chars = chars + list(case_insensitive( character_range(list(p['part'])), True ))
-                else: chars = chars + list(character_range(list(p['part'])))
+                if isCaseInsensitive: chars = chars + list(case_insensitive( character_range(list(p.val)), True ))
+                else: chars = chars + list(character_range(list(p.val)))
             
             
             elif T_UNICODECHAR == ptype or T_HEXCHAR == ptype:
             
-                chars.append( case_insensitive( p['flags']['Char'] ) if isCaseInsensitive else p['flags']['Char'] )
+                chars.append( case_insensitive( p.flags['Char'] ) if isCaseInsensitive else p.flags['Char'] )
             
             
             elif T_SPECIAL == ptype:
             
-                p_part = p['part']
+                p_part = p.val
                 if 'D' == p_part:
                 
                     chars.append( digit( False ) )
@@ -324,17 +384,17 @@ def generate( part, isCaseInsensitive=False ):
                 
             
         
-        sample += character(chars, not ('NotMatch' in part['flags']))
+        sample += character(chars, not ('NotMatch' in node.flags))
     
 
     elif T_STRING == type:
     
-        sample += case_insensitive( part['part'] ) if isCaseInsensitive else part['part']
+        sample += case_insensitive( node.val ) if isCaseInsensitive else node.val
     
 
-    elif T_SPECIAL == type and not('MatchStart' in part['flags']) and not('MatchEnd' in part['flags']):
+    elif T_SPECIAL == type and not('MatchStart' in node.flags) and not('MatchEnd' in node.flags):
     
-        p_part = part.part
+        p_part = node.val
         if 'D' == p_part:
         
             sample += digit( False )
@@ -371,60 +431,60 @@ def generate( part, isCaseInsensitive=False ):
             
     elif T_UNICODECHAR == type or T_HEXCHAR == type:
     
-        sample +=  case_insensitive( part['flags']['Char'] ) if isCaseInsensitive else part['flags']['Char']
+        sample +=  case_insensitive( node.flags['Char'] ) if isCaseInsensitive else node.flags['Char']
     
 
     return sample
 
 
-def peek_characters( part ):
+def peek_characters( node ):
     peek = {}
     negativepeek = {}
     
-    if not part: return { 'peek': peek, 'negativepeek': negativepeek }
+    if not node: return { 'peek': peek, 'negativepeek': negativepeek }
     
-    type = part['type']
+    type = node.type
     # walk the sequence
     if T_ALTERNATION == type:
-        for p in part['part']:
+        for p in node.val:
             tmp = peek_characters( p )
             peek = concat( peek, tmp['peek'] )
             negativepeek = concat( negativepeek, tmp['negativepeek'] )
     
     elif T_GROUP == type:
-        tmp = peek_characters( part['part'] )
+        tmp = peek_characters( node.val )
         peek = concat( peek, tmp['peek'] )
         negativepeek = concat( negativepeek, tmp['negativepeek'] )
     
     elif T_SEQUENCE == type:
         i = 0
-        l = len(part['part'])
-        p = part['part'][i]
+        l = len(node.val)
+        p = node.val[i]
         done = ( 
-            i >= l or not(p) or T_QUANTIFIER != p['type'] or 
-            ((('MatchZeroOrMore' not in p['flags']) and ('MatchZeroOrOne' not in p['flags']) and ('MatchMinimum' not in p['flags'])) or "0" != p['flags']['MatchMinimum'])
+            i >= l or not(p) or T_QUANTIFIER != p.type or 
+            ((('MatchZeroOrMore' not in p.flags) and ('MatchZeroOrOne' not in p.flags) and ('MatchMinimum' not in p.flags)) or "0" != p.flags['MatchMinimum'])
         )
         while not done:
-            tmp = peek_characters( p['part'] )
+            tmp = peek_characters( p.val )
             peek = concat( peek, tmp['peek'] )
             negativepeek = concat( negativepeek, tmp['negativepeek'] )
             
             i += 1
-            p = part['part'][i]
+            p = node.val[i]
             
             done = ( 
-                i >= l or not(p) or T_QUANTIFIER != p['type'] or 
-                ((('MatchZeroOrMore' not in p['flags']) and ('MatchZeroOrOne' not in p['flags']) and ('MatchMinimum' not in p['flags'])) or "0" != p['flags']['MatchMinimum'])
+                i >= l or not(p) or T_QUANTIFIER != p.type or 
+                ((('MatchZeroOrMore' not in p.flags) and ('MatchZeroOrOne' not in p.flags) and ('MatchMinimum' not in p.flags)) or "0" != p.flags['MatchMinimum'])
             )
         
         if i < l:
-            p = part['part'][i]
+            p = node.val[i]
             
-            if T_SPECIAL == p['type'] and ('^'==p['part'] or '$'==p['part']):
-                p = part['part'][i+1] if (i+1 < l) else None
+            if T_SPECIAL == p.type and ('^'==p.val or '$'==p.val):
+                p = node.val[i+1] if (i+1 < l) else None
             
-            if p and T_QUANTIFIER == p['type']:
-                p = p['part']
+            if p and T_QUANTIFIER == p.type:
+                p = p.val
             
             if p:
                 tmp = peek_characters( p )
@@ -432,56 +492,56 @@ def peek_characters( part ):
                 negativepeek = concat( negativepeek, tmp['negativepeek'] )
     
     elif T_CHARGROUP == type:
-        if 'NotMatch' in part['flags']:
+        if 'NotMatch' in node.flags:
             current = negativepeek
         else:
             current = peek
         
-        for p in part['part']:
-            ptype = p['type']
+        for p in node.val:
+            ptype = p.type
             if T_CHARS == ptype:
-                current = concat( current, p['part'] )
+                current = concat( current, p.val )
             
             elif T_CHARRANGE == ptype:
-                current = concat( current, character_range(p['part']) )
+                current = concat( current, character_range(p.val) )
             
             elif T_UNICODECHAR == ptype or T_HEXCHAR == ptype:
-                current[p['flags']['Char']] = 1
+                current[p.flags['Char']] = 1
             
             elif T_SPECIAL == ptype:
-                if 'D' == p['part']:
-                    if 'NotMatch' in part['flags']:
+                if 'D' == p.val:
+                    if 'NotMatch' in node.flags:
                         peek[ '\\d' ] = 1
                     else:
                         negativepeek[ '\\d' ] = 1
-                elif 'W' == p['part']:
-                    if 'NotMatch' in part['flags']:
+                elif 'W' == p.val:
+                    if 'NotMatch' in node.flags:
                         peek[ '\\w' ] = 1
                     else:
                         negativepeek[ '\\W' ] = 1
-                elif 'S' == p['part']:
-                    if 'NotMatch' in part['flags']:
+                elif 'S' == p.val:
+                    if 'NotMatch' in node.flags:
                         peek[ '\\s' ] = 1
                     else:
                         negativepeek[ '\\s' ] = 1
                 else:
-                    current['\\' + p['part']] = 1
+                    current['\\' + p.val] = 1
     
     elif T_STRING == type:
-        peek[part['part'][0]] = 1
+        peek[node.val[0]] = 1
     
-    elif T_SPECIAL == type and ('MatchStart' not in part['flags']) and ('MatchEnd' not in part['flags']['MatchEnd']):
-        if 'D' == part['part']:
+    elif T_SPECIAL == type and ('MatchStart' not in node.flags) and ('MatchEnd' not in node.flags['MatchEnd']):
+        if 'D' == node.val:
             negativepeek[ '\\d' ] = 1
-        elif 'W' == part['part']:
+        elif 'W' == node.val:
             negativepeek[ '\\W' ] = 1
-        elif 'S' == part['part']:
+        elif 'S' == node.val:
             negativepeek[ '\\s' ] = 1
         else:
-            peek['\\' + part['part']] = 1
+            peek['\\' + node.val] = 1
             
     elif T_UNICODECHAR == type or T_HEXCHAR == type:
-        peek[part['flags']['Char']] = 1
+        peek[node.flags['Char']] = 1
     
     return {'peek': peek, 'negativepeek': negativepeek}
 
@@ -545,16 +605,6 @@ def match_repeats( s ):
     return False
 
 
-class RE_OBJ():
-    def __init__(self, regex):
-        self.re = regex
-        self.len = len(regex)
-        self.pos = 0
-        self.groupIndex = 0
-        self.inGroup = 0
-        
- 
-
 def chargroup( re_obj ):
     global _G
     sequence = []
@@ -607,12 +657,12 @@ def chargroup( re_obj ):
         
             if len(chars):
             
-                sequence.append( { 'part': chars, 'flags': {}, 'typeName': "Chars", 'type': T_CHARS } )
+                sequence.append( Node(T_CHARS, chars) )
                 chars = []
             
             range[1] = ch
             isRange = False
-            sequence.append( { 'part': range, 'flags': {}, 'typeName': "CharRange", 'type': T_CHARRANGE } )
+            sequence.append( Node(T_CHARRANGE, range) )
         
         else:
         
@@ -622,12 +672,12 @@ def chargroup( re_obj ):
                 
                     if len(chars):
                     
-                        sequence.append( { 'part': chars, 'flags': {}, 'typeName': "Chars", 'type': T_CHARS } )
+                        sequence.append( Node(T_CHARS, chars) )
                         chars = []
             
                     flag = {}
                     flag[ _G.specialCharsEscaped[ch] ] = 1
-                    sequence.append( { 'part': ch, 'flags': flag, 'typeName': "Special", 'type': T_SPECIAL} )
+                    sequence.append( Node(T_SPECIAL, ch, flag) )
                 
                 
                 else:
@@ -643,10 +693,10 @@ def chargroup( re_obj ):
                 
                     if len(chars):
                     
-                        sequence.append( { 'part': chars, 'flags': {}, 'typeName': "Chars", 'type': T_CHARS } )
+                        sequence.append( Node(T_CHARS, chars) )
                         chars = []
                     
-                    return { 'part': sequence, 'flags': flags, 'typeName': "CharGroup", 'type': T_CHARGROUP }
+                    return Node(T_CHARGROUP, sequence, flags)
                 
                 
                 elif '-' == ch:
@@ -665,10 +715,10 @@ def chargroup( re_obj ):
     
     if len(chars):
     
-        sequence.append( { 'part': chars, 'flags': {}, 'typeName': "Chars", 'type': T_CHARS } )
+        sequence.append( Node(T_CHARS, chars) )
         chars = []
     
-    return { 'part': sequence, 'flags': flags, 'typeName': "CharGroup", 'type': T_CHARGROUP }
+    return Node(T_CHARGROUP, sequence, flags)
 
 
 def analyze_re( re_obj ):
@@ -724,13 +774,13 @@ def analyze_re( re_obj ):
             
                 if wordlen:
                 
-                    sequence.append( { 'part': word, 'flags': {}, 'typeName': "String", 'type': T_STRING } )
+                    sequence.append( Node(T_STRING, word) )
                     word = ''
                     wordlen = 0
                 
                 m = match_unicode( re_obj.re[re_obj.pos-1:] )
                 re_obj.pos += len(m[0])-1
-                sequence.append( { 'part': m[0], 'flags': { "Char": chr(int(m[1], 16)), "Code": m[1] }, 'typeName': "UnicodeChar", 'type': T_UNICODECHAR } )
+                sequence.append( Node(T_UNICODECHAR, m[0], {"Char": chr(int(m[1], 16)), "Code": m[1]}) )
             
             
             # hex character
@@ -738,26 +788,26 @@ def analyze_re( re_obj ):
             
                 if wordlen:
                 
-                    sequence.append( { 'part': word, 'flags': {}, 'typeName': "String", 'type': T_STRING } )
+                    sequence.append( Node(T_STRING, word) )
                     word = ''
                     wordlen = 0
                 
                 m = match_hex( re_obj.re[re_obj.pos-1:] )
                 re_obj.pos += len(m[0])-1
-                sequence.append( { 'part': m[0], 'flags': { "Char": chr(int(m[1], 16)), "Code": m[1] }, 'typeName': "HexChar", 'type': T_HEXCHAR } )
+                sequence.append( Node(T_HEXCHAR, m[0], {"Char": chr(int(m[1], 16)), "Code": m[1]}) )
             
             
             elif (ch in _G.specialCharsEscaped) and ('/' != ch):
             
                 if wordlen:
                 
-                    sequence.append( { 'part': word, 'flags': {}, 'typeName': "String", 'type': T_STRING } )
+                    sequence.append( Node(T_STRING, word) )
                     word = ''
                     wordlen = 0
                 
                 flag = {}
                 flag[ _G.specialCharsEscaped[ch] ] = 1
-                sequence.append( { 'part': ch, 'flags': flag, 'typeName': "Special", 'type': T_SPECIAL } )
+                sequence.append( Node(T_SPECIAL, ch, flag) )
             
             
             else:
@@ -774,21 +824,21 @@ def analyze_re( re_obj ):
             
                 if wordlen:
                 
-                    sequence.append( { 'part': word, 'flags': {}, 'typeName': "String", 'type': T_STRING } )
+                    sequence.append( Node(T_STRING, word) )
                     word = ''
                     wordlen = 0
                 
                 if len(alternation):
                 
-                    alternation.append( { 'part': sequence, 'flags': {}, 'typeName': "Sequence", 'type': T_SEQUENCE } )
+                    alternation.append( Node(T_SEQUENCE, sequence) )
                     sequence = []
                     flag = {}
                     flag[ _G.specialChars['|'] ] = 1
-                    return { 'part': { 'part': alternation, 'flags': flag, 'typeName': "Alternation", 'type': T_ALTERNATION }, 'flags': flags, 'typeName': "Group", 'type': T_GROUP }
+                    return Node(T_GROUP, Node(T_ALTERNATION, alternation, flag), flags)
                 
                 else:
                 
-                    return { 'part': { 'part': sequence, 'flags': {}, 'typeName': "Sequence", 'type': T_SEQUENCE }, 'flags': flags, 'typeName': "Group", 'type': T_GROUP }
+                    return Node(T_GROUP, Node(T_SEQUENCE, sequence), flags)
                 
             
             
@@ -797,11 +847,11 @@ def analyze_re( re_obj ):
             
                 if wordlen:
                 
-                    sequence.append( { 'part': word, 'flags': {}, 'typeName': "String", 'type': T_STRING } )
+                    sequence.append( Node(T_STRING, word) )
                     word = ''
                     wordlen = 0
                 
-                alternation.append( { 'part': sequence, 'flags': {}, 'typeName': "Sequence", 'type': T_SEQUENCE } )
+                alternation.append( Node(T_SEQUENCE, sequence) )
                 sequence = []
             
             
@@ -810,7 +860,7 @@ def analyze_re( re_obj ):
             
                 if wordlen:
                 
-                    sequence.append( { 'part': word, 'flags': {}, 'typeName': "String", 'type': T_STRING } )
+                    sequence.append( Node(T_STRING, word) )
                     word = ''
                     wordlen = 0
                 
@@ -822,7 +872,7 @@ def analyze_re( re_obj ):
             
                 if wordlen:
                 
-                    sequence.append( { 'part': word, 'flags': {}, 'typeName': "String", 'type': T_STRING } )
+                    sequence.append( Node(T_STRING, word) )
                     word = ''
                     wordlen = 0
                 
@@ -836,13 +886,13 @@ def analyze_re( re_obj ):
             
                 if wordlen:
                 
-                    sequence.append( { 'part': word, 'flags': {}, 'typeName': "String", 'type': T_STRING } )
+                    sequence.append( Node(T_STRING, word) )
                     word = ''
                     wordlen = 0
                 
                 m = match_repeats( re_obj.re[re_obj.pos-1:] )
                 re_obj.pos += len(m[0])-1
-                flag = { 'part': m[0], "MatchMinimum": m[1], "MatchMaximum": m[2] if m[2] else "unlimited" }
+                flag = { 'val': m[0], "MatchMinimum": m[1], "MatchMaximum": m[2] if m[2] else "unlimited" }
                 flag[ _G.specialChars[ch] ] = 1
                 if re_obj.pos<lre and '?' == re_obj.re[re_obj.pos]:
                 
@@ -854,12 +904,12 @@ def analyze_re( re_obj ):
                     flag[ "isGreedy" ] = 1
                 
                 prev = sequence.pop()
-                if T_STRING == prev['type'] and len(prev['part']) > 1:
+                if T_STRING == prev.type and len(prev.val) > 1:
                 
-                    sequence.append( { 'part': prev['part'][0:-1], 'flags': {}, 'typeName': "String", 'type': T_STRING } )
-                    prev['part'] = prev['part'][-1]
+                    sequence.append( Node(T_STRING, prev.val[0:-1]) )
+                    prev.val = prev.val[-1]
                 
-                sequence.append( { 'part': prev, 'flags': flag, 'typeName': "Quantifier", 'type': T_QUANTIFIER } )
+                sequence.append( Node(T_QUANTIFIER, prev, flag) )
             
             
             # quantifiers
@@ -867,7 +917,7 @@ def analyze_re( re_obj ):
             
                 if wordlen:
                 
-                    sequence.append( { 'part': word, 'flags': {}, 'typeName': "String", 'type': T_STRING } )
+                    sequence.append( Node(T_STRING, word) )
                     word = ''
                     wordlen = 0
                 
@@ -883,12 +933,12 @@ def analyze_re( re_obj ):
                     flag[ "isGreedy" ] = 1
                 
                 prev = sequence.pop()
-                if T_STRING == prev['type'] and len(prev['part']) > 1:
+                if T_STRING == prev.type and len(prev.val) > 1:
                 
-                    sequence.append( { 'part': prev['part'][0:-1], 'flags': {}, 'typeName': "String", 'type': T_STRING } )
-                    prev['part'] = prev['part'][-1]
+                    sequence.append( Node(T_STRING, prev.val[0:-1]) )
+                    prev.val = prev.val[-1]
                 
-                sequence.append( { 'part': prev, 'flags': flag, 'typeName': "Quantifier", 'type': T_QUANTIFIER } )
+                sequence.append( Node(T_QUANTIFIER, prev, flag) )
             
         
             # special characters like ^, $, ., etc..
@@ -896,13 +946,13 @@ def analyze_re( re_obj ):
             
                 if wordlen:
                 
-                    sequence.append( { 'part': word, 'flags': {}, 'typeName': "String", 'type': T_STRING } )
+                    sequence.append( Node(T_STRING, word) )
                     word = ''
                     wordlen = 0
                 
                 flag = {}
                 flag[ _G.specialChars[ch] ] = 1
-                sequence.append( { 'part': ch, 'flags': flag, 'typeName': "Special", 'type': T_SPECIAL } )
+                sequence.append( Node(T_SPECIAL, ch, flag) )
             
         
             else:
@@ -915,27 +965,29 @@ def analyze_re( re_obj ):
     
     if wordlen:
     
-        sequence.append( { 'part': word, 'flags': {}, 'typeName': "String", 'type': T_STRING } )
+        sequence.append( Node(T_STRING, word) )
         word = ''
         wordlen = 0
                 
     
     if len(alternation):
     
-        alternation.append( { 'part': sequence, 'flags': {}, 'typeName': "Sequence", 'type': T_SEQUENCE } )
+        alternation.append( Node(T_SEQUENCE, sequence) )
         sequence = []
         flag = {}
         flag[ _G.specialChars['|'] ] = 1
-        return { 'part': alternation, 'flags': flag, 'typeName': "Alternation", 'type': T_ALTERNATION }
+        return Node(T_ALTERNATION, alternation, flag)
     
-    return { 'part': sequence, 'flags': {}, 'typeName': "Sequence", 'type': T_SEQUENCE }
+    return Node(T_SEQUENCE, sequence)
     
 
 
 
 class RegexAnalyzer:
     
-    VERSION = "0.4.4"
+    VERSION = "0.4.5"
+    
+    Node = Node
     
     # A simple (js-flavored) regular expression analyzer
     def __init__(self, regex=None, delim=None):
@@ -1001,7 +1053,7 @@ class RegexAnalyzer:
         return generate( self._parts, 'i' in self._flags )
     
     # experimental feature, implement (optimised) RE matching as well
-    def match( str ):
+    def match( self, str ):
         #return match( self.$parts, str, 0, self.$flags && self.$flags.i );
         return False
     

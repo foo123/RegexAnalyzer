@@ -76,7 +76,7 @@ echo("Regular Expression Flags: ");
 echo(anal._flags);
 echo();
 echo("Regular Expression Parts: ");
-echo(JSON.stringify(anal._parts, null, 4));
+echo(JSON.stringify(anal._parts.toObject(), null, 4));
 echo();
 echo("Regular Expression Peek Characters: ");
 echo(JSON.stringify(peekChars, null, 4));

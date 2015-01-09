@@ -1,7 +1,7 @@
 /**
 *
 *   RegexAnalyzer
-*   @version: 0.4.4
+*   @version: 0.4.5
 *
 *   A simple Regular Expression Analyzer for PHP, Python, Node/JS, ActionScript
 *   https://github.com/foo123/RegexAnalyzer
@@ -34,13 +34,12 @@
         
     "use strict";
     /* main code starts here */
-    var __version__ = "0.4.4",
+    var __version__ = "0.4.5",
     
         PROTO = 'prototype', Obj = Object, Arr = Array, /*Str = String,*/ 
         Keys = Obj.keys, to_string = Obj[PROTO].toString, 
-        fromCharCode = String.fromCharCode, CHAR = 'charAt', CHARCODE = 'charCodeAt',
+        fromCharCode = String.fromCharCode, CHAR = 'charAt', CHARCODE = 'charCodeAt', toJSON = JSON.stringify,
         INF = Infinity, HAS = 'hasOwnProperty',
-        
         escapeChar = '\\',
         specialChars = {
             "." : "MatchAnyChar",
@@ -100,9 +99,83 @@
         T_SEQUENCE = 1, T_ALTERNATION = 2, T_GROUP = 3,
         T_QUANTIFIER = 4, T_UNICODECHAR = 5, T_HEXCHAR = 6,
         T_SPECIAL = 7, T_CHARGROUP = 8, T_CHARS = 9,
-        T_CHARRANGE = 10, T_STRING = 11,
-        
-        rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
+        T_CHARRANGE = 10, T_STRING = 11;
+    
+    var RE_OBJ = function( re ) {
+        var self = this;
+        self.re = re;
+        self.len = re.length;
+        self.pos = 0;
+        self.groupIndex = 0;
+        self.inGroup = 0;
+    },
+    Node = function Node( type, value, flags ) {
+        var self = this;
+        if ( !(self instanceof Node) ) return new Node(type, value, flags);
+        self.type = type;
+        self.val = value;
+        self.flags = flags || {};
+        switch(type)
+        {
+            case T_SEQUENCE: 
+                self.typeName = "Sequence"; break;
+            case T_ALTERNATION: 
+                self.typeName = "Alternation"; break;
+            case T_GROUP: 
+                self.typeName = "Group"; break;
+            case T_CHARGROUP: 
+                self.typeName = "CharacterGroup"; break;
+            case T_CHARS: 
+                self.typeName = "Characters"; break;
+            case T_CHARRANGE: 
+                self.typeName = "CharacterRange"; break;
+            case T_STRING: 
+                self.typeName = "String"; break;
+            case T_QUANTIFIER: 
+                self.typeName = "Quantifier"; break;
+            case T_UNICODECHAR: 
+                self.typeName = "UnicodeChar"; break;
+            case T_HEXCHAR: 
+                self.typeName = "HexChar"; break;
+            case T_SPECIAL: 
+                self.typeName = "Special"; break;
+        }
+    };
+    Node.toObjectStatic = function toObject( v ) {
+        if (v instanceof Node)
+        {
+            return {
+                type: v.typeName,
+                value: toObject(v.val),
+                flags: v.flags
+            }; 
+        }
+        else if (v instanceof Array)
+        {
+            return v.map(toObject);
+        }
+        return v;
+    };
+    Node[PROTO] = {
+        constructor: Node
+        ,type: null
+        ,typeName: null
+        ,val: null
+        ,flags: null
+        ,dispose: function( ) {
+            var self = this;
+            self.val = null;
+            self.flags = null;
+            self.type = null;
+            self.typeName = null;
+            return self;
+        }
+        ,toObject: function( ) {
+            return Node.toObjectStatic(this);
+        }
+    };
+    
+    var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
         char_code = function( c ) { return c[CHARCODE](0); },
         char_code_range = function( s ) { return [s[CHARCODE](0), s[CHARCODE](s.length-1)]; },
         //char_codes = function( s_or_a ) { return (s_or_a.substr ? s_or_a.split("") : s_or_a).map( char_code ); },
@@ -470,29 +543,29 @@
                 return random_upper_or_lower( chars );
             }
         },
-        generate = function generate( part, isCaseInsensitive ) {
+        generate = function generate( node, isCaseInsensitive ) {
             var sample = '', p, i, l, type;
             
-            type = part.type;
+            type = node.type;
             // walk the sequence
             if ( T_ALTERNATION === type )
             {
-                sample += generate( part.part[rnd(0, part.part.length-1)], isCaseInsensitive );
+                sample += generate( node.val[rnd(0, node.val.length-1)], isCaseInsensitive );
             }
             
             else if ( T_GROUP === type )
             {
-                sample += generate( part.part, isCaseInsensitive );
+                sample += generate( node.val, isCaseInsensitive );
             }
             
             else if ( T_SEQUENCE === type )
             {
                 var repeat, mmin, mmax;
-                l = part.part.length;
-                p = part.part[i];
+                l = node.val.length;
+                p = node.val[i];
                 for (i=0; i<l; i++)
                 {
-                    p = part.part[i];
+                    p = node.val[i];
                     if ( !p ) continue;
                     repeat = 1;
                     if ( T_QUANTIFIER === p.type )
@@ -509,7 +582,7 @@
                         while ( repeat > 0 ) 
                         {
                             repeat--;
-                            sample += generate( p.part, isCaseInsensitive );
+                            sample += generate( p.val, isCaseInsensitive );
                         }
                     }
                     else if ( T_SPECIAL === p.type )
@@ -527,18 +600,18 @@
             {
                 var chars = [], ptype;
                 
-                for (i=0, l=part.part.length; i<l; i++)
+                for (i=0, l=node.val.length; i<l; i++)
                 {
-                    p = part.part[i];
+                    p = node.val[i];
                     ptype = p.type;
                     if ( T_CHARS === ptype )
                     {
-                        chars = chars.concat( isCaseInsensitive ? case_insensitive( p.part, true ) : p.part );
+                        chars = chars.concat( isCaseInsensitive ? case_insensitive( p.val, true ) : p.val );
                     }
                     
                     else if ( T_CHARRANGE === ptype )
                     {
-                        chars = chars.concat( isCaseInsensitive ? case_insensitive( character_range(p.part), true ) : character_range(p.part) );
+                        chars = chars.concat( isCaseInsensitive ? case_insensitive( character_range(p.val), true ) : character_range(p.val) );
                     }
                     
                     else if ( T_UNICODECHAR === ptype || T_HEXCHAR === ptype )
@@ -548,7 +621,7 @@
                     
                     else if ( T_SPECIAL === ptype )
                     {
-                        var p_part = p.part;
+                        var p_part = p.val;
                         if ('D' == p_part)
                         {
                             chars.push( digit( false ) );
@@ -579,17 +652,17 @@
                         }
                     }
                 }
-                sample += character(chars, !part.flags.NotMatch);
+                sample += character(chars, !node.flags.NotMatch);
             }
             
             else if ( T_STRING === type )
             {
-                sample += isCaseInsensitive ? case_insensitive( part.part ) : part.part;
+                sample += isCaseInsensitive ? case_insensitive( node.val ) : node.val;
             }
             
-            else if ( T_SPECIAL === type && !part.flags.MatchStart && !part.flags.MatchEnd )
+            else if ( T_SPECIAL === type && !node.flags.MatchStart && !node.flags.MatchEnd )
             {
-                var p_part = part.part;
+                var p_part = node.val;
                 if ('D' == p_part)
                 {
                     sample += digit( false );
@@ -626,23 +699,23 @@
                     
             else if ( T_UNICODECHAR === type || T_HEXCHAR === type )
             {
-                sample += isCaseInsensitive ? case_insensitive( part.flags.Char ) : part.flags.Char;
+                sample += isCaseInsensitive ? case_insensitive( node.flags.Char ) : node.flags.Char;
             }
             
             return sample;
         },
 
-        peek_characters = function peek_characters( part ) {
+        peek_characters = function peek_characters( node ) {
             var peek = {}, negativepeek = {}, current, p, i, l, 
                 tmp, done, type, ptype;
             
-            type = part.type;
+            type = node.type;
             // walk the sequence
             if ( T_ALTERNATION === type )
             {
-                for (i=0, l=part.part.length; i<l; i++)
+                for (i=0, l=node.val.length; i<l; i++)
                 {
-                    tmp = peek_characters( part.part[i] );
+                    tmp = peek_characters( node.val[i] );
                     peek = concat( peek, tmp.peek );
                     negativepeek = concat( negativepeek, tmp.negativepeek );
                 }
@@ -650,7 +723,7 @@
             
             else if ( T_GROUP === type )
             {
-                tmp = peek_characters( part.part );
+                tmp = peek_characters( node.val );
                 peek = concat( peek, tmp.peek );
                 negativepeek = concat( negativepeek, tmp.negativepeek );
             }
@@ -658,20 +731,20 @@
             else if ( T_SEQUENCE === type )
             {
                 i = 0;
-                l = part.part.length;
-                p = part.part[i];
+                l = node.val.length;
+                p = node.val[i];
                 done = ( 
                     i >= l || !p || T_QUANTIFIER != p.type || 
                     ( !p.flags.MatchZeroOrMore && !p.flags.MatchZeroOrOne && "0"!=p.flags.MatchMinimum ) 
                 );
                 while ( !done )
                 {
-                    tmp = peek_characters( p.part );
+                    tmp = peek_characters( p.val );
                     peek = concat( peek, tmp.peek );
                     negativepeek = concat( negativepeek, tmp.negativepeek );
                     
                     i++;
-                    p = part.part[i];
+                    p = node.val[i];
                     
                     done = ( 
                         i >= l || !p || T_QUANTIFIER != p.type || 
@@ -680,11 +753,11 @@
                 }
                 if ( i < l )
                 {
-                    p = part.part[i];
+                    p = node.val[i];
                     
-                    if (T_SPECIAL === p.type && ('^'==p.part || '$'==p.part)) p = part.part[i+1] || null;
+                    if (T_SPECIAL === p.type && ('^'==p.val || '$'==p.val)) p = node.val[i+1] || null;
                     
-                    if (p && T_QUANTIFIER === p.type) p = p.part;
+                    if (p && T_QUANTIFIER === p.type) p = p.val;
                     
                     if (p)
                     {
@@ -697,20 +770,20 @@
             
             else if ( T_CHARGROUP === type )
             {
-                current = ( part.flags.NotMatch ) ? negativepeek : peek;
+                current = ( node.flags.NotMatch ) ? negativepeek : peek;
                 
-                for (i=0, l=part.part.length; i<l; i++)
+                for (i=0, l=node.val.length; i<l; i++)
                 {
-                    p = part.part[i];
+                    p = node.val[i];
                     ptype = p.type;
                     if ( T_CHARS === ptype )
                     {
-                        current = concat( current, p.part );
+                        current = concat( current, p.val );
                     }
                     
                     else if ( T_CHARRANGE === ptype )
                     {
-                        current = concat( current, character_range(p.part) );
+                        current = concat( current, character_range(p.val) );
                     }
                     
                     else if ( T_UNICODECHAR === ptype || T_HEXCHAR === ptype )
@@ -720,24 +793,24 @@
                     
                     else if ( T_SPECIAL === ptype )
                     {
-                        var p_part = p.part;
+                        var p_part = p.val;
                         if ('D' == p_part)
                         {
-                            if (part.flags.NotMatch)
+                            if (node.flags.NotMatch)
                                 peek[ '\\d' ] = 1;
                             else
                                 negativepeek[ '\\d' ] = 1;
                         }
                         else if ('W' == p_part)
                         {
-                            if (part.flags.NotMatch)
+                            if (node.flags.NotMatch)
                                 peek[ '\\w' ] = 1;
                             else
                                 negativepeek[ '\\W' ] = 1;
                         }
                         else if ('S' == p_part)
                         {
-                            if (part.flags.NotMatch)
+                            if (node.flags.NotMatch)
                                 peek[ '\\s' ] = 1;
                             else
                                 negativepeek[ '\\s' ] = 1;
@@ -752,32 +825,32 @@
             
             else if ( T_STRING === type )
             {
-                peek[part.part[CHAR](0)] = 1;
+                peek[node.val[CHAR](0)] = 1;
             }
             
-            else if ( T_SPECIAL === type && !part.flags.MatchStart && !part.flags.MatchEnd )
+            else if ( T_SPECIAL === type && !node.flags.MatchStart && !node.flags.MatchEnd )
             {
-                if ('D' == part.part)
+                if ('D' == node.val)
                 {
                     negativepeek[ '\\d' ] = 1;
                 }
-                else if ('W' == part.part)
+                else if ('W' == node.val)
                 {
                     negativepeek[ '\\W' ] = 1;
                 }
-                else if ('S' == part.part)
+                else if ('S' == node.val)
                 {
                     negativepeek[ '\\s' ] = 1;
                 }
                 else
                 {
-                    peek['\\' + part.part] = 1;
+                    peek['\\' + node.val] = 1;
                 }
             }
                     
             else if ( T_UNICODECHAR === type || T_HEXCHAR === type )
             {
-                peek[part.flags.Char] = 1;
+                peek[node.flags.Char] = 1;
             }
             
             return { peek: peek, negativepeek: negativepeek };
@@ -885,12 +958,12 @@
                 {
                     if ( chars.length )
                     {
-                        sequence.push( { part: chars, flags: {}, typeName: "Chars", type: T_CHARS } );
+                        sequence.push( Node(T_CHARS, chars) );
                         chars = [];
                     }
                     range[1] = ch;
                     isRange = false;
-                    sequence.push( { part: range, flags: {}, typeName: "CharRange", type: T_CHARRANGE } );
+                    sequence.push( Node(T_CHARRANGE, range) );
                 }
                 else
                 {
@@ -900,12 +973,12 @@
                         {
                             if ( chars.length )
                             {
-                                sequence.push( { part: chars, flags: {}, typeName: "Chars", type: T_CHARS } );
+                                sequence.push( Node(T_CHARS, chars) );
                                 chars = [];
                             }
                             flag = {};
                             flag[ specialCharsEscaped[ch] ] = 1;
-                            sequence.push( { part: ch, flags: flag, typeName: "Special", type: T_SPECIAL } );
+                            sequence.push( Node(T_SPECIAL, ch, flag) );
                         }
                         
                         else
@@ -921,10 +994,10 @@
                         {
                             if ( chars.length )
                             {
-                                sequence.push( { part: chars, flags: {}, typeName: "Chars", type: T_CHARS } );
+                                sequence.push( Node(T_CHARS, chars) );
                                 chars = [];
                             }
-                            return { part: sequence, flags: flags, typeName: "CharGroup", type: T_CHARGROUP };
+                            return Node(T_CHARGROUP, sequence, flags);
                         }
                         
                         else if ( '-' == ch )
@@ -943,10 +1016,10 @@
             }
             if ( chars.length )
             {
-                sequence.push( { part: chars, flags: {}, typeName: "Chars", type: T_CHARS } );
+                sequence.push( Node(T_CHARS, chars) );
                 chars = [];
             }
-            return { part: sequence, flags: flags, typeName: "CharGroup", type: T_CHARGROUP };
+            return Node(T_CHARGROUP, sequence, flags);
         },
         
         analyze_re = function analyze_re( re_obj ) {
@@ -995,13 +1068,13 @@
                     {
                         if ( wordlen )
                         {
-                            sequence.push( { part: word, flags: {}, typeName: "String", type: T_STRING } );
+                            sequence.push( Node(T_STRING, word) );
                             word = '';
                             wordlen = 0;
                         }
                         m = match_unicode( re_obj.re.substr( re_obj.pos-1 ) );
                         re_obj.pos += m[0].length-1;
-                        sequence.push( { part: m[0], flags: { "Char": fromCharCode(parseInt(m[1], 16)), "Code": m[1] }, typeName: "UnicodeChar", type: T_UNICODECHAR } );
+                        sequence.push( Node(T_UNICODECHAR, m[0], {"Char": fromCharCode(parseInt(m[1], 16)), "Code": m[1]}) );
                     }
                     
                     // hex character
@@ -1009,26 +1082,26 @@
                     {
                         if ( wordlen )
                         {
-                            sequence.push( { part: word, flags: {}, typeName: "String", type: T_STRING } );
+                            sequence.push( Node(T_STRING, word) );
                             word = '';
                             wordlen = 0;
                         }
                         m = match_hex( re_obj.re.substr( re_obj.pos-1 ) );
                         re_obj.pos += m[0].length-1;
-                        sequence.push( { part: m[0], flags: { "Char": fromCharCode(parseInt(m[1], 16)), "Code": m[1] }, typeName: "HexChar", type: T_HEXCHAR } );
+                        sequence.push( Node(T_HEXCHAR, m[0], {"Char": fromCharCode(parseInt(m[1], 16)), "Code": m[1]}) );
                     }
                     
                     else if ( specialCharsEscaped[HAS](ch) && '/' != ch)
                     {
                         if ( wordlen )
                         {
-                            sequence.push( { part: word, flags: {}, typeName: "String", type: T_STRING } );
+                            sequence.push( Node(T_STRING, word) );
                             word = '';
                             wordlen = 0;
                         }
                         flag = {};
                         flag[ specialCharsEscaped[ch] ] = 1;
-                        sequence.push( { part: ch, flags: flag, typeName: "Special", type: T_SPECIAL } );
+                        sequence.push( Node(T_SPECIAL, ch, flag) );
                     }
                     
                     else
@@ -1045,21 +1118,21 @@
                     {
                         if ( wordlen )
                         {
-                            sequence.push( { part: word, flags: {}, typeName: "String", type: T_STRING } );
+                            sequence.push( Node(T_STRING, word) );
                             word = '';
                             wordlen = 0;
                         }
                         if ( alternation.length )
                         {
-                            alternation.push( { part: sequence, flags: {}, typeName: "Sequence", type: T_SEQUENCE } );
+                            alternation.push( Node(T_SEQUENCE, sequence) );
                             sequence = [];
                             flag = {};
                             flag[ specialChars['|'] ] = 1;
-                            return { part: { part: alternation, flags: flag, typeName: "Alternation", type: T_ALTERNATION }, flags: flags, typeName: "Group", type: T_GROUP };
+                            return Node(T_GROUP, Node(T_ALTERNATION, alternation, flag), flags);
                         }
                         else
                         {
-                            return { part: { part: sequence, flags: {}, typeName: "Sequence", type: T_SEQUENCE }, flags: flags, typeName: "Group", type: T_GROUP };
+                            return Node(T_GROUP, Node(T_SEQUENCE, sequence), flags);
                         }
                     }
                     
@@ -1068,11 +1141,11 @@
                     {
                         if ( wordlen )
                         {
-                            sequence.push( { part: word, flags: {}, typeName: "String", type: T_STRING } );
+                            sequence.push( Node(T_STRING, word) );
                             word = '';
                             wordlen = 0;
                         }
-                        alternation.push( { part: sequence, flags: {}, typeName: "Sequence", type: T_SEQUENCE } );
+                        alternation.push( Node(T_SEQUENCE, sequence) );
                         sequence = [];
                     }
                     
@@ -1081,7 +1154,7 @@
                     {
                         if ( wordlen )
                         {
-                            sequence.push( { part: word, flags: {}, typeName: "String", type: T_STRING } );
+                            sequence.push( Node(T_STRING, word) );
                             word = '';
                             wordlen = 0;
                         }
@@ -1093,7 +1166,7 @@
                     {
                         if ( wordlen )
                         {
-                            sequence.push( { part: word, flags: {}, typeName: "String", type: T_STRING } );
+                            sequence.push( Node(T_STRING, word) );
                             word = '';
                             wordlen = 0;
                         }
@@ -1107,13 +1180,13 @@
                     {
                         if ( wordlen )
                         {
-                            sequence.push( { part: word, flags: {}, typeName: "String", type: T_STRING } );
+                            sequence.push( Node(T_STRING, word) );
                             word = '';
                             wordlen = 0;
                         }
                         m = match_repeats( re_obj.re.substr( re_obj.pos-1 ) );
                         re_obj.pos += m[0].length-1;
-                        flag = { part: m[0], "MatchMinimum": m[1], "MatchMaximum": m[2] || "unlimited" };
+                        flag = { val: m[0], "MatchMinimum": m[1], "MatchMaximum": m[2] || "unlimited" };
                         flag[ specialChars[ch] ] = 1;
                         if ( re_obj.pos < lre && '?' == re_obj.re[CHAR](re_obj.pos) )
                         {
@@ -1125,12 +1198,12 @@
                             flag[ "isGreedy" ] = 1;
                         }
                         var prev = sequence.pop();
-                        if ( T_STRING === prev.type && prev.part.length > 1 )
+                        if ( T_STRING === prev.type && prev.val.length > 1 )
                         {
-                            sequence.push( { part: prev.part.slice(0, -1), flags: {}, typeName: "String", type: T_STRING } );
-                            prev.part = prev.part.slice(-1);
+                            sequence.push( Node(T_STRING, prev.val.slice(0, -1)) );
+                            prev.val = prev.val.slice(-1);
                         }
-                        sequence.push( { part: prev, flags: flag, typeName: "Quantifier", type: T_QUANTIFIER } );
+                        sequence.push( Node(T_QUANTIFIER, prev, flag) );
                     }
                     
                     // quantifiers
@@ -1138,7 +1211,7 @@
                     {
                         if ( wordlen )
                         {
-                            sequence.push( { part: word, flags: {}, typeName: "String", type: T_STRING } );
+                            sequence.push( Node(T_STRING, word) );
                             word = '';
                             wordlen = 0;
                         }
@@ -1154,12 +1227,12 @@
                             flag[ "isGreedy" ] = 1;
                         }
                         var prev = sequence.pop();
-                        if ( T_STRING === prev.type && prev.part.length > 1 )
+                        if ( T_STRING === prev.type && prev.val.length > 1 )
                         {
-                            sequence.push( { part: prev.part.slice(0, -1), flags: {}, typeName: "String", type: T_STRING } );
-                            prev.part = prev.part.slice(-1);
+                            sequence.push( Node(T_STRING, prev.val.slice(0, -1)) );
+                            prev.val = prev.val.slice(-1);
                         }
-                        sequence.push( { part: prev, flags: flag, typeName: "Quantifier", type: T_QUANTIFIER } );
+                        sequence.push( Node(T_QUANTIFIER, prev, flag) );
                     }
                 
                     // special characters like ^, $, ., etc..
@@ -1167,13 +1240,13 @@
                     {
                         if ( wordlen )
                         {
-                            sequence.push( { part: word, flags: {}, typeName: "String", type: T_STRING } );
+                            sequence.push( Node(T_STRING, word) );
                             word = '';
                             wordlen = 0;
                         }
                         flag = {};
                         flag[ specialChars[ch] ] = 1;
-                        sequence.push( { part: ch, flags: flag, typeName: "Special", type: T_SPECIAL } );
+                        sequence.push( Node(T_SPECIAL, ch, flag) );
                     }
                 
                     else
@@ -1186,20 +1259,20 @@
             
             if ( wordlen )
             {
-                sequence.push( { part: word, flags: {}, typeName: "String", type: T_STRING } );
+                sequence.push( Node(T_STRING, word) );
                 word = '';
                 wordlen = 0;
             }
             
             if ( alternation.length )
             {
-                alternation.push( { part: sequence, flags: {}, typeName: "Sequence", type: T_SEQUENCE } );
+                alternation.push( Node(T_SEQUENCE, sequence) );
                 sequence = [];
                 flag = {};
                 flags[ specialChars['|'] ] = 1;
-                return { part: alternation, flags: flag, typeName: "Alternation", type: T_ALTERNATION };
+                return Node(T_ALTERNATION, alternation, flag);
             }
-            return { part: sequence, flags: {}, typeName: "Sequence", type: T_SEQUENCE };
+            return Node(T_SEQUENCE, sequence);
         }
     ;
 
@@ -1209,6 +1282,7 @@
         if ( regex ) this.regex( regex, delim );
     };
     Analyzer.VERSION = __version__;
+    Analyzer.Node = Node;
     Analyzer.getCharRange = character_range;
     Analyzer[PROTO] = {
         
@@ -1265,7 +1339,7 @@
             var self = this;
             if ( self._needsRefresh )
             {
-                self._parts = analyze_re( {re: self._regex, len: self._regex.length, pos: 0, groupIndex: 0, inGroup: 0} );
+                self._parts = analyze_re( new RE_OBJ(self._regex) );
                 self._needsRefresh = false;
             }
             return self;

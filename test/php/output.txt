@@ -5,7 +5,7 @@ Composed: /^([_a-z][_a-z0-9]*|\*\*aabb\*\*|.|\s|\D+)*?$/i
 Expected: /^([_a-z][_a-z0-9]*|\*\*aabb\*\*|.|\s|\D+)*?$/i
 ================
 
-Testing Analyzer.VERSION = 0.4.4
+Testing Analyzer.VERSION = 0.4.5
 ================
 Input: /xyz([abc0-9]){2,3}/i
 
@@ -21,114 +21,106 @@ Array
 Regular Expression Parts: 
 Array
 (
-    [part] => Array
+    [type] => Sequence
+    [value] => Array
         (
             [0] => Array
                 (
-                    [part] => xyz
-                    [flags] => Array
+                    [type] => String
+                    [value] => xyz
+                    [flags] => stdClass Object
                         (
                         )
 
-                    [typeName] => String
-                    [type] => 11
                 )
 
             [1] => Array
                 (
-                    [part] => Array
+                    [type] => Quantifier
+                    [value] => Array
                         (
-                            [part] => Array
+                            [type] => Group
+                            [value] => Array
                                 (
-                                    [part] => Array
+                                    [type] => Sequence
+                                    [value] => Array
                                         (
                                             [0] => Array
                                                 (
-                                                    [part] => Array
+                                                    [type] => CharacterGroup
+                                                    [value] => Array
                                                         (
                                                             [0] => Array
                                                                 (
-                                                                    [part] => Array
+                                                                    [type] => Characters
+                                                                    [value] => Array
                                                                         (
                                                                             [0] => a
                                                                             [1] => b
                                                                             [2] => c
                                                                         )
 
-                                                                    [flags] => Array
+                                                                    [flags] => stdClass Object
                                                                         (
                                                                         )
 
-                                                                    [typeName] => Chars
-                                                                    [type] => 9
                                                                 )
 
                                                             [1] => Array
                                                                 (
-                                                                    [part] => Array
+                                                                    [type] => CharacterRange
+                                                                    [value] => Array
                                                                         (
                                                                             [0] => 0
                                                                             [1] => 9
                                                                         )
 
-                                                                    [flags] => Array
+                                                                    [flags] => stdClass Object
                                                                         (
                                                                         )
 
-                                                                    [typeName] => CharRange
-                                                                    [type] => 10
                                                                 )
 
                                                         )
 
-                                                    [flags] => Array
+                                                    [flags] => stdClass Object
                                                         (
                                                         )
 
-                                                    [typeName] => CharGroup
-                                                    [type] => 8
                                                 )
 
                                         )
 
-                                    [flags] => Array
+                                    [flags] => stdClass Object
                                         (
                                         )
 
-                                    [typeName] => Sequence
-                                    [type] => 1
                                 )
 
-                            [flags] => Array
+                            [flags] => stdClass Object
                                 (
                                     [GroupIndex] => 1
                                 )
 
-                            [typeName] => Group
-                            [type] => 3
                         )
 
-                    [flags] => Array
+                    [flags] => stdClass Object
                         (
-                            [part] => {2,3}
+                            [val] => {2,3}
                             [MatchMinimum] => 2
                             [MatchMaximum] => 3
                             [StartRepeats] => 1
                             [isGreedy] => 1
                         )
 
-                    [typeName] => Quantifier
-                    [type] => 4
                 )
 
         )
 
-    [flags] => Array
+    [flags] => stdClass Object
         (
         )
 
-    [typeName] => Sequence
-    [type] => 1
 )
 
 
@@ -149,6 +141,6 @@ Array
 
 
 Regular Expression Sample Match String: 
-XYZ56B -> Matched
+xyz94 -> Matched
 ================
 

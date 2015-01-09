@@ -77,7 +77,7 @@ echo_("Regular Expression Flags: ");
 echo_(print_r($anal->_flags, true));
 echo_();
 echo_("Regular Expression Parts: ");
-echo_(print_r($anal->_parts, true));
+echo_(print_r($anal->_parts->toObject(), true));
 echo_();
 echo_("Regular Expression Peek Characters: ");
 echo_(print_r($peekChars, true));

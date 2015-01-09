@@ -2,7 +2,7 @@
 /**
 *
 *   RegexAnalyzer
-*   @version: 0.4.4
+*   @version: 0.4.5
 *
 *   A simple Regular Expression Analyzer for PHP, Python, Node/JS, ActionScript
 *   https://github.com/foo123/RegexAnalyzer
@@ -10,9 +10,99 @@
 **/
 if ( !class_exists('RegexAnalyzer') )
 {
+class RE_OBJ
+{ 
+    public $re = null;
+    public $len = null;
+    public $pos = 0;
+    public $groupIndex = 0;
+    public $inGroup = 0;
+    public function __construct( $re ) 
+    {
+        $this->re = $re;
+        $this->len = strlen($re);
+        $this->pos = 0;
+        $this->groupIndex = 0;
+        $this->inGroup = 0;
+    }
+}
+
+class RegexNode
+{
+    public static function toObjectStatic( $v )
+    {
+        if ($v instanceof RegexNode)
+        {
+            return array(
+                'type'=> $v->typeName,
+                'value'=> self::toObjectStatic($v->val),
+                'flags'=> $v->flags
+            ); 
+        }
+        elseif ( is_array($v) )
+        {
+            return array_map(array('RegexNode','toObjectStatic'), $v);
+        }
+        return $v;
+    }
+    
+    public $type = null;
+    public $typeName = null;
+    public $val = null;
+    public $flags = null;
+    
+    public function __construct( $type, $value, $flags=null )
+    {
+        $this->type = $type;
+        $this->val = $value;
+        if ( $flags ) $this->flags = $flags;
+        else $this->flags = array();
+        $this->flags = (object)$this->flags;
+        switch($type)
+        {
+            case RegexAnalyzer::T_SEQUENCE: 
+                $this->typeName = "Sequence"; break;
+            case RegexAnalyzer::T_ALTERNATION: 
+                $this->typeName = "Alternation"; break;
+            case RegexAnalyzer::T_GROUP: 
+                $this->typeName = "Group"; break;
+            case RegexAnalyzer::T_CHARGROUP: 
+                $this->typeName = "CharacterGroup"; break;
+            case RegexAnalyzer::T_CHARS: 
+                $this->typeName = "Characters"; break;
+            case RegexAnalyzer::T_CHARRANGE: 
+                $this->typeName = "CharacterRange"; break;
+            case RegexAnalyzer::T_STRING: 
+                $this->typeName = "String"; break;
+            case RegexAnalyzer::T_QUANTIFIER: 
+                $this->typeName = "Quantifier"; break;
+            case RegexAnalyzer::T_UNICODECHAR: 
+                $this->typeName = "UnicodeChar"; break;
+            case RegexAnalyzer::T_HEXCHAR: 
+                $this->typeName = "HexChar"; break;
+            case RegexAnalyzer::T_SPECIAL: 
+                $this->typeName = "Special"; break;
+        }
+    }
+    
+    public function dispose( ) 
+    {
+        $this->val = null;
+        $this->flags = null;
+        $this->type = null;
+        $this->typeName = null;
+        return $this;
+    }
+    
+    public function toObject( ) 
+    {
+        return self::toObjectStatic($this);
+    }
+}
+
 class RegexAnalyzer
 {
-    const VERSION = "0.4.4";
+    const VERSION = "0.4.5";
     const T_SEQUENCE = 1; 
     const T_ALTERNATION = 2; 
     const T_GROUP = 3;
@@ -37,6 +127,11 @@ class RegexAnalyzer
     public static $ALPHAS = null;
     public static $ALL = null; 
     public static $ALL_ARY = null;
+    
+    public static function Node( $type, $value, $flags=null )
+    {
+        return new RegexNode($type, $value, $flags);
+    }
     
     public static function init( )
     {
@@ -258,52 +353,52 @@ class RegexAnalyzer
             return self::random_upper_or_lower( $chars );
         }
     }
-    private static function generate( $part, $isCaseInsensitive=false ) 
+    private static function generate( $node, $isCaseInsensitive=false ) 
     {
         $sample = '';
         
-        $type = $part['type'];
+        $type = $node->type;
         // walk the sequence
         if ( self::T_ALTERNATION === $type )
         {
-            $sample .= self::generate( $part['part'][rand(0, count($part['part'])-1)], $isCaseInsensitive );
+            $sample .= self::generate( $node->val[rand(0, count($node->val)-1)], $isCaseInsensitive );
         }
         
         elseif ( self::T_GROUP === $type )
         {
-            $sample .= self::generate( $part['part'], $isCaseInsensitive );
+            $sample .= self::generate( $node->val, $isCaseInsensitive );
         }
         
         elseif ( self::T_SEQUENCE === $type )
         {
             $i = 0;
-            $l = count($part['part']);
-            $p = $part['part'][$i];
+            $l = count($node->val);
+            $p = $node->val[$i];
             for ($i=0; $i<$l; $i++)
             {
-                $p = $part['part'][$i];
+                $p = $node->val[$i];
                 if ( !$p ) continue;
                 $repeat = 1;
-                if ( self::T_QUANTIFIER === $p['type'] )
+                if ( self::T_QUANTIFIER === $p->type )
                 {
-                    if ( isset($p['flags']['MatchZeroOrMore']) && $p['flags']['MatchZeroOrMore'] ) $repeat = rand(0, 10);
-                    elseif ( isset($p['flags']['MatchZeroOrOne']) && $p['flags']['MatchZeroOrOne'] ) $repeat = rand(0, 1);
-                    elseif ( isset($p['flags']['MatchOneOrMore']) && $p['flags']['MatchOneOrMore'] ) $repeat = rand(1, 11);
+                    if ( isset($p->flags->MatchZeroOrMore) && $p->flags->MatchZeroOrMore ) $repeat = rand(0, 10);
+                    elseif ( isset($p->flags->MatchZeroOrOne) && $p->flags->MatchZeroOrOne ) $repeat = rand(0, 1);
+                    elseif ( isset($p->flags->MatchOneOrMore) && $p->flags->MatchOneOrMore ) $repeat = rand(1, 11);
                     else 
                     {
-                        $mmin = intval($p['flags']['MatchMinimum'], 10);
-                        $mmax = intval($p['flags']['MatchMaximum'], 10);
+                        $mmin = intval($p->flags->MatchMinimum, 10);
+                        $mmax = intval($p->flags->MatchMaximum, 10);
                         $repeat = rand($mmin, is_nan($mmax) ? ($mmin+10) : $mmax);
                     }
                     while ( $repeat > 0 ) 
                     {
                         $repeat--;
-                        $sample .= self::generate( $p['part'], $isCaseInsensitive );
+                        $sample .= self::generate( $p->val, $isCaseInsensitive );
                     }
                 }
-                else if ( self::T_SPECIAL === $p['type'] )
+                else if ( self::T_SPECIAL === $p->type )
                 {
-                    if ( isset($p['flags']['MatchAnyChar']) && $p['flags']['MatchAnyChar'] ) $sample .= self::any( );
+                    if ( isset($p->flags->MatchAnyChar) && $p->flags->MatchAnyChar ) $sample .= self::any( );
                 }
                 else
                 {
@@ -315,35 +410,35 @@ class RegexAnalyzer
         elseif ( self::T_CHARGROUP === $type )
         {
             $chars = array();
-            $l = count($part['part']);
+            $l = count($node->val);
             for ($i=0; $i<$l; $i++)
             {
-                $p = $part['part'][$i];
-                $ptype = $p['type'];
+                $p = $node->val[$i];
+                $ptype = $p->type;
                 if ( self::T_CHARS === $ptype )
                 {
                     if ( $isCaseInsensitive )
-                        $chars = array_merge($chars, self::case_insensitive( $p['part'], true ) );
+                        $chars = array_merge($chars, self::case_insensitive( $p->val, true ) );
                     else
-                        $chars = array_merge($chars, $p['part'] );
+                        $chars = array_merge($chars, $p->val );
                 }
                 
                 elseif ( self::T_CHARRANGE === $ptype )
                 {
                     if ( $isCaseInsensitive )
-                        $chars = array_merge($chars, self::case_insensitive( self::character_range($p['part']), true ) );
+                        $chars = array_merge($chars, self::case_insensitive( self::character_range($p->val), true ) );
                     else
-                        $chars = array_merge($chars, self::character_range($p['part']) );
+                        $chars = array_merge($chars, self::character_range($p->val) );
                 }
                 
                 elseif ( self::T_UNICODECHAR === $ptype || self::T_HEXCHAR === $ptype )
                 {
-                    $chars[] = $isCaseInsensitive ? self::case_insensitive( $p['flags']['Char'] ): $p['flags']['Char'];
+                    $chars[] = $isCaseInsensitive ? self::case_insensitive( $p->flags->Char ): $p->flags->Char;
                 }
                 
                 elseif ( self::T_SPECIAL === $ptype )
                 {
-                    $p_part = $p['part'];
+                    $p_part = $p->val;
                     if ('D' == $p_part)
                     {
                         $chars[] = self::digit( false );
@@ -374,19 +469,19 @@ class RegexAnalyzer
                     }
                 }
             }
-            $sample .= self::character($chars, isset($part['flags']['NotMatch']) && $part['flags']['NotMatch'] ? false: true);
+            $sample .= self::character($chars, isset($node->flags->NotMatch) && $node->flags->NotMatch ? false: true);
         }
         
         elseif ( self::T_STRING === $type )
         {
-            $sample .= $isCaseInsensitive ? self::case_insensitive( $part['part'] ) : $part['part'];
+            $sample .= $isCaseInsensitive ? self::case_insensitive( $node->val ) : $node->val;
         }
         
         elseif ( self::T_SPECIAL === $type && 
-            (!isset($part['flags']['MatchStart']) || !$part['flags']['MatchStart']) && 
-            (!isset($part['flags']['MatchEnd']) || !$part['flags']['MatchEnd']) )
+            (!isset($node->flags->MatchStart) || !$node->flags->MatchStart) && 
+            (!isset($node->flags->MatchEnd) || !$node->flags->MatchEnd) )
         {
-            $p_part = $part['part'];
+            $p_part = $node->val;
             if ('D' == $p_part)
             {
                 $sample .= self::digit( false );
@@ -423,25 +518,25 @@ class RegexAnalyzer
                 
         elseif ( self::T_UNICODECHAR === $type || self::T_HEXCHAR === $type )
         {
-            $sample .= $isCaseInsensitive ? self::case_insensitive( $part['flags']['Char'] ) : $part['flags']['Char'];
+            $sample .= $isCaseInsensitive ? self::case_insensitive( $node->flags->Char ) : $node->flags->Char;
         }
         
         return $sample;
     }
 
-    private static function peek_characters( $part ) 
+    private static function peek_characters( $node ) 
     {
         $peek = array(); 
         $negativepeek = array();
         
-        $type = $part['type'];
+        $type = $node->type;
         // walk the sequence
         if ( self::T_ALTERNATION === $type )
         {
-            $l = count($part['part']);
+            $l = count($node->val);
             for ($i=0; $i<$l; $i++)
             {
-                $tmp = self::peek_characters( $part['part'][$i] );
+                $tmp = self::peek_characters( $node->val[$i] );
                 $peek = self::concat( $peek, $tmp['peek'] );
                 $negativepeek = self::concat( $negativepeek, $tmp['negativepeek'] );
             }
@@ -449,7 +544,7 @@ class RegexAnalyzer
         
         elseif ( self::T_GROUP === $type )
         {
-            $tmp = self::peek_characters( $part['part'] );
+            $tmp = self::peek_characters( $node->val );
             $peek = self::concat( $peek, $tmp['peek'] );
             $negativepeek = self::concat( $negativepeek, $tmp['negativepeek'] );
         }
@@ -457,34 +552,34 @@ class RegexAnalyzer
         elseif ( self::T_SEQUENCE === $type )
         {
             $i = 0;
-            $l = count($part['part']);
-            $p = $part['part'][$i];
+            $l = count($node->val);
+            $p = $node->val[$i];
             $done = ( 
-                $i >= $l || !$p || self::T_QUANTIFIER !== $p['type'] || 
-                ( !isset($p['flags']['MatchZeroOrMore']) && !isset($p['flags']['MatchZeroOrOne']) && (!isset($p['flags']['MatchMinimum']) || "0"!=$p['flags']['MatchMinimum']) ) 
+                $i >= $l || !$p || self::T_QUANTIFIER !== $p->type || 
+                ( !isset($p->flags->MatchZeroOrMore) && !isset($p->flags->MatchZeroOrOne) && (!isset($p->flags->MatchMinimum) || "0"!=$p->flags->MatchMinimum) ) 
             );
             while ( !$done )
             {
-                $tmp = self::peek_characters( $p['part'] );
+                $tmp = self::peek_characters( $p->val );
                 $peek = self::concat( $peek, $tmp['peek'] );
                 $negativepeek = self::concat( $negativepeek, $tmp['negativepeek'] );
                 
                 $i++;
-                $p = $part['part'][$i];
+                $p = $node->val[$i];
                 
                 $done = ( 
-                    $i >= $l || !$p || self::T_QUANTIFIER !== $p['type'] || 
-                    ( !isset($p['flags']['MatchZeroOrMore']) && !isset($p['flags']['MatchZeroOrOne']) && (!isset($p['flags']['MatchMinimum']) || "0"!=$p['flags']['MatchMinimum']) ) 
+                    $i >= $l || !$p || self::T_QUANTIFIER !== $p->type || 
+                    ( !isset($p->flags->MatchZeroOrMore) && !isset($p->flags->MatchZeroOrOne) && (!isset($p->flags->MatchMinimum) || "0"!=$p->flags->MatchMinimum) ) 
                 );
             }
             if ( $i < $l )
             {
-                $p = $part['part'][$i];
+                $p = $node->val[$i];
                 
-                if (self::T_SPECIAL === $p['type'] && ('^'==$p['part'] || '$'==$p['part'])) 
-                    $p = isset($part['part'][$i+1]) ? $part['part'][$i+1] : null;
+                if (self::T_SPECIAL === $p->type && ('^'==$p->val || '$'==$p->val)) 
+                    $p = isset($node->val[$i+1]) ? $node->val[$i+1] : null;
                 
-                if ($p && self::T_QUANTIFIER === $p['type']) $p = $p['part'];
+                if ($p && self::T_QUANTIFIER === $p->type) $p = $p->val;
                 
                 if ($p)
                 {
@@ -497,49 +592,49 @@ class RegexAnalyzer
         
         elseif ( self::T_CHARGROUP === $type )
         {
-            $isNegative = isset($part['flags']['NotMatch']) && $part['flags']['NotMatch'];
+            $isNegative = isset($node->flags->NotMatch) && $node->flags->NotMatch;
             $current = array();
             
-            $l = count($part['part']);
+            $l = count($node->val);
             for ($i=0; $i<$l; $i++)
             {
-                $p = $part['part'][$i];
-                $ptype = $p['type'];
+                $p = $node->val[$i];
+                $ptype = $p->type;
                 if ( self::T_CHARS === $ptype )
                 {
-                    $current = self::concat( $current, $p['part'] );
+                    $current = self::concat( $current, $p->val );
                 }
                 
                 elseif ( self::T_CHARRANGE === $ptype )
                 {
-                    $current = self::concat( $current, self::character_range($p['part']) );
+                    $current = self::concat( $current, self::character_range($p->val) );
                 }
                 
                 elseif ( self::T_UNICODECHAR === $ptype || self::T_HEXCHAR === $ptype )
                 {
-                    $current[$p['flags']['Char']] = 1;
+                    $current[$p->flags->Char] = 1;
                 }
                 
                 elseif ( self::T_SPECIAL === $ptype )
                 {
-                    $p_part = $p['part'];
+                    $p_part = $p->val;
                     if ('D' == $p_part)
                     {
-                        if (isset($part['flags']['NotMatch']) && $part['flags']['NotMatch'])
+                        if (isset($node->flags->NotMatch) && $node->flags->NotMatch)
                             $peek[ '\\d' ] = 1;
                         else
                             $negativepeek[ '\\d' ] = 1;
                     }
                     elseif ('W' == $p_part)
                     {
-                        if (isset($part['flags']['NotMatch']) && $part['flags']['NotMatch'])
+                        if (isset($node->flags->NotMatch) && $node->flags->NotMatch)
                             $peek[ '\\w' ] = 1;
                         else
                             $negativepeek[ '\\W' ] = 1;
                     }
                     elseif ('S' == $p_part)
                     {
-                        if (isset($part['flags']['NotMatch']) && $part['flags']['NotMatch'])
+                        if (isset($node->flags->NotMatch) && $node->flags->NotMatch)
                             $peek[ '\\s' ] = 1;
                         else
                             $negativepeek[ '\\s' ] = 1;
@@ -558,14 +653,14 @@ class RegexAnalyzer
         
         elseif ( self::T_STRING === $type )
         {
-            $peek[$part['part'][0]] = 1;
+            $peek[$node->val[0]] = 1;
         }
         
         elseif ( self::T_SPECIAL === $type && 
-            (!isset($part['flags']['MatchStart']) || !$part['flags']['MatchStart']) && 
-            (!isset($part['flags']['MatchEnd']) || !$part['flags']['MatchEnd']) )
+            (!isset($node->flags->MatchStart) || !$node->flags->MatchStart) && 
+            (!isset($node->flags->MatchEnd) || !$node->flags->MatchEnd) )
         {
-            $p_part = $part['part'];
+            $p_part = $node->val;
             if ('D' == $p_part)
             {
                 $negativepeek[ '\\d' ] = 1;
@@ -586,7 +681,7 @@ class RegexAnalyzer
                 
         elseif ( self::T_UNICODECHAR === $type || self::T_HEXCHAR === $type )
         {
-            $peek[$part['flags']['Char']] = 1;
+            $peek[$node->flags->Char] = 1;
         }
         
         return array('peek'=> $peek, 'negativepeek'=> $negativepeek);
@@ -701,12 +796,12 @@ class RegexAnalyzer
             {
                 if ( count($chars) )
                 {
-                    $sequence[] = array( 'part'=> $chars, 'flags'=> array(), 'typeName'=> "Chars", 'type'=> self::T_CHARS );
+                    $sequence[] = self::Node(self::T_CHARS, $chars);
                     $chars = array();
                 }
                 $range[1] = $ch;
                 $isRange = false;
-                $sequence[] = array( 'part'=> $range, 'flags'=> array(), 'typeName'=> "CharRange", 'type'=> self::T_CHARRANGE );
+                $sequence[] = self::Node(self::T_CHARRANGE, $range);
             }
             else
             {
@@ -716,12 +811,12 @@ class RegexAnalyzer
                     {
                         if ( count($chars) )
                         {
-                            $sequence[] = array( 'part'=> $chars, 'flags'=> array(), 'typeName'=> "Chars", 'type'=> self::T_CHARS );
+                            $sequence[] = self::Node(self::T_CHARS, $chars);
                             $chars = array();
                         }
                         $flag = array();
                         $flag[ self::$specialCharsEscaped[$ch] ] = 1;
-                        $sequence[] = array( 'part'=> $ch, 'flags'=> $flag, 'typeName'=> "Special", 'type'=> self::T_SPECIAL );
+                        $sequence[] = self::Node(self::T_SPECIAL, $ch, $flag);
                     }
                     
                     else
@@ -737,10 +832,10 @@ class RegexAnalyzer
                     {
                         if ( count($chars) )
                         {
-                            $sequence[] = array( 'part'=> $chars, 'flags'=> array(), 'typeName'=> "Chars", 'type'=> self::T_CHARS );
+                            $sequence[] = self::Node(self::T_CHARS, $chars);
                             $chars = array();
                         }
-                        return array( 'part'=> $sequence, 'flags'=> $flags, 'typeName'=> "CharGroup", 'type'=> self::T_CHARGROUP );
+                        return self::Node(self::T_CHARGROUP, $sequence, $flags);
                     }
                     
                     else if ( '-' == $ch )
@@ -759,10 +854,10 @@ class RegexAnalyzer
         }
         if ( count($chars) )
         {
-            $sequence[] = array( 'part'=> $chars, 'flags'=> array(), 'typeName'=> "Chars", 'type'=> self::T_CHARS );
+            $sequence[] = self::Node(self::T_CHARS, $chars);
             $chars = array();
         }
-        return array( 'part'=> $sequence, 'flags'=> $flags, 'typeName'=> "CharGroup", 'type'=> self::T_CHARGROUP );
+        return self::Node(self::T_CHARGROUP, $sequence, $flags);
     }
     private static function analyze_re( &$re_obj ) 
     {
@@ -812,13 +907,13 @@ class RegexAnalyzer
                 {
                     if ( $wordlen )
                     {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'typeName'=> "String", 'type'=> self::T_STRING );
+                        $sequence[] = self::Node(self::T_STRING, $word);
                         $word = '';
                         $wordlen = 0;
                     }
                     $m = self::match_unicode(substr($re_obj->re, $re_obj->pos-1));
                     $re_obj->pos += strlen($m[0])-1;
-                    $sequence[] = array( 'part'=> $m[0], 'flags'=> array( "Char"=> chr(intval($m[1], 16)), "Code"=> $m[1] ), 'typeName'=> "UnicodeChar", 'type'=> self::T_UNICODECHAR );
+                    $sequence[] = self::Node(self::T_UNICODECHAR, $m[0], array("Char"=> chr(intval($m[1], 16)), "Code"=> $m[1]));
                 }
                 
                 // hex character
@@ -826,26 +921,26 @@ class RegexAnalyzer
                 {
                     if ( $wordlen )
                     {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'typeName'=> "String", 'type'=> self::T_STRING );
+                        $sequence[] = self::Node(self::T_STRING, $word);
                         $word = '';
                         $wordlen = 0;
                     }
                     $m = self::match_hex(substr($re_obj->re, $re_obj->pos-1));
                     $re_obj->pos += strlen($m[0])-1;
-                    $sequence[] = array( 'part'=> $m[0], 'flags'=> array( "Char"=> chr(intval($m[1], 16)), "Code"=> $m[1] ), 'typeName'=> "HexChar", 'type'=> self::T_HEXCHAR );
+                    $sequence[] = self::Node(self::T_HEXCHAR, $m[0], array("Char"=> chr(intval($m[1], 16)), "Code"=> $m[1]));
                 }
                 
                 else if ( isset(self::$specialCharsEscaped[$ch]) && '/' != $ch)
                 {
                     if ( $wordlen )
                     {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'typeName'=> "String", 'type'=> self::T_STRING );
+                        $sequence[] = self::Node(self::T_STRING, $word);
                         $word = '';
                         $wordlen = 0;
                     }
                     $flag = array();
                     $flag[ self::$specialCharsEscaped[$ch] ] = 1;
-                    $sequence[] = array( 'part'=> $ch, 'flags'=> $flag, 'typeName'=> "Special", 'type'=> self::T_SPECIAL );
+                    $sequence[] = self::Node(self::T_SPECIAL, $ch, $flag);
                 }
                 
                 else
@@ -862,21 +957,21 @@ class RegexAnalyzer
                 {
                     if ( $wordlen )
                     {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'typeName'=> "String", 'type'=> self::T_STRING );
+                        $sequence[] = self::Node(self::T_STRING, $word);
                         $word = '';
                         $wordlen = 0;
                     }
                     if ( count($alternation) )
                     {
-                        $alternation[] = array( 'part'=> $sequence, 'flags'=> array(), 'typeName'=> "Sequence", 'type'=> self::T_SEQUENCE );
+                        $alternation[] = self::Node(self::T_SEQUENCE, $sequence);
                         $sequence = array();
                         $flag = array();
                         $flag[ self::$specialChars['|'] ] = 1;
-                        return array( 'part'=> array( 'part'=> $alternation, 'flags'=> $flag, 'typeName'=> "Alternation", 'type'=> self::T_ALTERNATION ), 'flags'=> $flags, 'typeName'=> "Group", 'type'=> self::T_GROUP );
+                        return self::Node(self::T_GROUP, self::Node(self::T_ALTERNATION, $alternation, $flag), $flags);
                     }
                     else
                     {
-                        return array( 'part'=> array( 'part'=> $sequence, 'flags'=> array(), 'typeName'=> "Sequence", 'type'=> self::T_SEQUENCE ), 'flags'=> $flags, 'typeName'=> "Group", 'type'=> self::T_GROUP );
+                        return self::Node(self::T_GROUP, self::Node(self::T_SEQUENCE, $sequence), $flags);
                     }
                 }
                 
@@ -885,11 +980,11 @@ class RegexAnalyzer
                 {
                     if ( $wordlen )
                     {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'typeName'=> "String", 'type'=> self::T_STRING );
+                        $sequence[] = self::Node(self::T_STRING, $word);
                         $word = '';
                         $wordlen = 0;
                     }
-                    $alternation[] = array( 'part'=> $sequence, 'flags'=> array(), 'typeName'=> "Sequence", 'type'=> self::T_SEQUENCE );
+                    $alternation[] = self::Node(self::T_SEQUENCE, $sequence);
                     $sequence = array();
                 }
                 
@@ -898,7 +993,7 @@ class RegexAnalyzer
                 {
                     if ( $wordlen )
                     {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'typeName'=> "String", 'type'=> self::T_STRING );
+                        $sequence[] = self::Node(self::T_STRING, $word);
                         $word = '';
                         $wordlen = 0;
                     }
@@ -910,7 +1005,7 @@ class RegexAnalyzer
                 {
                     if ( $wordlen )
                     {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'typeName'=> "String", 'type'=> self::T_STRING );
+                        $sequence[] = self::Node(self::T_STRING, $word);
                         $word = '';
                         $wordlen = 0;
                     }
@@ -924,13 +1019,13 @@ class RegexAnalyzer
                 {
                     if ( $wordlen )
                     {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'typeName'=> "String", 'type'=> self::T_STRING );
+                        $sequence[] = self::Node(self::T_STRING, $word);
                         $word = '';
                         $wordlen = 0;
                     }
                     $m = self::match_repeats(substr($re_obj->re, $re_obj->pos-1));
                     $re_obj->pos += strlen($m[0])-1;
-                    $flag = array( 'part'=> $m[0], "MatchMinimum"=> $m[1], "MatchMaximum"=> isset($m[2]) ? $m[2] : "unlimited" );
+                    $flag = array( 'val'=> $m[0], "MatchMinimum"=> $m[1], "MatchMaximum"=> isset($m[2]) ? $m[2] : "unlimited" );
                     $flag[ self::$specialChars[$ch] ] = 1;
                     if ( $re_obj->pos < $lre && '?' == $re_obj->re[$re_obj->pos] )
                     {
@@ -942,12 +1037,12 @@ class RegexAnalyzer
                         $flag[ "isGreedy" ] = 1;
                     }
                     $prev = array_pop($sequence);
-                    if ( self::T_STRING === $prev['type'] && strlen($prev['part']) > 1 )
+                    if ( self::T_STRING === $prev->type && strlen($prev->val) > 1 )
                     {
-                        $sequence[] = array( 'part'=> substr($prev['part'], 0, -1), 'flags'=> array(), 'typeName'=> "String", 'type'=> self::T_STRING );
-                        $prev['part'] = substr($prev['part'], -1);
+                        $sequence[] = self::Node(self::T_STRING, substr($prev->val, 0, -1));
+                        $prev->val = substr($prev->val, -1);
                     }
-                    $sequence[] = array( 'part'=> $prev, 'flags'=> $flag, 'typeName'=> "Quantifier", 'type'=> self::T_QUANTIFIER );
+                    $sequence[] = self::Node(self::T_QUANTIFIER, $prev, $flag);
                 }
                 
                 // quantifiers
@@ -955,7 +1050,7 @@ class RegexAnalyzer
                 {
                     if ( $wordlen )
                     {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'typeName'=> "String", 'type'=> self::T_STRING );
+                        $sequence[] = self::Node(self::T_STRING, $word);
                         $word = '';
                         $wordlen = 0;
                     }
@@ -971,12 +1066,12 @@ class RegexAnalyzer
                         $flag[ "isGreedy" ] = 1;
                     }
                     $prev = array_pop($sequence);
-                    if ( self::T_STRING === $prev['type'] && strlen($prev['part']) > 1 )
+                    if ( self::T_STRING === $prev->type && strlen($prev->val) > 1 )
                     {
-                        $sequence[] = array( 'part'=> substr($prev['part'], 0, -1), 'flags'=> array(), 'typeName'=> "String", 'type'=> self::T_STRING );
-                        $prev['part'] = substr($prev['part'], -1);
+                        $sequence[] = self::Node(self::T_STRING, substr($prev->val, 0, -1));
+                        $prev->val = substr($prev->val, -1);
                     }
-                    $sequence[] = array( 'part'=> $prev, 'flags'=> $flag, 'typeName'=> "Quantifier", 'type'=> self::T_QUANTIFIER );
+                    $sequence[] = self::Node(self::T_QUANTIFIER, $prev, $flag);
                 }
             
                 // special characters like ^, $, ., etc..
@@ -984,13 +1079,13 @@ class RegexAnalyzer
                 {
                     if ( $wordlen )
                     {
-                        $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'typeName'=> "String", 'type'=> self::T_STRING );
+                        $sequence[] = self::Node(self::T_STRING, $word);
                         $word = '';
                         $wordlen = 0;
                     }
                     $flag = array();
                     $flag[ self::$specialChars[$ch] ] = 1;
-                    $sequence[] = array( 'part'=> $ch, 'flags'=> $flag, 'typeName'=> "Special", 'type'=> self::T_SPECIAL );
+                    $sequence[] = self::Node(self::T_SPECIAL, $ch, $flag);
                 }
             
                 else
@@ -1003,20 +1098,20 @@ class RegexAnalyzer
         
         if ( $wordlen )
         {
-            $sequence[] = array( 'part'=> $word, 'flags'=> array(), 'typeName'=> "String", 'type'=> self::T_STRING );
+            $sequence[] = self::Node(self::T_STRING, $word);
             $word = '';
             $wordlen = 0;
         }
         
         if ( count($alternation) )
         {
-            $alternation[] = array( 'part'=> $sequence, 'flags'=> array(), 'typeName'=> "Sequence", 'type'=> self::T_SEQUENCE );
+            $alternation[] = self::Node(self::T_SEQUENCE, $sequence);
             $sequence = array();
             $flag = array();
             $flag[ self::$specialChars['|'] ] = 1;
-            return array( 'part'=> $alternation, 'flags'=> $flag, 'typeName'=> "Alternation", 'type'=> self::T_ALTERNATION );
+            return self::Node(self::T_ALTERNATION, $alternation, $flag);
         }
-        return array( 'part'=> $sequence, 'flags'=> array(), 'typeName'=> "Sequence", 'type'=> self::T_SEQUENCE );
+        return self::Node(self::T_SEQUENCE, $sequence);
     }
     
     
@@ -1082,14 +1177,7 @@ class RegexAnalyzer
     {
         if ( $this->_needsRefresh )
         {
-            $re_obj = (object)array(
-                're'=>          $this->_regex,
-                'len'=>         strlen($this->_regex),
-                'pos'=>         0,
-                'groupIndex'=>  0,
-                'inGroup'=>     0
-            );
-            $this->_parts = self::analyze_re( $re_obj );
+            $this->_parts = self::analyze_re( new RE_OBJ($this->_regex) );
             $this->_needsRefresh = false;
         }
         return $this;
