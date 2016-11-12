@@ -1,23 +1,15 @@
-RegExAnalyzer Module loaded succesfully
-Testing Analyzer.VERSION = 0.4.5
+RegexAnalyzer Module loaded succesfully
+Testing Analyzer.VERSION = 0.5.0
 
 ================
 
-Input: /xyz([abc0-9]){2,3}/i
+Input                        : /xyz([abc0-9]){2,3}/i
 
+Regular Expression           : xyz([abc0-9]){2,3}
 
+Regular Expression Flags     : i
 
-Regular Expression: xyz([abc0-9]){2,3}
-
-
-
-Regular Expression Flags: 
-
-{'i': 1}
-
-
-
-Regular Expression Parts: 
+Regular Expression Structure :
 
 {   'flags': {},
     'type': 'Sequence',
@@ -48,13 +40,19 @@ Regular Expression Parts:
 
 Regular Expression Peek Characters: 
 
-{'negativepeek': {}, 'peek': {'X': 1, 'x': 1}}
+{'negative': dict_keys([]), 'positive': dict_keys(['x', 'X'])}
+
+
+
+Regular Expression Minimum Length: 
+
+5
 
 
 
 Regular Expression Sample Match String: 
 
-xyz98 -> Matched
+XYZc8B -> Matched
 
 ================
 

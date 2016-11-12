@@ -1,5 +1,6 @@
 //
 // use as: node test.js "your_regex_here" > output.txt
+"use strict";
 
 var echo = console.log;
 
@@ -57,7 +58,7 @@ echo("================");
 echo();
 
 var Analyzer = require('../../src/js/RegexAnalyzer.js'),
-    anal, peekChars, sampleStr, inregex = process.argv[2] || /xyz([abc0-9]){2,3}/i
+    anal, peekChars, sampleStr, minLen, inregex = process.argv[2] || /xyz([abc0-9]){2,3}/i
 ;
 
 echo("Testing Analyzer.VERSION = " + Analyzer.VERSION);
@@ -67,19 +68,19 @@ echo("================");
 anal = Analyzer( inregex );
 peekChars = anal.peek( );
 sampleStr = anal.sample( );
+minLen = anal.minimum( );
 
-echo("Input: " + inregex.toString( ));
-echo();
-echo("Regular Expression: " + anal._regex);
-echo();
-echo("Regular Expression Flags: ");
-echo(anal._flags);
-echo();
-echo("Regular Expression Parts: ");
+echo("Input                         : " + inregex.toString( ));
+echo("Regular Expression            : " + anal._regex);
+echo("Regular Expression Flags      : " + Object.keys(anal._flags).join(','));
+echo("Regular Expression Structure :");
 echo(JSON.stringify(anal._parts.toObject(), null, 4));
 echo();
 echo("Regular Expression Peek Characters: ");
-echo(JSON.stringify(peekChars, null, 4));
+echo(JSON.stringify({positive:Object.keys(peekChars.positive||{}),negative:Object.keys(peekChars.negative||{})}, null, 4));
+echo();
+echo("Regular Expression Minimum Length: ");
+echo(minLen);
 echo();
 echo("Regular Expression Sample Match String: ");
 echo(sampleStr + ' -> ' + (inregex.test(sampleStr) ? 'Matched' : 'NOT Matched'));

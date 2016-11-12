@@ -2,9 +2,9 @@
 /**
 *
 *   RegexAnalyzer
-*   @version: 0.4.5
+*   @version: 0.5.0
 *
-*   A simple Regular Expression Analyzer for PHP, Python, Node/JS, ActionScript
+*   A simple Regular Expression Analyzer for PHP, Python, Node/XPCOM/JS, ActionScript
 *   https://github.com/foo123/RegexAnalyzer
 *
 **/
@@ -102,7 +102,7 @@ class RegexNode
 
 class RegexAnalyzer
 {
-    const VERSION = "0.4.5";
+    const VERSION = "0.5.0";
     const T_SEQUENCE = 1; 
     const T_ALTERNATION = 2; 
     const T_GROUP = 3;
@@ -353,338 +353,314 @@ class RegexAnalyzer
             return self::random_upper_or_lower( $chars );
         }
     }
-    private static function generate( $node, $isCaseInsensitive=false ) 
+    
+    private static function walk( $ret, &$node, &$state )
     {
-        $sample = '';
+        if ( empty($node) || empty($state) ) return $ret;
         
         $type = $node->type;
-        // walk the sequence
-        if ( self::T_ALTERNATION === $type )
-        {
-            $sample .= self::generate( $node->val[rand(0, count($node->val)-1)], $isCaseInsensitive );
-        }
         
-        elseif ( self::T_GROUP === $type )
+        // walk the tree
+        if ( self::T_ALTERNATION === $type || 
+            self::T_SEQUENCE === $type ||
+            self::T_CHARGROUP === $type ||
+            self::T_GROUP === $type ||
+            self::T_QUANTIFIER === $type
+        )
         {
-            $sample .= self::generate( $node->val, $isCaseInsensitive );
-        }
-        
-        elseif ( self::T_SEQUENCE === $type )
-        {
-            $i = 0;
-            $l = count($node->val);
-            $p = $node->val[$i];
-            for ($i=0; $i<$l; $i++)
+            $r = call_user_func( $state->map, $ret, $node, $state );
+            if ( isset($state->ret) )
             {
-                $p = $node->val[$i];
-                if ( !$p ) continue;
-                $repeat = 1;
-                if ( self::T_QUANTIFIER === $p->type )
+                $ret = call_user_func( $state->reduce, $ret, $node, $state );
+                $state->ret = null;
+            }
+            elseif ( null != $r )
+            {
+                if ( !is_array($r) ) $r = array($r);
+                for($i=0,$l=empty($r)?0:count($r); $i<$l; $i++)
                 {
-                    if ( isset($p->flags->MatchZeroOrMore) && $p->flags->MatchZeroOrMore ) $repeat = rand(0, 10);
-                    elseif ( isset($p->flags->MatchZeroOrOne) && $p->flags->MatchZeroOrOne ) $repeat = rand(0, 1);
-                    elseif ( isset($p->flags->MatchOneOrMore) && $p->flags->MatchOneOrMore ) $repeat = rand(1, 11);
-                    else 
-                    {
-                        $mmin = intval($p->flags->MatchMinimum, 10);
-                        $mmax = intval($p->flags->MatchMaximum, 10);
-                        $repeat = rand($mmin, is_nan($mmax) ? ($mmin+10) : $mmax);
-                    }
-                    while ( $repeat > 0 ) 
-                    {
-                        $repeat--;
-                        $sample .= self::generate( $p->val, $isCaseInsensitive );
-                    }
-                }
-                else if ( self::T_SPECIAL === $p->type )
-                {
-                    if ( isset($p->flags->MatchAnyChar) && $p->flags->MatchAnyChar ) $sample .= self::any( );
-                }
-                else
-                {
-                    $sample .= self::generate( $p, $isCaseInsensitive );
+                    $state->node = $node;
+                    $ret = self::walk( $ret, $r[$i], $state );
                 }
             }
         }
         
-        elseif ( self::T_CHARGROUP === $type )
+        elseif ( self::T_CHARS === $type ||
+                self::T_CHARRANGE === $type ||
+                self::T_UNICODECHAR === $type || self::T_HEXCHAR === $type ||
+                self::T_SPECIAL === $type ||
+                self::T_STRING === $type
+        )
         {
-            $chars = array();
-            $l = count($node->val);
-            for ($i=0; $i<$l; $i++)
-            {
-                $p = $node->val[$i];
-                $ptype = $p->type;
-                if ( self::T_CHARS === $ptype )
-                {
-                    if ( $isCaseInsensitive )
-                        $chars = array_merge($chars, self::case_insensitive( $p->val, true ) );
-                    else
-                        $chars = array_merge($chars, $p->val );
-                }
-                
-                elseif ( self::T_CHARRANGE === $ptype )
-                {
-                    if ( $isCaseInsensitive )
-                        $chars = array_merge($chars, self::case_insensitive( self::character_range($p->val), true ) );
-                    else
-                        $chars = array_merge($chars, self::character_range($p->val) );
-                }
-                
-                elseif ( self::T_UNICODECHAR === $ptype || self::T_HEXCHAR === $ptype )
-                {
-                    $chars[] = $isCaseInsensitive ? self::case_insensitive( $p->flags->Char ): $p->flags->Char;
-                }
-                
-                elseif ( self::T_SPECIAL === $ptype )
-                {
-                    $p_part = $p->val;
-                    if ('D' == $p_part)
-                    {
-                        $chars[] = self::digit( false );
-                    }
-                    elseif ('W' == $p_part)
-                    {
-                        $chars[] = self::word( false );
-                    }
-                    elseif ('S' == $p_part)
-                    {
-                        $chars[] = self::space( false );
-                    }
-                    elseif ('d' == $p_part)
-                    {
-                        $chars[] = self::digit( );
-                    }
-                    elseif ('w' == $p_part)
-                    {
-                        $chars[] = self::word( );
-                    }
-                    elseif ('s' == $p_part)
-                    {
-                        $chars[] = self::space( );
-                    }
-                    else
-                    {
-                        $chars[] = '\\' . $p_part;
-                    }
-                }
-            }
-            $sample .= self::character($chars, isset($node->flags->NotMatch) && $node->flags->NotMatch ? false: true);
+            $ret = call_user_func( $state->reduce, $ret, $node, $state );
         }
         
-        elseif ( self::T_STRING === $type )
-        {
-            $sample .= $isCaseInsensitive ? self::case_insensitive( $node->val ) : $node->val;
-        }
-        
-        elseif ( self::T_SPECIAL === $type && 
-            (!isset($node->flags->MatchStart) || !$node->flags->MatchStart) && 
-            (!isset($node->flags->MatchEnd) || !$node->flags->MatchEnd) )
-        {
-            $p_part = $node->val;
-            if ('D' == $p_part)
-            {
-                $sample .= self::digit( false );
-            }
-            elseif ('W' == $p_part)
-            {
-                $sample .= self::word( false );
-            }
-            elseif ('S' == $p_part)
-            {
-                $sample .= self::space( false );
-            }
-            elseif ('d' == $p_part)
-            {
-                $sample .= self::digit( );
-            }
-            elseif ('w' == $p_part)
-            {
-                $sample .= self::word( );
-            }
-            elseif ('s' == $p_part)
-            {
-                $sample .= self::space( );
-            }
-            elseif ('.' == $p_part)
-            {
-                $sample .= self::any( );
-            }
-            else
-            {
-                $sample .= '\\' . $p_part;
-            }
-        }
-                
-        elseif ( self::T_UNICODECHAR === $type || self::T_HEXCHAR === $type )
-        {
-            $sample .= $isCaseInsensitive ? self::case_insensitive( $node->flags->Char ) : $node->flags->Char;
-        }
-        
-        return $sample;
+        $state->node = null;
+        return $ret;
     }
-
-    private static function peek_characters( $node ) 
+    
+    private static function map_any( $ret, &$node, &$state )
     {
-        $peek = array(); 
-        $negativepeek = array();
-        
         $type = $node->type;
-        // walk the sequence
+        if ( self::T_ALTERNATION === $type || self::T_CHARGROUP === $type )
+        {
+            return !empty($node->val) ? $node->val[rand(0, count($node->val)-1)] : null;
+        }
+        elseif ( self::T_QUANTIFIER === $type )
+        {
+            $numrepeats = 0;
+            if ( strlen($ret) >= $state->maxLength )
+            {
+                $numrepeats = !empty($node->flags->MatchZeroOrMore) || !empty($node->flags->MatchZeroOrOne) ? 0 : (!empty($node->flags->MatchOneOrMore) ? 1 : intval($node->flags->MatchMinimum, 10));
+            }
+            else
+            {
+                if ( !empty($node->flags->MatchZeroOrMore) )
+                {
+                    $numrepeats = rand(0, 2*$state->maxLength);
+                }
+                elseif ( !empty($node->flags->MatchZeroOrOne) )
+                {
+                    $numrepeats = rand(0, 1);
+                }
+                elseif ( !empty($node->flags->MatchOneOrMore) )
+                {
+                    $numrepeats = rand(1, 2*$state->maxLength+1);
+                }
+                else 
+                {
+                    $mmin = intval($node->flags->MatchMinimum, 10);
+                    $mmax = intval($node->flags->MatchMaximum, 10);
+                    $numrepeats = rand($mmin, is_nan($mmax) ? ($mmin+2*$state->maxLength) : $mmax);
+                }
+            }
+            if ( $numrepeats )
+            {
+                $repeats = array();
+                for($i=0; $i<$numrepeats; $i++) $repeats[] = $node->val;
+                return $repeats;
+            }
+            else
+            {
+                return null;
+            }
+        }
+        else
+        {
+            return $node->val;
+        }
+    }
+    
+    private static function map_min( $ret, &$node, &$state )
+    {
+        $type = $node->type;
         if ( self::T_ALTERNATION === $type )
         {
             $l = count($node->val);
-            for ($i=0; $i<$l; $i++)
+            $index = $l ? 0 : -1;
+            $min = $l ? self::walk(0, $node->val[0], $state) : 0;
+            for($i=1; $i<$l; $i++)
             {
-                $tmp = self::peek_characters( $node->val[$i] );
-                $peek = self::concat( $peek, $tmp['peek'] );
-                $negativepeek = self::concat( $negativepeek, $tmp['negativepeek'] );
-            }
-        }
-        
-        elseif ( self::T_GROUP === $type )
-        {
-            $tmp = self::peek_characters( $node->val );
-            $peek = self::concat( $peek, $tmp['peek'] );
-            $negativepeek = self::concat( $negativepeek, $tmp['negativepeek'] );
-        }
-        
-        elseif ( self::T_SEQUENCE === $type )
-        {
-            $i = 0;
-            $l = count($node->val);
-            $p = $node->val[$i];
-            $done = ( 
-                $i >= $l || !$p || self::T_QUANTIFIER !== $p->type || 
-                ( !isset($p->flags->MatchZeroOrMore) && !isset($p->flags->MatchZeroOrOne) && (!isset($p->flags->MatchMinimum) || "0"!=$p->flags->MatchMinimum) ) 
-            );
-            while ( !$done )
-            {
-                $tmp = self::peek_characters( $p->val );
-                $peek = self::concat( $peek, $tmp['peek'] );
-                $negativepeek = self::concat( $negativepeek, $tmp['negativepeek'] );
-                
-                $i++;
-                $p = $node->val[$i];
-                
-                $done = ( 
-                    $i >= $l || !$p || self::T_QUANTIFIER !== $p->type || 
-                    ( !isset($p->flags->MatchZeroOrMore) && !isset($p->flags->MatchZeroOrOne) && (!isset($p->flags->MatchMinimum) || "0"!=$p->flags->MatchMinimum) ) 
-                );
-            }
-            if ( $i < $l )
-            {
-                $p = $node->val[$i];
-                
-                if (self::T_SPECIAL === $p->type && ('^'==$p->val || '$'==$p->val)) 
-                    $p = isset($node->val[$i+1]) ? $node->val[$i+1] : null;
-                
-                if ($p && self::T_QUANTIFIER === $p->type) $p = $p->val;
-                
-                if ($p)
+                $cur = self::walk(0, $node->val[$i], $state);
+                if ( $cur < $min )
                 {
-                    $tmp = self::peek_characters( $p );
-                    $peek = self::concat( $peek, $tmp['peek'] );
-                    $negativepeek = self::concat( $negativepeek, $tmp['negativepeek'] );
+                    $min = $cur;
+                    $index = $i;
                 }
             }
+            if ( $l ) $state->ret = $min;
+            return null;
         }
-        
         elseif ( self::T_CHARGROUP === $type )
         {
-            $isNegative = isset($node->flags->NotMatch) && $node->flags->NotMatch;
-            $current = array();
-            
-            $l = count($node->val);
-            for ($i=0; $i<$l; $i++)
-            {
-                $p = $node->val[$i];
-                $ptype = $p->type;
-                if ( self::T_CHARS === $ptype )
-                {
-                    $current = self::concat( $current, $p->val );
-                }
-                
-                elseif ( self::T_CHARRANGE === $ptype )
-                {
-                    $current = self::concat( $current, self::character_range($p->val) );
-                }
-                
-                elseif ( self::T_UNICODECHAR === $ptype || self::T_HEXCHAR === $ptype )
-                {
-                    $current[$p->flags->Char] = 1;
-                }
-                
-                elseif ( self::T_SPECIAL === $ptype )
-                {
-                    $p_part = $p->val;
-                    if ('D' == $p_part)
-                    {
-                        if (isset($node->flags->NotMatch) && $node->flags->NotMatch)
-                            $peek[ '\\d' ] = 1;
-                        else
-                            $negativepeek[ '\\d' ] = 1;
-                    }
-                    elseif ('W' == $p_part)
-                    {
-                        if (isset($node->flags->NotMatch) && $node->flags->NotMatch)
-                            $peek[ '\\w' ] = 1;
-                        else
-                            $negativepeek[ '\\W' ] = 1;
-                    }
-                    elseif ('S' == $p_part)
-                    {
-                        if (isset($node->flags->NotMatch) && $node->flags->NotMatch)
-                            $peek[ '\\s' ] = 1;
-                        else
-                            $negativepeek[ '\\s' ] = 1;
-                    }
-                    else
-                    {
-                        $current['\\' . $p_part] = 1;
-                    }
-                }
-            }
-            if ( $isNegative )
-                $negativepeek = self::concat($negativepeek, $current);
-            else
-                $peek = self::concat($peek, $current);
+            return !empty($node->val) ? $node->val[0] : null;
         }
-        
+        elseif ( self::T_QUANTIFIER === $type )
+        {
+            if ( isset($node->flags->MatchMinimum) && "0"!==$node->flags->MatchMinimum )
+            {
+                $nrepeats = intval($node->flags->MatchMinimum,10);
+                $repeats = array();
+                for($i=0; $i<$nrepeats; $i++) $repeats[] = $node->val;
+                return $repeats;
+            }
+            return !empty($node->flags->MatchOneOrMore) ? $node->val : null;
+        }
+        else
+        {
+            return $node->val;
+        }
+    }
+    
+    private static function map_max( $ret, &$node, &$state )
+    {
+        $type = $node->type;
+        if ( self::T_SEQUENCE === $type )
+        {
+            $seq = array();
+            $l = count($node->val);
+            for($i=0; $i<$l; $i++)
+            {
+                $n = $node->val[$i];
+                $seq[] = $n;
+                if ( (self::T_QUANTIFIER !== $n->type) || !empty($n->flags->MatchOneOrMore) || (isset($n->flags->MatchMinimum) && "0" !== $n->flags->MatchMinimum) )
+                    break;
+            }
+            return !empty($seq) ? $seq : null;
+        }
+        else
+        {
+            return $node->val;
+        }
+    }
+    
+    private static function reduce_count( $ret, &$node, &$state )
+    {
+        if ( isset($state->ret) )
+        {
+            $ret += $state->ret;
+            return $ret;
+        }
+        $type = $node->type;
+        if ( self::T_CHARS === $type || self::T_CHARRANGE === $type ||
+            self::T_UNICODECHAR === $type || self::T_HEXCHAR === $type ||
+            (self::T_SPECIAL === $type && !isset($node->flags->MatchStart) && !isset($node->flags->MatchEnd))
+        )
+        {
+            $ret += 1;
+        }
         elseif ( self::T_STRING === $type )
         {
-            $peek[$node->val[0]] = 1;
+            $ret += strlen($node->val);
         }
         
-        elseif ( self::T_SPECIAL === $type && 
-            (!isset($node->flags->MatchStart) || !$node->flags->MatchStart) && 
-            (!isset($node->flags->MatchEnd) || !$node->flags->MatchEnd) )
+        return $ret;
+    }
+    
+    private static function reduce_concat( $ret, &$node, &$state )
+    {
+        if ( isset($state->ret) )
         {
-            $p_part = $node->val;
-            if ('D' == $p_part)
+            $ret .= $state->ret;
+            return $ret;
+        }
+        $type = $node->type; $sample = null;
+        
+        if ( self::T_CHARS === $type )
+        {
+            $sample = $node->val;
+        }
+        elseif ( self::T_CHARRANGE === $type )
+        {
+            $sample = self::character_range($node->val);
+        }
+        elseif ( self::T_UNICODECHAR === $type || self::T_HEXCHAR === $type )
+        {
+            $sample = array($node->flags->Char);
+        }
+        elseif ( self::T_SPECIAL === $type && !isset($node->flags->MatchStart) && !isset($node->flags->MatchEnd) )
+        {
+            $part = $node->val;
+            if ('D' === $part)
             {
-                $negativepeek[ '\\d' ] = 1;
+                $sample = array(self::digit( false ));
             }
-            else if ('W' == $p_part)
+            elseif ('W' === $part)
             {
-                $negativepeek[ '\\W' ] = 1;
+                $sample = array(self::word( false ));
             }
-            else if ('S' == $p_part)
+            elseif ('S' === $part)
             {
-                $negativepeek[ '\\s' ] = 1;
+                $sample = array(self::space( false ));
+            }
+            elseif ('d' === $part)
+            {
+                $sample = array(self::digit( ));
+            }
+            elseif ('w' === $part)
+            {
+                $sample = array(self::word( ));
+            }
+            elseif ('s' === $part)
+            {
+                $sample = array(self::space( ));
+            }
+            elseif ('.' === $part && !empty($node->flags->MatchAnyChar))
+            {
+                $sample = array(self::any( ));
             }
             else
             {
-                $peek['\\' . $p_part] = 1;
+                $sample = array('\\' . $part);
             }
         }
-                
-        elseif ( self::T_UNICODECHAR === $type || self::T_HEXCHAR === $type )
+        elseif ( self::T_STRING === $type )
         {
-            $peek[$node->flags->Char] = 1;
+            $sample = $node->val;
         }
         
-        return array('peek'=> $peek, 'negativepeek'=> $negativepeek);
+        if ( $sample )
+        {
+            $ret .= self::T_STRING === $type ?
+            ($state->isCaseInsensitive ? self::case_insensitive($sample) : $sample) :
+            (self::character($state->isCaseInsensitive ? self::case_insensitive($sample, true) : $sample, empty($state->node) || empty($state->node->flags->NotMatch)))
+            ;
+        }
+        
+        return $ret;
+    }
+    
+    private static function reduce_peek( $ret, &$node, &$state )
+    {
+        if ( isset($state->ret) )
+        {
+            $ret['positive'] = self::concat($ret['positive'], $state->ret['positive']);
+            $ret['negative'] = self::concat($ret['negative'], $state->ret['negative']);
+            return $ret;
+        }
+        $type = $node->type;
+        $inCharGroup = !empty($state->node) && self::T_CHARGROUP === $state->node->type;
+        $inNegativeCharGroup = $inCharGroup && !empty($state->node->flags->NotMatch);
+        $peek = $inNegativeCharGroup ? "negative" : "positive";
+        
+        if ( self::T_CHARS === $type )
+        {
+            $ret[$peek] = self::concat( $ret[$peek], $node->val );
+        }
+        elseif ( self::T_CHARRANGE === $type )
+        {
+            $ret[$peek] = self::concat( $ret[$peek], self::character_range($node->val) );
+        }
+        elseif ( self::T_UNICODECHAR === $type || self::T_HEXCHAR === $type )
+        {
+            $ret[$peek][$node->flags->Char] = 1;
+        }
+        elseif ( self::T_SPECIAL === $type && !isset($node->flags->MatchStart) && !isset($node->flags->MatchEnd) )
+        {
+            $part = $node->val;
+            if ('D' === $part)
+            {
+                $ret[$inNegativeCharGroup?"positive":"negative"][ '\\d' ] = 1;
+            }
+            elseif ('W' === $part)
+            {
+                $ret[$inNegativeCharGroup?"positive":"negative"][ '\\w' ] = 1;
+            }
+            elseif ('S' === $part)
+            {
+                $ret[$inNegativeCharGroup?"positive":"negative"][ '\\s' ] = 1;
+            }
+            else
+            {
+                $ret[$peek]['\\' . $part] = 1;
+            }
+        }
+        elseif ( self::T_STRING === $type )
+        {
+            $ret["positive"][$node->val[0]] = 1;
+        }
+        
+        return $ret;
     }
     
     private static function match_hex( $s ) 
@@ -709,7 +685,7 @@ class RegexAnalyzer
     }
     private static function match_repeats( $s ) 
     {
-        $pos = 0; $m = false; $sl = strlen($s);
+        $pos = 0; $m = false; $sl = strlen($s); $hasComma = false;
         if ( $sl > 2 && '{' == $s[$pos] )
         {
             $m = array('', '', null);
@@ -725,7 +701,7 @@ class RegexAnalyzer
                 return false;
             }
             if ( $l=self::match_chars(self::$SPACES, $s, $pos) ) $pos += $l;
-            if ( $pos < $sl && ',' === $s[$pos] ) $pos += 1;
+            if ( $pos < $sl && ',' === $s[$pos] ) {$pos += 1; $hasComma = true;}
             if ( $l=self::match_chars(self::$SPACES, $s, $pos) ) $pos += $l;
             if ( $l=self::match_char_range(self::$DIGITS_RANGE, $s, $pos) ) 
             {
@@ -737,6 +713,7 @@ class RegexAnalyzer
             {
                 $pos++;
                 $m[0] = substr($s, 0, $pos);
+                if ( !$hasComma ) $m[2] = $m[1];
                 return $m;
             }
             else
@@ -1162,9 +1139,10 @@ class RegexAnalyzer
         return $this;
     }
     
-    public function getRegex( ) 
+    public function getRegex( $RF=null ) 
     {
-        return '/' . str_replace('/', '\\/', $this->_regex) . '/' . implode("", array_keys($this->_flags));
+        $RF = empty($RF) ? (!empty($this->_flags) ? $this->_flags : array()): (array)$RF;
+        return '/' . str_replace('/', '\\/', $this->_regex) . '/' . (!empty($RF['g'])||!empty($RF['G'])?'g':'').(!empty($RF['i'])||!empty($RF['I'])?'i':'').(!empty($RF['m'])||!empty($RF['M'])?'m':'');
     }
     
     public function getParts( ) 
@@ -1183,13 +1161,6 @@ class RegexAnalyzer
         return $this;
     }
     
-    // experimental feature
-    public function sample( ) 
-    {
-        if ( $this->_needsRefresh ) $this->analyze( );
-        return self::generate( $this->_parts, isset($this->_flags['i']) );
-    }
-    
     // experimental feature, implement (optimised) RE matching as well
     public function match( $str ) 
     {
@@ -1198,32 +1169,60 @@ class RegexAnalyzer
     }
         
     // experimental feature
+    public function sample( $len=10 ) 
+    {
+        if ( $this->_needsRefresh ) $this->analyze( );
+        $state = (object)array(
+            'map'=>array(__CLASS__, 'map_any'),
+            'reduce'=>array(__CLASS__, 'reduce_concat'),
+            'isCaseInsensitive'=> !empty($this->_flags['i']),
+            'maxLength'=> (int)$len
+        );
+        return (string)self::walk('', $this->_parts, $state);
+    }
+    
+    // experimental feature
+    public function minimum( )
+    {
+        if ( $this->_needsRefresh ) $this->analyze( );
+        $state = (object)array(
+            'map'=>array(__CLASS__, 'map_min'),
+            'reduce'=>array(__CLASS__, 'reduce_count')
+        );
+        return (int)self::walk(0, $this->_parts, $state);
+    }
+    
+    // experimental feature
     public function peek( ) 
     {
         if ( $this->_needsRefresh ) $this->analyze( );
-        $isCaseInsensitive = isset($this->_flags['i']);
-        $peek = self::peek_characters( $this->_parts );
+        $isCaseInsensitive = !empty($this->_flags['i']);
+        $state = (object)array(
+            'map'=>array(__CLASS__, 'map_max'),
+            'reduce'=>array(__CLASS__, 'reduce_peek')
+        );
+        $peek = self::walk(array('positive'=>array(),'negative'=>array()), $this->_parts, $state);
         
         foreach ($peek as $n=>$p)
         {
             $cases = array();
             
-            // either peek or negativepeek
+            // either positive or negative
             foreach (array_keys($p) as $c)
             {
-                if ('\\d' == $c)
+                if ('\\d' === $c)
                 {
                     unset( $p[$c] );
                     $cases = self::concat($cases, self::character_range('0', '9'));
                 }
                 
-                else if ('\\s' == $c)
+                else if ('\\s' === $c)
                 {
                     unset( $p[$c] );
                     $cases = self::concat($cases, array('\f','\n','\r','\t','\v','\u00A0','\u2028','\u2029'));
                 }
                 
-                else if ('\\w' == $c)
+                else if ('\\w' === $c)
                 {
                     unset( $p[$c] );
                     $cases = self::concat($cases, array_merge(
@@ -1234,31 +1233,31 @@ class RegexAnalyzer
                         ));
                 }
                 
-                else if ('\\.' == $c)
+                else if ('\\.' === $c)
                 {
                     unset( $p[$c] );
                     $cases[ $this->specialChars['.'] ] = 1;
                 }
                 
-                /*else if ('\\^' == $c)
+                /*else if ('\\^' === $c)
                 {
                     unset( $p[$c] );
                     $cases[ $this->specialChars['^'] ] = 1;
                 }
                 
-                else if ('\\$' == $c)
+                else if ('\\$' === $c)
                 {
                     unset( $p[$c] );
                     $cases[ $this->specialChars['$'] ] = 1;
                 }*/
                 
-                else if ( '\\' != $c[0] && $isCaseInsensitive )
+                else if ( '\\' !== $c[0] && $isCaseInsensitive )
                 {
                     $cases[ strtolower($c) ] = 1;
                     $cases[ strtoupper($c) ] = 1;
                 }
                 
-                else if ( '\\' == $c[0] )
+                else if ( '\\' === $c[0] )
                 {
                     unset( $p[$c] );
                 }
@@ -1268,5 +1267,5 @@ class RegexAnalyzer
         return $peek;
     }
 }
-RegExAnalyzer::init();
+RegexAnalyzer::init();
 }

@@ -224,17 +224,6 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
         }
         return l >= minlen ? l : false;
     },
-    /*match_non_chars = function( CHARS, s, pos, minlen, maxlen ) {
-        pos = pos || 0;
-        minlen = minlen || 1;
-        maxlen = maxlen || INF;
-        var lp = pos, l = 0, sl = s.length, ch;
-        while ( (lp < sl) && (l <= maxlen) && 0 > CHARS.indexOf( ch=s[CHAR](lp) ) ) 
-        { 
-            lp++; l++; 
-        }
-        return l >= minlen ? l : false;
-    },*/
     match_char_range = function( RANGE, s, pos, minlen, maxlen ) {
         pos = pos || 0;
         minlen = minlen || 1;
@@ -246,17 +235,6 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
         }
         return l >= minlen ? l : false;
     },
-    /*match_non_char_range = function( RANGE, s, pos, minlen, maxlen ) {
-        pos = pos || 0;
-        minlen = minlen || 1;
-        maxlen = maxlen || INF;
-        var lp = pos, l = 0, sl = s.length, ch;
-        while ( (lp < sl) && (l <= maxlen) && ((ch=s[CHARCODE](lp)) < RANGE[0] || ch > RANGE[1]) ) 
-        { 
-            lp++; l++;
-        }
-        return l >= minlen ? l : false;
-    },*/
     match_char_ranges = function( RANGES, s, pos, minlen, maxlen ) {
         pos = pos || 0;
         minlen = minlen || 1;
@@ -278,210 +256,6 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
         }
         return l >= minlen ? l : false;
     },
-    /*match_non_char_ranges = function( RANGES, s, pos, minlen, maxlen ) {
-        pos = pos || 0;
-        minlen = minlen || 1;
-        maxlen = maxlen || INF;
-        var lp = pos, l = 0, sl = s.length, ch, 
-            i, Rl = RANGES.length, RANGE, notfound = true;
-        while ( (lp < sl) && (l <= maxlen) && notfound ) 
-        { 
-            ch = s[CHARCODE](lp);
-            for (i=0; i<Rl; i++)
-            {
-                RANGE = RANGES[i];
-                if ( ch >= RANGE[0] && ch <= RANGE[1] )
-                {
-                    lp++; l++; notfound = false;
-                    break;
-                }
-            }
-        }
-        return l >= minlen ? l : false;
-    },*/
-    /*match_literal = function( lit, s, pos, caseInsensitive ) {
-        var lp = pos, l = 0, mlen = lit.length, sl = s.length;
-        if ( caseInsensitive )
-        {
-            while ( (lp < sl) && (l <= mlen) && (lit[CHAR](l).toLowerCase() === s[CHAR](lp).toLowerCase()) ) 
-            { 
-                lp++; l++; 
-            }
-        }
-        else
-        {
-            while ( (lp < sl) && (l <= mlen) && (lit[CHAR](l) === s[CHAR](lp)) ) 
-            { 
-                lp++; l++; 
-            }
-        }
-        return l === mlen;
-    },*/
-    // TODO, generate RE matcher for given RE and string
-    /*match = function match( s, pos, part, isCaseInsensitive ) {
-        var m = false, p, i, l, type;
-        
-        type = part.type;
-        // walk the sequence
-        if ( "Alternation" == type )
-        {
-            for (i=0; i<part.part.length; i++)
-            {
-                if ( m = match(s, pos, part.part[i], isCaseInsensitive) )
-                {
-                    break;
-                }
-            }
-        }
-        
-        else if ( "Group" == type )
-        {
-            m = match(s, pos, part.part, isCaseInsensitive);
-        }
-        
-        else if ( "Sequence" == type )
-        {
-            var repeat, mmin, mmax;
-            l = part.part.length;
-            p = part.part[i];
-            for (i=0; i<l; i++)
-            {
-                p = part.part[i];
-                if ( !p ) continue;
-                repeat = 1;
-                if ( "Quantifier" == p.type )
-                {
-                    if ( p.flags.MatchZeroOrMore ) repeat = rnd(0, 10);
-                    else if ( p.flags.MatchZeroOrOne ) repeat = rnd(0, 1);
-                    else if ( p.flags.MatchOneOrMore ) repeat = rnd(1, 11);
-                    else 
-                    {
-                        mmin = parseInt(p.flags.MatchMinimum, 10);
-                        mmax = parseInt(p.flags.MatchMaximum, 10);
-                        repeat = rnd(mmin, isNaN(mmax) ? (mmin+10) : mmax);
-                    }
-                    while ( repeat > 0 ) 
-                    {
-                        repeat--;
-                        sample += generate( p.part, isCaseInsensitive );
-                    }
-                }
-                else if ( "Special" == p.type )
-                {
-                    if ( p.flags.MatchAnyChar ) sample += any( );
-                }
-                else
-                {
-                    sample += generate( p, isCaseInsensitive );
-                }
-            }
-        }
-        
-        else if ( "CharGroup" == type )
-        {
-            var chars = [], ptype;
-            
-            for (i=0, l=part.part.length; i<l; i++)
-            {
-                p = part.part[i];
-                ptype = p.type;
-                if ( "Chars" == ptype )
-                {
-                    m = match_chars(isCaseInsensitive ? p.part.toLowerCase()+p.part.toUpperCase() : p.part, s, pos);
-                }
-                
-                else if ( "CharRange" == ptype )
-                {
-                    m = match_char_range(char_code_range(p.part.join("")), s, pos);
-                }
-                
-                else if ( "UnicodeChar" == ptype || "HexChar" == ptype )
-                {
-                    m = match_chars(isCaseInsensitive ? p.flags.Char.toLowerCase()+p.flags.Char.toUpperCase() : p.flags.Char, s, pos);
-                }
-                
-                else if ( "Special" == ptype )
-                {
-                    if ('D' == p.part)
-                    {
-                        m = match_non_char_range(DIGITS_RANGE, s, pos);
-                    }
-                    else if ('W' == p.part)
-                    {
-                        m = match_non_char_ranges(WORD_RANGES, s, pos);
-                    }
-                    else if ('S' == p.part)
-                    {
-                        m = match_non_chars(SPACES, s, pos);
-                    }
-                    else if ('d' == p.part)
-                    {
-                        m = match_char_range(DIGITS_RANGE, s, pos);
-                    }
-                    else if ('w' == p.part)
-                    {
-                        m = match_char_ranges(WORD_RANGES, s, pos);
-                    }
-                    else if ('s' == p.part)
-                    {
-                        m = match_chars(SPACES, s, pos);
-                    }
-                    else
-                    {
-                        m = match_chars('\\' + p.part, s, pos);
-                    }
-                }
-            }
-        }
-        
-        else if ( "String" == type )
-        {
-            m = match_literal( part.part, s, pos, isCaseInsensitive );
-        }
-        
-        else if ( "Special" == type && !part.flags.MatchStart && !part.flags.MatchEnd )
-        {
-            if ('D' == part.part)
-            {
-                m = match_non_char_range(DIGITS_RANGE, s, pos);
-            }
-            else if ('W' == part.part)
-            {
-                m = match_non_char_ranges(WORD_RANGES, s, pos);
-            }
-            else if ('S' == part.part)
-            {
-                m = match_non_chars(SPACES, s, pos);
-            }
-            else if ('d' == part.part)
-            {
-                m = match_char_range(DIGITS_RANGE, s, pos);
-            }
-            else if ('w' == part.part)
-            {
-                m = match_char_ranges(WORD_RANGES, s, pos);
-            }
-            else if ('s' == part.part)
-            {
-                m = match_chars(SPACES, s, pos);
-            }
-            else if ('.' == part.part)
-            {
-                m = match_chars(ALL, s, pos);
-            }
-            else
-            {
-                m = match_chars('\\' + part.part, s, pos);
-            }
-        }
-                
-        else if ( "UnicodeChar" == type || "HexChar" == type )
-        {
-            sample += isCaseInsensitive ? case_insensitive( part.flags.Char ) : part.flags.Char;
-        }
-        
-        return m;
-    },*/
 
     punct = function( ){ 
         return PUNCTS[CHAR](rnd(0, PUNCTS.length-1)); 
@@ -532,379 +306,302 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             return random_upper_or_lower( chars );
         }
     },
-    generate = function generate( len, node, isCaseInsensitive ) {
-        var sample = '', p, i, l, type;
-        
-        if ( 0 >= len ) return sample;
-        
-        type = node.type;
-        // walk the sequence
-        if ( T_ALTERNATION === type )
-        {
-            sample += generate( len, node.val[rnd(0, node.val.length-1)], isCaseInsensitive );
-        }
-        
-        else if ( T_GROUP === type )
-        {
-            sample += generate( len, node.val, isCaseInsensitive );
-        }
-        
-        else if ( T_SEQUENCE === type )
-        {
-            var repeat, mmin, mmax;
-            l = node.val.length;
-            p = node.val[i];
-            for (i=0; i<l; i++)
-            {
-                p = node.val[i];
-                if ( !p ) continue;
-                repeat = 1;
-                if ( T_QUANTIFIER === p.type )
-                {
-                    if ( p.flags.MatchZeroOrMore ) repeat = rnd(0, 2*len);
-                    else if ( p.flags.MatchZeroOrOne ) repeat = rnd(0, 1);
-                    else if ( p.flags.MatchOneOrMore ) repeat = rnd(1, 2*len+1);
-                    else 
-                    {
-                        mmin = parseInt(p.flags.MatchMinimum, 10);
-                        mmax = parseInt(p.flags.MatchMaximum, 10);
-                        repeat = rnd(mmin, isNaN(mmax) ? (mmin+2*len) : mmax);
-                    }
-                    while ( repeat > 0 ) 
-                    {
-                        repeat--;
-                        sample += generate( len, p.val, isCaseInsensitive );
-                        if ( sample.length >= len ) break;
-                    }
-                }
-                else if ( T_SPECIAL === p.type )
-                {
-                    if ( p.flags.MatchAnyChar ) sample += any( );
-                }
-                else
-                {
-                    sample += generate( len, p, isCaseInsensitive );
-                }
-            }
-        }
-        
-        else if ( T_CHARGROUP === type )
-        {
-            var chars = [], ptype;
-            
-            for (i=0, l=node.val.length; i<l; i++)
-            {
-                p = node.val[i];
-                ptype = p.type;
-                if ( T_CHARS === ptype )
-                {
-                    chars = chars.concat( isCaseInsensitive ? case_insensitive( p.val, true ) : p.val );
-                }
-                
-                else if ( T_CHARRANGE === ptype )
-                {
-                    chars = chars.concat( isCaseInsensitive ? case_insensitive( character_range(p.val), true ) : character_range(p.val) );
-                }
-                
-                else if ( T_UNICODECHAR === ptype || T_HEXCHAR === ptype )
-                {
-                    chars.push( isCaseInsensitive ? case_insensitive( p.flags.Char ): p.flags.Char );
-                }
-                
-                else if ( T_SPECIAL === ptype )
-                {
-                    var p_part = p.val;
-                    if ('D' === p_part)
-                    {
-                        chars.push( digit( false ) );
-                    }
-                    else if ('W' === p_part)
-                    {
-                        chars.push( word( false ) );
-                    }
-                    else if ('S' === p_part)
-                    {
-                        chars.push( space( false ) );
-                    }
-                    else if ('d' === p_part)
-                    {
-                        chars.push( digit( ) );
-                    }
-                    else if ('w' === p_part)
-                    {
-                        chars.push( word( ) );
-                    }
-                    else if ('s' === p_part)
-                    {
-                        chars.push( space( ) );
-                    }
-                    else
-                    {
-                        chars.push( '\\' + p_part );
-                    }
-                }
-            }
-            sample += character(chars, !node.flags.NotMatch);
-        }
-        
-        else if ( T_STRING === type )
-        {
-            sample += isCaseInsensitive ? case_insensitive( node.val ) : node.val;
-        }
-        
-        else if ( T_SPECIAL === type && !node.flags.MatchStart && !node.flags.MatchEnd )
-        {
-            var p_part = node.val;
-            if ('D' === p_part)
-            {
-                sample += digit( false );
-            }
-            else if ('W' === p_part)
-            {
-                sample += word( false );
-            }
-            else if ('S' === p_part)
-            {
-                sample += space( false );
-            }
-            else if ('d' === p_part)
-            {
-                sample += digit( );
-            }
-            else if ('w' === p_part)
-            {
-                sample += word( );
-            }
-            else if ('s' === p_part)
-            {
-                sample += space( );
-            }
-            else if ('.' === p_part)
-            {
-                sample += any( );
-            }
-            else
-            {
-                sample += '\\' + p_part;
-            }
-        }
-                
-        else if ( T_UNICODECHAR === type || T_HEXCHAR === type )
-        {
-            sample += isCaseInsensitive ? case_insensitive( node.flags.Char ) : node.flags.Char;
-        }
-        
-        return sample;
-    },
-
-    peek_characters = function peek_characters( node ) {
-        var peek = {}, negativepeek = {}, current, p, i, l, 
-            tmp, done, type, ptype;
-        
-        type = node.type;
-        // walk the sequence
-        if ( T_ALTERNATION === type )
-        {
-            for (i=0, l=node.val.length; i<l; i++)
-            {
-                tmp = peek_characters( node.val[i] );
-                peek = concat( peek, tmp.peek );
-                negativepeek = concat( negativepeek, tmp.negativepeek );
-            }
-        }
-        
-        else if ( T_GROUP === type )
-        {
-            tmp = peek_characters( node.val );
-            peek = concat( peek, tmp.peek );
-            negativepeek = concat( negativepeek, tmp.negativepeek );
-        }
-        
-        else if ( T_SEQUENCE === type )
-        {
-            i = 0;
-            l = node.val.length;
-            p = node.val[i];
-            done = ( 
-                i >= l || !p || T_QUANTIFIER !== p.type || 
-                ( !p.flags.MatchZeroOrMore && !p.flags.MatchZeroOrOne && "0"!==p.flags.MatchMinimum ) 
-            );
-            while ( !done )
-            {
-                tmp = peek_characters( p.val );
-                peek = concat( peek, tmp.peek );
-                negativepeek = concat( negativepeek, tmp.negativepeek );
-                
-                i++;
-                p = node.val[i];
-                
-                done = ( 
-                    i >= l || !p || T_QUANTIFIER !== p.type || 
-                    ( !p.flags.MatchZeroOrMore && !p.flags.MatchZeroOrOne && "0"!==p.flags.MatchMinimum ) 
-                );
-            }
-            if ( i < l )
-            {
-                p = node.val[i];
-                
-                if (T_SPECIAL === p.type && ('^'===p.val || '$'===p.val)) p = node.val[i+1] || null;
-                
-                if (p && T_QUANTIFIER === p.type) p = p.val;
-                
-                if (p)
-                {
-                    tmp = peek_characters( p );
-                    peek = concat( peek, tmp.peek );
-                    negativepeek = concat( negativepeek, tmp.negativepeek );
-                }
-            }
-        }
-        
-        else if ( T_CHARGROUP === type )
-        {
-            current = ( node.flags.NotMatch ) ? negativepeek : peek;
-            
-            for (i=0, l=node.val.length; i<l; i++)
-            {
-                p = node.val[i];
-                ptype = p.type;
-                if ( T_CHARS === ptype )
-                {
-                    current = concat( current, p.val );
-                }
-                
-                else if ( T_CHARRANGE === ptype )
-                {
-                    current = concat( current, character_range(p.val) );
-                }
-                
-                else if ( T_UNICODECHAR === ptype || T_HEXCHAR === ptype )
-                {
-                    current[p.flags.Char] = 1;
-                }
-                
-                else if ( T_SPECIAL === ptype )
-                {
-                    var p_part = p.val;
-                    if ('D' === p_part)
-                    {
-                        if (node.flags.NotMatch)
-                            peek[ '\\d' ] = 1;
-                        else
-                            negativepeek[ '\\d' ] = 1;
-                    }
-                    else if ('W' === p_part)
-                    {
-                        if (node.flags.NotMatch)
-                            peek[ '\\w' ] = 1;
-                        else
-                            negativepeek[ '\\W' ] = 1;
-                    }
-                    else if ('S' === p_part)
-                    {
-                        if (node.flags.NotMatch)
-                            peek[ '\\s' ] = 1;
-                        else
-                            negativepeek[ '\\s' ] = 1;
-                    }
-                    else
-                    {
-                        current['\\' + p_part] = 1;
-                    }
-                }
-            }
-        }
-        
-        else if ( T_STRING === type )
-        {
-            peek[node.val[CHAR](0)] = 1;
-        }
-        
-        else if ( T_SPECIAL === type && !node.flags.MatchStart && !node.flags.MatchEnd )
-        {
-            if ('D' === node.val)
-            {
-                negativepeek[ '\\d' ] = 1;
-            }
-            else if ('W' === node.val)
-            {
-                negativepeek[ '\\W' ] = 1;
-            }
-            else if ('S' === node.val)
-            {
-                negativepeek[ '\\s' ] = 1;
-            }
-            else
-            {
-                peek['\\' + node.val] = 1;
-            }
-        }
-                
-        else if ( T_UNICODECHAR === type || T_HEXCHAR === type )
-        {
-            peek[node.flags.Char] = 1;
-        }
-        
-        return { peek: peek, negativepeek: negativepeek };
-    },
     
-    minimum_length = function minimum_length( node ) {
-        var minlen = 0, current, p, i, l, tmp, done, type, ptype, cur;
+    walk = function walk( ret, node, state ) {
+        if ( !node || !state ) return ret;
         
-        type = node.type;
-        // walk the sequence
-        if ( T_ALTERNATION === type )
+        var i, l, r, type = node.type;
+        
+        // walk the tree
+        if ( T_ALTERNATION === type || 
+            T_SEQUENCE === type ||
+            T_CHARGROUP === type ||
+            T_GROUP === type ||
+            T_QUANTIFIER === type
+        )
         {
-            cur = node.val.length ? minimum_length( node.val[0] )||0 : 0;
-            for (i=1, l=node.val.length; i<l; i++)
+            r = state.map( ret, node, state );
+            if ( null != state.ret )
             {
-                tmp = minimum_length( node.val[i] )||0;
-                if ( tmp < cur ) cur = tmp;
+                ret = state.reduce( ret, node, state );
+                state.ret = null;
             }
-            minlen += cur;
+            else if ( null != r )
+            {
+                if ( !(r instanceof Array) ) r = [r];
+                for(i=0,l=r?r.length:0; i<l; i++)
+                {
+                    state.node = node;
+                    ret = walk( ret, r[i], state );
+                }
+            }
         }
         
-        else if ( T_GROUP === type )
+        else if ( T_CHARS === type ||
+                T_CHARRANGE === type ||
+                T_UNICODECHAR === type || T_HEXCHAR === type ||
+                T_SPECIAL === type ||
+                T_STRING === type
+        )
         {
-            minlen += minimum_length( node.val )||0;
+            ret = state.reduce( ret, node, state );
         }
         
-        else if ( T_SEQUENCE === type )
+        state.node = null;
+        return ret;
+    },
+    /*map_all = function map_all( ret, node, state ) {
+        return node.val;
+    },*/
+    map_any = function map_any( ret, node, state ) {
+        var type = node.type;
+        if ( T_ALTERNATION === type || T_CHARGROUP === type )
         {
-            minlen += node.val.length ? minimum_length( node.val[0] )||0 : 0;
-            for (i=1, l=node.val.length; i<l; i++)
-                minlen += minimum_length( node.val[i] )||0;
+            return node.val.length ? node.val[rnd(0, node.val.length-1)] : null;
         }
-        
         else if ( T_QUANTIFIER === type )
         {
-            minlen += node.flags.MatchZeroOrMore || node.flags.MatchZeroOrOne || "0"===node.flags.MatchMinimum ? 0 : minimum_length( node.val )||0;
+            var numrepeats, nmin, nmax, repeats;
+            if ( ret.length >= state.maxLength )
+            {
+                numrepeats = node.flags.MatchZeroOrMore || node.flags.MatchZeroOrOne ? 0 : (node.flags.MatchOneOrMore ? 1 :parseInt(node.flags.MatchMinimum, 10));
+            }
+            else
+            {
+                if ( node.flags.MatchZeroOrMore )
+                {
+                    numrepeats = rnd(0, 2*state.maxLength);
+                }
+                else if ( node.flags.MatchZeroOrOne )
+                {
+                    numrepeats = rnd(0, 1);
+                }
+                else if ( node.flags.MatchOneOrMore )
+                {
+                    numrepeats = rnd(1, 2*state.maxLength+1);
+                }
+                else 
+                {
+                    nmin = parseInt(node.flags.MatchMinimum, 10);
+                    nmax = parseInt(node.flags.MatchMaximum, 10);
+                    numrepeats = rnd(nmin, isNaN(nmax) ? (nmin+2*state.maxLength) : nmax);
+                }
+            }
+            if ( numrepeats )
+            {
+                repeats = new Array(numrepeats);
+                for(var i=0; i<numrepeats; i++) repeats[i] = node.val;
+                return repeats;
+            }
+            else
+            {
+                return null;
+            }
         }
-        
+        else
+        {
+            return node.val;
+        }
+    },
+    map_min = function map_min( ret, node, state ) {
+        var type = node.type;
+        if ( T_ALTERNATION === type )
+        {
+            var i, l = node.val.length, index = l ? 0 : -1, cur,
+                min = l ? walk(0, node.val[0], state) : 0;
+            for(i=1; i<l; i++)
+            {
+                cur = walk(0, node.val[i], state);
+                if ( cur < min )
+                {
+                    min = cur;
+                    index = i;
+                }
+            }
+            if ( l ) state.ret = min;
+            return null;
+        }
         else if ( T_CHARGROUP === type )
         {
-            minlen += 1;
+            return node.val.length ? node.val[0] : null;
         }
-        
+        else if ( T_QUANTIFIER === type )
+        {
+            if ( node.flags.MatchMinimum && "0"!==node.flags.MatchMinimum )
+            {
+                var i, nrepeats = parseInt(node.flags.MatchMinimum,10), repeats = new Array(nrepeats);
+                for(i=0; i<nrepeats; i++) repeats[i] = node.val;
+                return repeats;
+            }
+            return node.flags.MatchOneOrMore ? node.val : null;
+        }
+        else
+        {
+            return node.val;
+        }
+    },
+    map_max = function map_max( ret, node, state ) {
+        var type = node.type;
+        if ( T_SEQUENCE === type )
+        {
+            var seq=[], i=0, l=node.val.length, n;
+            for(i=0; i<l; i++)
+            {
+                n = node.val[i];
+                seq.push( n );
+                if ( (T_QUANTIFIER !== n.type) || n.flags.MatchOneOrMore || (null != n.flags.MatchMinimum && "0" !== n.flags.MatchMinimum) )
+                    break;
+            }
+            return seq.length ? seq : null;
+        }
+        else
+        {
+            return node.val;
+        }
+    },
+    reduce_count = function reduce_count( ret, node, state ) {
+        if ( null != state.ret )
+        {
+            ret += state.ret;
+            return ret;
+        }
+        var type = node.type;
+        if ( T_CHARS === type || T_CHARRANGE === type ||
+            T_UNICODECHAR === type || T_HEXCHAR === type ||
+            (T_SPECIAL === type && !node.flags.MatchStart && !node.flags.MatchEnd)
+        )
+        {
+            ret += 1;
+        }
         else if ( T_STRING === type )
         {
-            minlen += node.val.length;
+            ret += node.val.length;
         }
         
-        else if ( T_SPECIAL === type && !node.flags.MatchStart && !node.flags.MatchEnd )
+        return ret;
+    },
+    reduce_concat = function reduce_concat( ret, node, state ) {
+        if ( null != state.ret )
         {
-            minlen += 1;
+            ret += state.ret;
+            return ret;
         }
-                
+        var type = node.type, sample = null;
+        
+        if ( T_CHARS === type )
+        {
+            sample = node.val;
+        }
+        else if ( T_CHARRANGE === type )
+        {
+            sample = character_range(node.val);
+        }
         else if ( T_UNICODECHAR === type || T_HEXCHAR === type )
         {
-            minlen += 1;
+            sample = [node.flags.Char];
+        }
+        else if ( T_SPECIAL === type && !node.flags.MatchStart && !node.flags.MatchEnd )
+        {
+            var part = node.val;
+            if ('D' === part)
+            {
+                sample = [digit( false )];
+            }
+            else if ('W' === part)
+            {
+                sample = [word( false )];
+            }
+            else if ('S' === part)
+            {
+                sample = [space( false )];
+            }
+            else if ('d' === part)
+            {
+                sample = [digit( )];
+            }
+            else if ('w' === part)
+            {
+                sample = [word( )];
+            }
+            else if ('s' === part)
+            {
+                sample = [space( )];
+            }
+            else if ('.' === part && node.flags.MatchAnyChar)
+            {
+                sample = [any( )];
+            }
+            else
+            {
+                sample = ['\\' + part];
+            }
+        }
+        else if ( T_STRING === type )
+        {
+            sample = node.val;
         }
         
-        return minlen;
+        if ( sample )
+        {
+            ret += T_STRING === type ?
+            (state.isCaseInsensitive ? case_insensitive(sample) : sample) :
+            (character(state.isCaseInsensitive ? case_insensitive(sample, true) : sample, !state.node || !state.node.flags.NotMatch))
+            ;
+        }
+        
+        return ret;
+    },
+    reduce_peek = function reduce_peek( ret, node, state ) {
+        if ( null != state.ret )
+        {
+            ret.positive = concat( ret.positive, state.ret.positive );
+            ret.negative = concat( ret.negative, state.ret.negative );
+            return ret;
+        }
+        var type = node.type, inCharGroup = state.node && T_CHARGROUP === state.node.type,
+            inNegativeCharGroup = inCharGroup && state.node.flags.NotMatch,
+            peek = inNegativeCharGroup ? "negative" : "positive";
+        
+        if ( T_CHARS === type )
+        {
+            ret[peek] = concat( ret[peek], node.val );
+        }
+        else if ( T_CHARRANGE === type )
+        {
+            ret[peek] = concat( ret[peek], character_range(node.val) );
+        }
+        else if ( T_UNICODECHAR === type || T_HEXCHAR === type )
+        {
+            ret[peek][node.flags.Char] = 1;
+        }
+        else if ( T_SPECIAL === type && !node.flags.MatchStart && !node.flags.MatchEnd )
+        {
+            var part = node.val;
+            if ('D' === part)
+            {
+                ret[inNegativeCharGroup?"positive":"negative"][ '\\d' ] = 1;
+            }
+            else if ('W' === part)
+            {
+                ret[inNegativeCharGroup?"positive":"negative"][ '\\w' ] = 1;
+            }
+            else if ('S' === part)
+            {
+                ret[inNegativeCharGroup?"positive":"negative"][ '\\s' ] = 1;
+            }
+            else
+            {
+                ret[peek]['\\' + part] = 1;
+            }
+        }
+        else if ( T_STRING === type )
+        {
+            ret["positive"][node.val[CHAR](0)] = 1;
+        }
+        
+        return ret;
     },
     
-    //hexRegex = /^x([0-9a-fA-F]{2})/,
     match_hex = function( s ) {
         var m = false;
         if ( s.length > 2 && 'x' === s[CHAR](0) )
@@ -913,7 +610,6 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
         }
         return false;
     },
-    //unicodeRegex = /^u([0-9a-fA-F]{4})/,
     match_unicode = function( s ) {
         var m = false;
         if ( s.length > 4 && 'u' === s[CHAR](0) )
@@ -922,9 +618,8 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
         }
         return false;
     },
-    //repeatsRegex = /^\{\s*(\d+)\s*,?\s*(\d+)?\s*\}/,
     match_repeats = function( s ) {
-        var l, sl = s.length, pos = 0, m = false;
+        var l, sl = s.length, pos = 0, m = false, hasComma = false;
         if ( sl > 2 && '{' === s[CHAR](pos) )
         {
             m = ['', '', null];
@@ -940,7 +635,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                 return false;
             }
             if ( l=match_chars(SPACES, s, pos) ) pos += l;
-            if ( pos < sl && ',' === s[CHAR](pos) ) pos += 1;
+            if ( pos < sl && ',' === s[CHAR](pos) ) {pos += 1; hasComma = true;}
             if ( l=match_chars(SPACES, s, pos) ) pos += l;
             if ( l=match_char_range(DIGITS_RANGE, s, pos) ) 
             {
@@ -952,6 +647,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             {
                 pos++;
                 m[0] = s.slice(0, pos);
+                if ( !hasComma ) m[2] = m[1];
                 return m;
             }
             else
@@ -1394,24 +1090,32 @@ Analyzer[PROTO] = {
         return self;
     },
     
+    // experimental feature, implement (optimised) RE matching as well
+    match: function( str ) {
+        //return match( self._parts, str, 0, self._flags && self._flags.i );
+        return false;
+    },
+    
     // experimental feature
     sample: function( len ) {
         var self = this;
         if ( self._needsRefresh ) self.analyze( );
-        return generate( len||10, self._parts, self._flags && self._flags.i );
+        return walk('', self._parts, {
+            map:map_any,
+            reduce:reduce_concat,
+            isCaseInsensitive: self._flags && self._flags.i,
+            maxLength: len||10
+        });
     },
     
     // experimental feature
     minimum: function( ) {
         var self = this;
         if ( self._needsRefresh ) self.analyze( );
-        return minimum_length( self._parts );
-    },
-    
-    // experimental feature, implement (optimised) RE matching as well
-    match: function( str ) {
-        //return match( self._parts, str, 0, self._flags && self._flags.i );
-        return false;
+        return walk(0, self._parts, {
+            map:map_min,
+            reduce:reduce_count
+        })|0;
     },
     
     // experimental feature
@@ -1421,13 +1125,17 @@ Analyzer[PROTO] = {
         
         if ( self._needsRefresh ) self.analyze( );
         
-        peek = peek_characters( self._parts );
         isCaseInsensitive = self._flags && self._flags.i;
+        
+        peek = walk({positive:{},negative:{}}, self._parts, {
+            map:map_max,
+            reduce:reduce_peek
+        });
         
         for (n in peek)
         {
             cases = {};
-            // either peek or negativepeek
+            // either positive or negative
             p = peek[n];
             for (c in p)
             {

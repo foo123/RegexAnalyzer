@@ -2,9 +2,9 @@
 ##
 #
 #   RegexAnalyzer
-#   @version: 0.4.5
+#   @version: 0.5.0
 #
-#   A simple Regular Expression Analyzer for PHP, Python, Node/JS, ActionScript
+#   A simple Regular Expression Analyzer for PHP, Python, Node/XPCOM/JS, ActionScript
 #   https://github.com/foo123/RegexAnalyzer
 #
 ##
@@ -271,279 +271,187 @@ def case_insensitive( chars, asArray=False ):
     if asArray:
     
         if isinstance(chars, str): chars = chars.split('')
-        chars = map( random_upper_or_lower, chars )
+        chars = list(map( random_upper_or_lower, chars ))
         return chars
     
     else:
         return random_upper_or_lower( chars )
     
-
-def generate( node, isCaseInsensitive=False ):
-    sample = ''
-
+def walk( ret, node, state ):
+    if not node or not state: return ret
+    
     type = node.type
-    # walk the sequence
-    if T_ALTERNATION == type:
     
-        sample += generate( node.val[rnd(0, len(node.val)-1)], isCaseInsensitive )
-    
-
-    elif T_GROUP == type:
-    
-        sample += generate( node.val, isCaseInsensitive )
-    
-
-    elif T_SEQUENCE == type:
-    
-        for p in node.val:
+    # walk the tree
+    if T_ALTERNATION == type or T_SEQUENCE == type or T_CHARGROUP == type or T_GROUP == type or T_QUANTIFIER == type:
+        r = state['map']( ret, node, state )
+        if ('ret' in state) and (state['ret'] is not None):
+            ret = state['reduce']( ret, node, state )
+            state['ret'] = None
         
-            if not p: continue
-            repeat = 1
-            if T_QUANTIFIER == p.type:
-            
-                if 'MatchZeroOrMore' in p.flags: repeat = rnd(0, 10)
-                elif 'MatchZeroOrOne' in p.flags: repeat = rnd(0, 1)
-                elif 'MatchOneOrMore' in p.flags: repeat = rnd(1, 11)
-                else: 
-                
-                    mmin = int(p.flags['MatchMinimum'], 10)
-                    mmax = int(p.flags['MatchMaximum'], 10)
-                    repeat = rnd(mmin, (mmin+10) if is_nan(mmax) else mmax)
-                
-                while repeat > 0:
-                
-                    repeat-=1
-                    sample += generate( p.val, isCaseInsensitive )
-                
-            
-            elif T_SPECIAL == p.type:
-            
-                if 'MatchAnyChar' in p.flags: sample += any( )
-            
+        elif r is not None:
+            if not isinstance(r, (list,tuple)): r = [r]
+            for ri in r:
+                state['node'] = node
+                ret = walk( ret, ri, state )
+    
+    elif T_CHARS == type or T_CHARRANGE == type or T_UNICODECHAR == type or T_HEXCHAR == type or T_SPECIAL == type or T_STRING == type:
+        ret = state['reduce']( ret, node, state )
+    
+    state['node'] = None
+    return ret
+
+def map_any( ret, node, state ):
+    type = node.type
+    if T_ALTERNATION == type or T_CHARGROUP == type:
+        return node.val[rnd(0, len(node.val)-1)] if len(node.val) else None
+    
+    elif T_QUANTIFIER == type:
+        if len(ret) >= state['maxLength']:
+            numrepeats = 0 if ('MatchZeroOrMore' in node.flags) or ('MatchZeroOrOne' in node.flags) else (1 if ('MatchOneOrMore' in node.flags) else int(node.flags['MatchMinimum'], 10))
+        
+        else:
+            if ('MatchZeroOrMore' in node.flags) and node.flags['MatchZeroOrMore']:
+                numrepeats = rnd(0, 2*state['maxLength'])
+            elif ('MatchZeroOrOne' in node.flags) and node.flags['MatchZeroOrOne']:
+                numrepeats = rnd(0, 1)
+            elif ('MatchOneOrMore' in node.flags) and node.flags['MatchOneOrMore']:
+                numrepeats = rnd(1, 2*state['maxLength']+1)
             else:
-            
-                sample += generate( p, isCaseInsensitive )
-            
+                mmin = int(node.flags['MatchMinimum'], 10)
+                mmax = int(node.flags['MatchMaximum'], 10)
+                numrepeats = rnd(mmin, (mmin+2*state['maxLength']) if is_nan(mmax) else mmax)
         
-    
-
-    elif T_CHARGROUP == type:
-    
-        chars = []
-        #l = len(node.val);
-        for p in node.val:
-        
-            ptype = p.type
-            if T_CHARS == ptype:
-            
-                if isCaseInsensitive: chars = chars + list(case_insensitive( list(p.val), True ))
-                else: chars = chars + list(p.val)
-            
-            
-            elif T_CHARRANGE == ptype:
-            
-                if isCaseInsensitive: chars = chars + list(case_insensitive( character_range(list(p.val)), True ))
-                else: chars = chars + list(character_range(list(p.val)))
-            
-            
-            elif T_UNICODECHAR == ptype or T_HEXCHAR == ptype:
-            
-                chars.append( case_insensitive( p.flags['Char'] ) if isCaseInsensitive else p.flags['Char'] )
-            
-            
-            elif T_SPECIAL == ptype:
-            
-                p_part = p.val
-                if 'D' == p_part:
-                
-                    chars.append( digit( False ) )
-                
-                elif 'W' == p_part:
-                
-                    chars.append( word( False ) )
-                
-                elif 'S' == p_part:
-                
-                    chars.appemd( space( False ) )
-                
-                elif 'd' == p_part:
-                
-                    chars.append( digit( ) )
-                
-                elif 'w' == p_part:
-                
-                    chars.append( word( ) )
-                
-                elif 's' == p_part:
-                
-                    chars.append( space( ) )
-                
-                else:
-                
-                    chars.append( '\\' + p_part )
-                
-            
-        
-        sample += character(chars, not ('NotMatch' in node.flags))
-    
-
-    elif T_STRING == type:
-    
-        sample += case_insensitive( node.val ) if isCaseInsensitive else node.val
-    
-
-    elif T_SPECIAL == type and not('MatchStart' in node.flags) and not('MatchEnd' in node.flags):
-    
-        p_part = node.val
-        if 'D' == p_part:
-        
-            sample += digit( False )
-        
-        elif 'W' == p_part:
-        
-            sample += word( False )
-        
-        elif 'S' == p_part:
-        
-            sample += space( False )
-        
-        elif 'd' == p_part:
-        
-            sample += digit( )
-        
-        elif 'w' == p_part:
-        
-            sample += word( )
-        
-        elif 's' == p_part:
-        
-            sample += space( )
-        
-        elif '.' == p_part:
-        
-            sample += any( )
-        
+        if numrepeats:
+            repeats = []
+            for i in range(numrepeats): repeats.append(node.val)
+            return repeats
         else:
-        
-            sample += '\\' + p_part
-        
-    
-            
-    elif T_UNICODECHAR == type or T_HEXCHAR == type:
-    
-        sample +=  case_insensitive( node.flags['Char'] ) if isCaseInsensitive else node.flags['Char']
-    
+            return None
+    else:
+        return node.val
 
-    return sample
-
-
-def peek_characters( node ):
-    peek = {}
-    negativepeek = {}
+def map_min( ret, node, state ):
+    type = node.type
+    if T_ALTERNATION == type:
+        l = len(node.val)
+        index = 0 if l else -1
+        min = walk(0, node.val[0], state) if l else 0
+        i = 1
+        while i < l:
+            cur = walk(0, node.val[i], state)
+            if cur < min:
+                min = cur
+                index = i
+            i += 1
+        if l: state['ret'] = min
+        return None
     
-    if not node: return { 'peek': peek, 'negativepeek': negativepeek }
+    elif T_CHARGROUP == type:
+        return node.val[0] if len(node.val) else None
+    
+    elif T_QUANTIFIER == type:
+        if ('MatchMinimum' in node.flags) and "0"!=node.flags['MatchMinimum']:
+            nrepeats = int(node.flags['MatchMinimum'],10)
+            repeats = []
+            for i in range(nrepeats): repeats.append(node.val)
+            return repeats
+        return node.val if ('MatchOneOrMore' in node.flags) and node.flags['MatchOneOrMore'] else None
+    
+    else:
+        return node.val
+
+def map_max( ret, node, state ):
+    type = node.type
+    if T_SEQUENCE == type:
+        seq = []
+        for n in node.val:
+            seq.append( n )
+            if (T_QUANTIFIER != n.type) or (('MatchOneOrMore' in n.flags) and n.flags['MatchOneOrMore']) or (('MatchMinimum' in n.flags) and "0" != n.flags['MatchMinimum']):
+                break
+        return seq if len(seq) else None
+    
+    else:
+        return node.val
+
+def reduce_count( ret, node, state ):
+    if ('ret' in state) and state['ret'] is not None:
+        ret += state['ret']
+        return ret
+    
+    type = node.type;
+    if T_CHARS == type or T_CHARRANGE == type or T_UNICODECHAR == type or T_HEXCHAR == type or (T_SPECIAL == type and ('MatchStart' not in node.flags) and ('MatchEnd' not in node.flags)):
+        ret += 1
+    
+    elif T_STRING == type:
+        ret += len(node.val)
+    
+    return ret
+
+def reduce_concat( ret, node, state ):
+    if ('ret' in state) and state['ret'] is not None:
+        ret += str(state['ret'])
+        return ret
     
     type = node.type
-    # walk the sequence
-    if T_ALTERNATION == type:
-        for p in node.val:
-            tmp = peek_characters( p )
-            peek = concat( peek, tmp['peek'] )
-            negativepeek = concat( negativepeek, tmp['negativepeek'] )
+    sample = None
     
-    elif T_GROUP == type:
-        tmp = peek_characters( node.val )
-        peek = concat( peek, tmp['peek'] )
-        negativepeek = concat( negativepeek, tmp['negativepeek'] )
-    
-    elif T_SEQUENCE == type:
-        i = 0
-        l = len(node.val)
-        p = node.val[i]
-        done = ( 
-            i >= l or not(p) or T_QUANTIFIER != p.type or 
-            ((('MatchZeroOrMore' not in p.flags) and ('MatchZeroOrOne' not in p.flags) and ('MatchMinimum' not in p.flags)) or "0" != p.flags['MatchMinimum'])
-        )
-        while not done:
-            tmp = peek_characters( p.val )
-            peek = concat( peek, tmp['peek'] )
-            negativepeek = concat( negativepeek, tmp['negativepeek'] )
-            
-            i += 1
-            p = node.val[i]
-            
-            done = ( 
-                i >= l or not(p) or T_QUANTIFIER != p.type or 
-                ((('MatchZeroOrMore' not in p.flags) and ('MatchZeroOrOne' not in p.flags) and ('MatchMinimum' not in p.flags)) or "0" != p.flags['MatchMinimum'])
-            )
-        
-        if i < l:
-            p = node.val[i]
-            
-            if T_SPECIAL == p.type and ('^'==p.val or '$'==p.val):
-                p = node.val[i+1] if (i+1 < l) else None
-            
-            if p and T_QUANTIFIER == p.type:
-                p = p.val
-            
-            if p:
-                tmp = peek_characters( p )
-                peek = concat( peek, tmp['peek'] )
-                negativepeek = concat( negativepeek, tmp['negativepeek'] )
-    
-    elif T_CHARGROUP == type:
-        if 'NotMatch' in node.flags:
-            current = negativepeek
-        else:
-            current = peek
-        
-        for p in node.val:
-            ptype = p.type
-            if T_CHARS == ptype:
-                current = concat( current, p.val )
-            
-            elif T_CHARRANGE == ptype:
-                current = concat( current, character_range(p.val) )
-            
-            elif T_UNICODECHAR == ptype or T_HEXCHAR == ptype:
-                current[p.flags['Char']] = 1
-            
-            elif T_SPECIAL == ptype:
-                if 'D' == p.val:
-                    if 'NotMatch' in node.flags:
-                        peek[ '\\d' ] = 1
-                    else:
-                        negativepeek[ '\\d' ] = 1
-                elif 'W' == p.val:
-                    if 'NotMatch' in node.flags:
-                        peek[ '\\w' ] = 1
-                    else:
-                        negativepeek[ '\\W' ] = 1
-                elif 'S' == p.val:
-                    if 'NotMatch' in node.flags:
-                        peek[ '\\s' ] = 1
-                    else:
-                        negativepeek[ '\\s' ] = 1
-                else:
-                    current['\\' + p.val] = 1
-    
-    elif T_STRING == type:
-        peek[node.val[0]] = 1
-    
-    elif T_SPECIAL == type and ('MatchStart' not in node.flags) and ('MatchEnd' not in node.flags['MatchEnd']):
-        if 'D' == node.val:
-            negativepeek[ '\\d' ] = 1
-        elif 'W' == node.val:
-            negativepeek[ '\\W' ] = 1
-        elif 'S' == node.val:
-            negativepeek[ '\\s' ] = 1
-        else:
-            peek['\\' + node.val] = 1
-            
+    if T_CHARS == type:
+        sample = node.val
+    elif T_CHARRANGE == type:
+        sample = character_range(node.val)
     elif T_UNICODECHAR == type or T_HEXCHAR == type:
-        peek[node.flags['Char']] = 1
+        sample = [node.flags['Char']]
+    elif T_SPECIAL == type and ('MatchStart' not in node.flags) and ('MatchEnd' not in node.flags):
+        part = node.val
+        if 'D' == part: sample = [digit( False )]
+        elif 'W' == part: sample = [word( False )]
+        elif 'S' == part: sample = [space( False )]
+        elif 'd' == part: sample = [digit( )]
+        elif 'w' == part: sample = [word( )]
+        elif 's' == part: sample = [space( )]
+        elif ('.' == part) and ('MatchAnyChar' in node.flags): sample = [any( )]
+        else: sample = ['\\' + part]
+    elif T_STRING == type:
+        sample = node.val
     
-    return {'peek': peek, 'negativepeek': negativepeek}
+    if sample is not None:
+        ret += (case_insensitive(sample) if state['isCaseInsensitive'] else sample) if T_STRING == type else character(case_insensitive(sample, True) if state['isCaseInsensitive'] else sample, ('node' not in state) or ('NotMatch' not in state['node'].flags))
+    
+    return ret
+
+def reduce_peek( ret, node, state ):
+    if ('ret' in state) and state['ret'] is not None:
+        ret['positive'] = concat( ret['positive'], state['ret']['positive'] )
+        ret['negative'] = concat( ret['negative'], state['ret']['negative'] )
+        return ret
+    
+    type = node.type
+    inCharGroup = ('node' in state) and (T_CHARGROUP == state['node'].type)
+    inNegativeCharGroup = inCharGroup and ('NotMatch' in state['node'].flags)
+    peek = "negative" if inNegativeCharGroup else "positive"
+    
+    if T_CHARS == type:
+        ret[peek] = concat( ret[peek], node.val )
+    elif T_CHARRANGE == type:
+        ret[peek] = concat( ret[peek], character_range(node.val) )
+    elif T_UNICODECHAR == type or T_HEXCHAR == type:
+        ret[peek][node.flags['Char']] = 1
+    elif T_SPECIAL == type and ('MatchStart' not in node.flags) and ('MatchEnd' not in node.flags):
+        part = node.val
+        if 'D' == part:
+            ret["positive" if inNegativeCharGroup else "negative"][ '\\d' ] = 1
+        elif 'W' == part:
+            ret["positive" if inNegativeCharGroup else "negative"][ '\\w' ] = 1
+        elif 'S' == part:
+            ret["positive" if inNegativeCharGroup else "negative"][ '\\s' ] = 1
+        else:
+            ret[peek]['\\' + part] = 1
+    elif T_STRING == type:
+        ret["positive"][node.val[0]] = 1
+    
+    return ret
+
 
 def match_hex( s ):
     global _G
@@ -571,6 +479,7 @@ def match_repeats( s ):
     global _G
     pos = 0 
     m = False
+    hasComma = False
     sl = len(s);
     if sl > 2 and '{' == s[pos]:
     
@@ -586,7 +495,9 @@ def match_repeats( s ):
             return False
         l=match_chars(_G.SPACES, s, pos)
         if l: pos += l
-        if pos<sl and ',' == s[pos]: pos += 1
+        if pos<sl and ',' == s[pos]:
+            pos += 1
+            hasComma = True
         l=match_chars(_G.SPACES, s, pos)
         if l: pos += l
         l=match_char_range(_G.DIGITS_RANGE, s, pos)
@@ -598,6 +509,7 @@ def match_repeats( s ):
         if pos<sl and '}' == s[pos]:
             pos+=1
             m[0] = s[0:pos]
+            if not hasComma: m[2] = m[1]
             return m
         else:
             return False
@@ -985,7 +897,7 @@ def analyze_re( re_obj ):
 
 class RegexAnalyzer:
     
-    VERSION = "0.4.5"
+    VERSION = "0.5.0"
     
     Node = Node
     
@@ -1033,8 +945,9 @@ class RegexAnalyzer:
         
         return self
         
-    def getRegex( self ):
-        return re.compile(self._regex, re.I if 'i' in self._flags else None)
+    def getRegex( self, RF=None ):
+        RF = (self._flags if self._flags else {}) if not RF else RF
+        return re.compile(self._regex, re.I if 'i' in RF else None)
     
     def getParts( self ):
         if self._needsRefresh: self.analyze( )
@@ -1047,27 +960,44 @@ class RegexAnalyzer:
         
         return self
     
-    # experimental feature
-    def sample( self ):
-        if self._needsRefresh: self.analyze( )
-        return generate( self._parts, 'i' in self._flags )
-    
     # experimental feature, implement (optimised) RE matching as well
     def match( self, str ):
         #return match( self.$parts, str, 0, self.$flags && self.$flags.i );
         return False
     
     # experimental feature
+    def sample( self, leng=10 ):
+        if self._needsRefresh: self.analyze( )
+        return walk( '', self._parts, {
+            'map':map_any,
+            'reduce':reduce_concat,
+            'isCaseInsensitive':('i' in self._flags),
+            'maxLength':leng
+        })
+    
+    # experimental feature
+    def minimum( self ):
+        if self._needsRefresh: self.analyze( )
+        return walk( 0, self._parts, {
+            'map':map_min,
+            'reduce':reduce_count
+        })
+    
+    # experimental feature
     def peek( self ):
         if self._needsRefresh: self.analyze( )
         isCaseInsensitive = 'i' in self._flags
-        peek = peek_characters( self._parts )
+
+        peek = walk({'positive':{},'negative':{}}, self._parts, {
+            'map':map_max,
+            'reduce':reduce_peek
+        })
         
         for n,p in peek.items():
         
             cases = {}
             
-            # either peek or negativepeek
+            # either positive or negative
             for c in p.keys():
             
                 if '\\d' == c:

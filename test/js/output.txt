@@ -1,20 +1,16 @@
-Testing Composer.VERSION = 0.4.4
+Testing Composer.VERSION = 0.4.5
 ================
 Partial: [_a-z][_a-z0-9]*
 Composed: /^([_a-z][_a-z0-9]*|\*\*aabb\*\*|.|\s|\D+)*?$/i
 Expected: /^([_a-z][_a-z0-9]*|\*\*aabb\*\*|.|\s|\D+)*?$/i
 ================
 
-Testing Analyzer.VERSION = 0.4.5
+Testing Analyzer.VERSION = 0.5.0
 ================
-Input: /xyz([abc0-9]){2,3}/i
-
-Regular Expression: xyz([abc0-9]){2,3}
-
-Regular Expression Flags: 
-{ i: 1 }
-
-Regular Expression Parts: 
+Input                         : /xyz([abc0-9]){2,3}/i
+Regular Expression            : xyz([abc0-9]){2,3}
+Regular Expression Flags      : i
+Regular Expression Structure :
 {
     "type": "Sequence",
     "value": [
@@ -74,14 +70,17 @@ Regular Expression Parts:
 
 Regular Expression Peek Characters: 
 {
-    "peek": {
-        "x": 1,
-        "X": 1
-    },
-    "negativepeek": {}
+    "positive": [
+        "x",
+        "X"
+    ],
+    "negative": []
 }
 
+Regular Expression Minimum Length: 
+5
+
 Regular Expression Sample Match String: 
-xyz48 -> Matched
+xyzb1 -> Matched
 ================
 

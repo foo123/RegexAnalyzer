@@ -5,20 +5,12 @@ Composed: /^([_a-z][_a-z0-9]*|\*\*aabb\*\*|.|\s|\D+)*?$/i
 Expected: /^([_a-z][_a-z0-9]*|\*\*aabb\*\*|.|\s|\D+)*?$/i
 ================
 
-Testing Analyzer.VERSION = 0.4.5
+Testing Analyzer.VERSION = 0.5.0
 ================
-Input: /xyz([abc0-9]){2,3}/i
-
-Regular Expression: xyz([abc0-9]){2,3}
-
-Regular Expression Flags: 
-Array
-(
-    [i] => 1
-)
-
-
-Regular Expression Parts: 
+Input                        : /xyz([abc0-9]){2,3}/i
+Regular Expression           : xyz([abc0-9]){2,3}
+Regular Expression Flags     : i
+Regular Expression Structure : 
 Array
 (
     [type] => Sequence
@@ -127,20 +119,23 @@ Array
 Regular Expression Peek Characters: 
 Array
 (
-    [peek] => Array
+    [positive] => Array
         (
-            [x] => 1
-            [X] => 1
+            [0] => x
+            [1] => X
         )
 
-    [negativepeek] => Array
+    [negative] => Array
         (
         )
 
 )
 
 
+Regular Expression Minimum Length: 
+5
+
 Regular Expression Sample Match String: 
-xyz94 -> Matched
+XYZ6Bc -> Matched
 ================
 

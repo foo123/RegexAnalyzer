@@ -19,7 +19,7 @@ if not RegexAnalyzer:
     print ('Could not load the RegExAnalyzer Module')
     sys.exit(1)
 else:    
-    print ('RegExAnalyzer Module loaded succesfully')
+    print ('RegexAnalyzer Module loaded succesfully')
 
 
 def echo_( o='' ):
@@ -33,20 +33,20 @@ inregex = '/xyz([abc0-9]){2,3}/i'
 anal = RegexAnalyzer( inregex )
 peekChars = anal.peek( )
 sampleStr = anal.sample( )
+minLen = anal.minimum( )
 test_regex = anal.getRegex()
 
-echo_("Input: " + inregex)
-echo_()
-echo_("Regular Expression: " + anal._regex)
-echo_()
-echo_("Regular Expression Flags: ")
-echo_(pprint.pformat(anal._flags, 4))
-echo_()
-echo_("Regular Expression Parts: ")
+echo_("Input                        : " + inregex)
+echo_("Regular Expression           : " + anal._regex)
+echo_("Regular Expression Flags     : " + ','.join(anal._flags.keys()))
+echo_("Regular Expression Structure :")
 echo_(pprint.pformat(anal._parts.toObject(), 4))
 echo_()
 echo_("Regular Expression Peek Characters: ")
-echo_(pprint.pformat(peekChars, 4))
+echo_(pprint.pformat({'positive':peekChars['positive'].keys(),'negative':peekChars['negative'].keys()}, 4))
+echo_()
+echo_("Regular Expression Minimum Length: ")
+echo_(str(minLen))
 echo_()
 echo_("Regular Expression Sample Match String: ")
 echo_(sampleStr + ' -> ' + ('Matched' if test_regex.match(sampleStr) else 'NOT Matched'))
