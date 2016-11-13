@@ -84,23 +84,23 @@ Regular Expression Minimum Length       :
 Regular Expression Sample Match Strings : 
 [
     {
-        "sample": "XYZb8",
+        "sample": "XYZ1B",
         "match": "yes"
     },
     {
-        "sample": "xyzA3",
+        "sample": "XYZac",
         "match": "yes"
     },
     {
-        "sample": "xyz9C",
+        "sample": "xyzB8",
         "match": "yes"
     },
     {
-        "sample": "xyzAB",
+        "sample": "XYZ67",
         "match": "yes"
     },
     {
-        "sample": "XYZAb",
+        "sample": "xyzb8",
         "match": "yes"
     }
 ]

@@ -381,15 +381,14 @@ class RegexAnalyzer
                 {
                     $state->node = $node;
                     $ret = self::walk( $ret, $r[$i], $state );
+                    if ( isset($state->stop) ) return $ret;
                 }
             }
         }
         
-        elseif ( self::T_CHARS === $type ||
-                self::T_CHARRANGE === $type ||
+        elseif ( self::T_CHARS === $type || self::T_CHARRANGE === $type ||
                 self::T_UNICODECHAR === $type || self::T_HEXCHAR === $type ||
-                self::T_SPECIAL === $type ||
-                self::T_STRING === $type
+                self::T_SPECIAL === $type || self::T_STRING === $type
         )
         {
             $ret = call_user_func( $state->reduce, $ret, $node, $state );
@@ -417,7 +416,7 @@ class RegexAnalyzer
             {
                 if ( !empty($node->flags->MatchZeroOrMore) )
                 {
-                    $numrepeats = rand(0, 2*$state->maxLength);
+                    $numrepeats = rand(0, 1+2*$state->maxLength);
                 }
                 elseif ( !empty($node->flags->MatchZeroOrOne) )
                 {
@@ -425,13 +424,13 @@ class RegexAnalyzer
                 }
                 elseif ( !empty($node->flags->MatchOneOrMore) )
                 {
-                    $numrepeats = rand(1, 2*$state->maxLength+1);
+                    $numrepeats = rand(1, 1+2*$state->maxLength);
                 }
                 else 
                 {
                     $mmin = intval($node->flags->MatchMinimum, 10);
-                    $mmax = intval($node->flags->MatchMaximum, 10);
-                    $numrepeats = rand($mmin, is_nan($mmax) ? ($mmin+2*$state->maxLength) : $mmax);
+                    $mmax = 'unlimited'===$node->flags->MatchMaximum ? ($mmin+1+2*$state->maxLength) : intval($node->flags->MatchMaximum, 10);
+                    $numrepeats = rand($mmin, $mmax);
                 }
             }
             if ( $numrepeats )
@@ -457,16 +456,11 @@ class RegexAnalyzer
         if ( self::T_ALTERNATION === $type )
         {
             $l = count($node->val);
-            $index = $l ? 0 : -1;
             $min = $l ? self::walk(0, $node->val[0], $state) : 0;
             for($i=1; $i<$l; $i++)
             {
                 $cur = self::walk(0, $node->val[$i], $state);
-                if ( $cur < $min )
-                {
-                    $min = $cur;
-                    $index = $i;
-                }
+                if ( $cur < $min ) $min = $cur;
             }
             if ( $l ) $state->ret = $min;
             return null;
@@ -477,8 +471,9 @@ class RegexAnalyzer
         }
         elseif ( self::T_QUANTIFIER === $type )
         {
-            if ( isset($node->flags->MatchMinimum) && "0"!==$node->flags->MatchMinimum )
+            if ( isset($node->flags->MatchMinimum) )
             {
+                if ( "0"===$node->flags->MatchMinimum ) return null;
                 $nrepeats = intval($node->flags->MatchMinimum,10);
                 $repeats = array();
                 for($i=0; $i<$nrepeats; $i++) $repeats[] = $node->val;
@@ -503,8 +498,11 @@ class RegexAnalyzer
             {
                 $n = $node->val[$i];
                 $seq[] = $n;
-                if ( (self::T_QUANTIFIER !== $n->type) || !empty($n->flags->MatchOneOrMore) || (isset($n->flags->MatchMinimum) && "0" !== $n->flags->MatchMinimum) )
-                    break;
+                if ( (self::T_QUANTIFIER === $n->type) && (!empty($n->flags->MatchZeroOrMore) || !empty($n->flags->MatchZeroOrOne) || (isset($n->flags->MatchMinimum) && "0" === $n->flags->MatchMinimum)) )
+                    continue;
+                elseif ( (self::T_SPECIAL === $n->type) && (!empty($n->flags->MatchStart) || !empty($n->flags->MatchEnd)) )
+                    continue;
+                break;
             }
             return !empty($seq) ? $seq : null;
         }
@@ -519,6 +517,11 @@ class RegexAnalyzer
         if ( isset($state->ret) )
         {
             $ret += $state->ret;
+            return $ret;
+        }
+        if ( self::T_SPECIAL === $node->type && isset($node->flags->MatchEnd) )
+        {
+            $state->stop = 1;
             return $ret;
         }
         $type = $node->type;
@@ -542,6 +545,11 @@ class RegexAnalyzer
         if ( isset($state->ret) )
         {
             $ret .= $state->ret;
+            return $ret;
+        }
+        if ( self::T_SPECIAL === $node->type && isset($node->flags->MatchEnd) )
+        {
+            $state->stop = 1;
             return $ret;
         }
         $type = $node->type; $sample = null;
@@ -616,6 +624,11 @@ class RegexAnalyzer
         {
             $ret['positive'] = self::concat($ret['positive'], $state->ret['positive']);
             $ret['negative'] = self::concat($ret['negative'], $state->ret['negative']);
+            return $ret;
+        }
+        if ( self::T_SPECIAL === $node->type && isset($node->flags->MatchEnd) )
+        {
+            $state->stop = 1;
             return $ret;
         }
         $type = $node->type;

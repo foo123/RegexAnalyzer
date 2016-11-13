@@ -54,11 +54,11 @@ Regular Expression Minimum Length       :
 
 Regular Expression Sample Match Strings : 
 
-[   {'match': 'yes', 'sample': 'XYZ87'},
-    {'match': 'yes', 'sample': 'XYZ68'},
-    {'match': 'yes', 'sample': 'XYZaC'},
-    {'match': 'yes', 'sample': 'xyzc6'},
-    {'match': 'yes', 'sample': 'xyzC6'}]
+[   {'match': 'yes', 'sample': 'xyzcb'},
+    {'match': 'yes', 'sample': 'XYZ7a'},
+    {'match': 'yes', 'sample': 'xyzAc'},
+    {'match': 'yes', 'sample': 'XYZCA'},
+    {'match': 'yes', 'sample': 'XYZ68'}]
 
 =========================================
 

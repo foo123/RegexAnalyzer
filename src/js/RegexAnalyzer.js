@@ -333,15 +333,14 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                 {
                     state.node = node;
                     ret = walk( ret, r[i], state );
+                    if ( state.stop ) return ret;
                 }
             }
         }
         
-        else if ( T_CHARS === type ||
-                T_CHARRANGE === type ||
+        else if ( T_CHARS === type || T_CHARRANGE === type ||
                 T_UNICODECHAR === type || T_HEXCHAR === type ||
-                T_SPECIAL === type ||
-                T_STRING === type
+                T_SPECIAL === type || T_STRING === type
         )
         {
             ret = state.reduce( ret, node, state );
@@ -361,16 +360,16 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
         }
         else if ( T_QUANTIFIER === type )
         {
-            var numrepeats, nmin, nmax, repeats;
+            var numrepeats, mmin, mmax, repeats;
             if ( ret.length >= state.maxLength )
             {
-                numrepeats = node.flags.MatchZeroOrMore || node.flags.MatchZeroOrOne ? 0 : (node.flags.MatchOneOrMore ? 1 :parseInt(node.flags.MatchMinimum, 10));
+                numrepeats = node.flags.MatchZeroOrMore || node.flags.MatchZeroOrOne ? 0 : (node.flags.MatchOneOrMore ? 1 : parseInt(node.flags.MatchMinimum, 10));
             }
             else
             {
                 if ( node.flags.MatchZeroOrMore )
                 {
-                    numrepeats = rnd(0, 2*state.maxLength);
+                    numrepeats = rnd(0, 1+2*state.maxLength);
                 }
                 else if ( node.flags.MatchZeroOrOne )
                 {
@@ -378,13 +377,13 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                 }
                 else if ( node.flags.MatchOneOrMore )
                 {
-                    numrepeats = rnd(1, 2*state.maxLength+1);
+                    numrepeats = rnd(1, 1+2*state.maxLength);
                 }
                 else 
                 {
-                    nmin = parseInt(node.flags.MatchMinimum, 10);
-                    nmax = parseInt(node.flags.MatchMaximum, 10);
-                    numrepeats = rnd(nmin, isNaN(nmax) ? (nmin+2*state.maxLength) : nmax);
+                    mmin = parseInt(node.flags.MatchMinimum, 10);
+                    mmax = "unlimited" === node.flags.MatchMaximum ? (mmin+1+2*state.maxLength) : parseInt(node.flags.MatchMaximum, 10);
+                    numrepeats = rnd(mmin, mmax);
                 }
             }
             if ( numrepeats )
@@ -407,16 +406,12 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
         var type = node.type;
         if ( T_ALTERNATION === type )
         {
-            var i, l = node.val.length, index = l ? 0 : -1, cur,
+            var i, l = node.val.length, cur,
                 min = l ? walk(0, node.val[0], state) : 0;
             for(i=1; i<l; i++)
             {
                 cur = walk(0, node.val[i], state);
-                if ( cur < min )
-                {
-                    min = cur;
-                    index = i;
-                }
+                if ( cur < min ) min = cur;
             }
             if ( l ) state.ret = min;
             return null;
@@ -427,8 +422,9 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
         }
         else if ( T_QUANTIFIER === type )
         {
-            if ( node.flags.MatchMinimum && "0"!==node.flags.MatchMinimum )
+            if ( node.flags.MatchMinimum )
             {
+                if ( "0" === node.flags.MatchMinimum ) return null;
                 var i, nrepeats = parseInt(node.flags.MatchMinimum,10), repeats = new Array(nrepeats);
                 for(i=0; i<nrepeats; i++) repeats[i] = node.val;
                 return repeats;
@@ -449,8 +445,11 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             {
                 n = node.val[i];
                 seq.push( n );
-                if ( (T_QUANTIFIER !== n.type) || n.flags.MatchOneOrMore || (null != n.flags.MatchMinimum && "0" !== n.flags.MatchMinimum) )
-                    break;
+                if ( (T_QUANTIFIER === n.type) && (n.flags.MatchZeroOrOne || n.flags.MatchZeroOrMore || ("0" === n.flags.MatchMinimum)) )
+                    continue;
+                else if ( (T_SPECIAL === n.type) && (n.flags.MatchStart || n.flags.MatchEnd) )
+                    continue;
+                break;
             }
             return seq.length ? seq : null;
         }
@@ -465,7 +464,13 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             ret += state.ret;
             return ret;
         }
+        if ( T_SPECIAL === node.type && node.flags.MatchEnd )
+        {
+            state.stop = 1;
+            return ret;
+        }
         var type = node.type;
+        
         if ( T_CHARS === type || T_CHARRANGE === type ||
             T_UNICODECHAR === type || T_HEXCHAR === type ||
             (T_SPECIAL === type && !node.flags.MatchStart && !node.flags.MatchEnd)
@@ -484,6 +489,11 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
         if ( null != state.ret )
         {
             ret += state.ret;
+            return ret;
+        }
+        if ( T_SPECIAL === node.type && node.flags.MatchEnd )
+        {
+            state.stop = 1;
             return ret;
         }
         var type = node.type, sample = null;
@@ -558,6 +568,12 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             ret.negative = concat( ret.negative, state.ret.negative );
             return ret;
         }
+        if ( T_SPECIAL === node.type && node.flags.MatchEnd )
+        {
+            state.stop = 1;
+            return ret;
+        }
+        
         var type = node.type, inCharGroup = state.node && T_CHARGROUP === state.node.type,
             inNegativeCharGroup = inCharGroup && state.node.flags.NotMatch,
             peek = inNegativeCharGroup ? "negative" : "positive";

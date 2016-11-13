@@ -294,6 +294,7 @@ def walk( ret, node, state ):
             for ri in r:
                 state['node'] = node
                 ret = walk( ret, ri, state )
+                if ('stop' in state) and state['stop']: return ret
     
     elif T_CHARS == type or T_CHARRANGE == type or T_UNICODECHAR == type or T_HEXCHAR == type or T_SPECIAL == type or T_STRING == type:
         ret = state['reduce']( ret, node, state )
@@ -312,15 +313,15 @@ def map_any( ret, node, state ):
         
         else:
             if ('MatchZeroOrMore' in node.flags) and node.flags['MatchZeroOrMore']:
-                numrepeats = rnd(0, 2*state['maxLength'])
+                numrepeats = rnd(0, 1+2*state['maxLength'])
             elif ('MatchZeroOrOne' in node.flags) and node.flags['MatchZeroOrOne']:
                 numrepeats = rnd(0, 1)
             elif ('MatchOneOrMore' in node.flags) and node.flags['MatchOneOrMore']:
-                numrepeats = rnd(1, 2*state['maxLength']+1)
+                numrepeats = rnd(1, 1+2*state['maxLength'])
             else:
                 mmin = int(node.flags['MatchMinimum'], 10)
-                mmax = int(node.flags['MatchMaximum'], 10)
-                numrepeats = rnd(mmin, (mmin+2*state['maxLength']) if is_nan(mmax) else mmax)
+                mmax = (mmin+1+2*state['maxLength']) if 'unlimited'==node.flags['MatchMaximum'] else int(node.flags['MatchMaximum'], 10)
+                numrepeats = rnd(mmin, mmax)
         return [node.val] * numrepeats if numrepeats else None
     
     else:
@@ -330,14 +331,11 @@ def map_min( ret, node, state ):
     type = node.type
     if T_ALTERNATION == type:
         l = len(node.val)
-        index = 0 if l else -1
         min = walk(0, node.val[0], state) if l else 0
         i = 1
         while i < l:
             cur = walk(0, node.val[i], state)
-            if cur < min:
-                min = cur
-                index = i
+            if cur < min: min = cur
             i += 1
         if l: state['ret'] = min
         return None
@@ -346,7 +344,8 @@ def map_min( ret, node, state ):
         return node.val[0] if len(node.val) else None
     
     elif T_QUANTIFIER == type:
-        if ('MatchMinimum' in node.flags) and "0"!=node.flags['MatchMinimum']:
+        if ('MatchMinimum' in node.flags):
+            if "0"==node.flags['MatchMinimum']: return None
             return [node.val] * int(node.flags['MatchMinimum'],10)
         return node.val if ('MatchOneOrMore' in node.flags) and node.flags['MatchOneOrMore'] else None
     
@@ -359,8 +358,11 @@ def map_max( ret, node, state ):
         seq = []
         for n in node.val:
             seq.append( n )
-            if (T_QUANTIFIER != n.type) or (('MatchOneOrMore' in n.flags) and n.flags['MatchOneOrMore']) or (('MatchMinimum' in n.flags) and "0" != n.flags['MatchMinimum']):
-                break
+            if (T_QUANTIFIER == n.type) and (('MatchZeroOrMore' in n.flags) or ('MatchZeroOrOne' in n.flags) or (('MatchMinimum' in n.flags) and "0" == n.flags['MatchMinimum'])):
+                continue
+            elif (T_SPECIAL == n.type) and (('MatchStart' in n.flags) or ('MatchEnd' in n.flags)):
+                continue
+            break
         return seq if len(seq) else None
     
     else:
@@ -370,7 +372,10 @@ def reduce_len( ret, node, state ):
     if ('ret' in state) and state['ret'] is not None:
         ret += state['ret']
         return ret
-    
+    if T_SPECIAL == node.type and ('MatchEnd' not in node.flags):
+        state['stop'] = 1
+        return ret
+        
     type = node.type;
     if T_CHARS == type or T_CHARRANGE == type or T_UNICODECHAR == type or T_HEXCHAR == type or (T_SPECIAL == type and ('MatchStart' not in node.flags) and ('MatchEnd' not in node.flags)):
         ret += 1
@@ -384,7 +389,10 @@ def reduce_str( ret, node, state ):
     if ('ret' in state) and state['ret'] is not None:
         ret += str(state['ret'])
         return ret
-    
+    if T_SPECIAL == node.type and ('MatchEnd' not in node.flags):
+        state['stop'] = 1
+        return ret
+        
     type = node.type
     sample = None
     
@@ -417,7 +425,10 @@ def reduce_peek( ret, node, state ):
         ret['positive'] = concat( ret['positive'], state['ret']['positive'] )
         ret['negative'] = concat( ret['negative'], state['ret']['negative'] )
         return ret
-    
+    if T_SPECIAL == node.type and ('MatchEnd' not in node.flags):
+        state['stop'] = 1
+        return ret
+        
     type = node.type
     inCharGroup = ('node' in state) and (T_CHARGROUP == state['node'].type)
     inNegativeCharGroup = inCharGroup and ('NotMatch' in state['node'].flags)

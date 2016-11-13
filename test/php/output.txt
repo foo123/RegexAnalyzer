@@ -141,31 +141,31 @@ Array
 (
     [0] => Array
         (
-            [sample] => xyz7c
+            [sample] => XYZA1
             [match] => yes
         )
 
     [1] => Array
         (
-            [sample] => XYZBb
+            [sample] => xyzc4
             [match] => yes
         )
 
     [2] => Array
         (
-            [sample] => xyz07
+            [sample] => xyz5B
             [match] => yes
         )
 
     [3] => Array
         (
-            [sample] => xyzBB
+            [sample] => XYZ21
             [match] => yes
         )
 
     [4] => Array
         (
-            [sample] => xyza0
+            [sample] => xyz9c
             [match] => yes
         )
 
