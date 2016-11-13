@@ -321,13 +321,8 @@ def map_any( ret, node, state ):
                 mmin = int(node.flags['MatchMinimum'], 10)
                 mmax = int(node.flags['MatchMaximum'], 10)
                 numrepeats = rnd(mmin, (mmin+2*state['maxLength']) if is_nan(mmax) else mmax)
-        
-        if numrepeats:
-            repeats = []
-            for i in range(numrepeats): repeats.append(node.val)
-            return repeats
-        else:
-            return None
+        return [node.val] * numrepeats if numrepeats else None
+    
     else:
         return node.val
 
@@ -352,10 +347,7 @@ def map_min( ret, node, state ):
     
     elif T_QUANTIFIER == type:
         if ('MatchMinimum' in node.flags) and "0"!=node.flags['MatchMinimum']:
-            nrepeats = int(node.flags['MatchMinimum'],10)
-            repeats = []
-            for i in range(nrepeats): repeats.append(node.val)
-            return repeats
+            return [node.val] * int(node.flags['MatchMinimum'],10)
         return node.val if ('MatchOneOrMore' in node.flags) and node.flags['MatchOneOrMore'] else None
     
     else:
@@ -374,7 +366,7 @@ def map_max( ret, node, state ):
     else:
         return node.val
 
-def reduce_count( ret, node, state ):
+def reduce_len( ret, node, state ):
     if ('ret' in state) and state['ret'] is not None:
         ret += state['ret']
         return ret
@@ -388,7 +380,7 @@ def reduce_count( ret, node, state ):
     
     return ret
 
-def reduce_concat( ret, node, state ):
+def reduce_str( ret, node, state ):
     if ('ret' in state) and state['ret'] is not None:
         ret += str(state['ret'])
         return ret
@@ -902,97 +894,101 @@ class RegexAnalyzer:
     Node = Node
     
     # A simple (js-flavored) regular expression analyzer
-    def __init__(self, regex=None, delim=None):
-        self._regex = None
-        self._flags = None
-        self._parts = None
-        self._needsRefresh = False
+    def __init__(self, re=None, delim=None):
+        self.ast = None
+        self.re = None
+        self.fl = None
        
-        if regex is not None:   
-            self.regex(regex, delim)
+        if re is not None:   
+            self.set(re, delim)
             
             
     def dispose( self ):
-        self._regex = None
-        self._flags = None
-        self._parts = None
+        self.ast = None
+        self.re = None
+        self.fl = None
         return self
     
-    def regex(self, regex, delim=None):
-        if regex:
-            flags = {}
+    def set(self, re, delim=None):
+        if re:
             
             if not delim: delim = '/'
+            re = str(re)
+            fl = {}
+            l = len(re)
             
-            r = str(regex)
-            l = len(r)
-            ch = r[l-1]
+            # parse re flags, if any
+            while 0 < l:
+                ch = re[l-1]
+                if delim == ch:
+                    break
+                else:
+                    fl[ ch ] = 1
+                    l -= 1
             
-            # parse regex flags
-            while delim != ch:
+            if 0 < l:
+                # remove re delimiters
+                if delim == re[0] and delim == re[l-1]:  re = re[1:l-1]
+                else: re = re[0:l]
+            else:
+                re = ''
             
-                flags[ ch ] = 1
-                r = r[0:-1]
-                l -= 1
-                ch = r[-1]
-            
-            # remove regex delimiters
-            if delim == r[0] and delim == r[-1]:  r = r[1:-1]
-            
-            if self._regex != r: self._needsRefresh = True
-            self._regex = r 
-            self._flags = flags
+            # re is different, reset the ast
+            if self.re != re: self.ast = None
+            self.re = re 
+            self.fl = fl
         
         return self
         
-    def getRegex( self, RF=None ):
-        RF = (self._flags if self._flags else {}) if not RF else RF
-        return re.compile(self._regex, re.I if 'i' in RF else None)
-    
-    def getParts( self ):
-        if self._needsRefresh: self.analyze( )
-        return self._parts
-    
     def analyze( self ):
-        if self._needsRefresh:
-            self._parts = analyze_re( RE_OBJ(self._regex) )
-            self._needsRefresh = False
-        
+        if self.re and (self.ast is None): self.ast = analyze_re( RE_OBJ(self.re) )
         return self
     
-    # experimental feature, implement (optimised) RE matching as well
-    def match( self, str ):
-        #return match( self.$parts, str, 0, self.$flags && self.$flags.i );
-        return False
+    def compile( self, flags=None ):
+        if not self.re: return None
+        flags = (self.fl if self.fl else {}) if not flags else flags
+        return re.compile(self.re, re.I if 'i' in flags else None)
+    
+    def tree( self, flat=False ):
+        if not self.re: return None
+        if self.ast is None: self.analyze( )
+        return self.ast.toObject() if flat is True else self.ast
     
     # experimental feature
-    def sample( self, leng=10 ):
-        if self._needsRefresh: self.analyze( )
-        return walk( '', self._parts, {
-            'map':map_any,
-            'reduce':reduce_concat,
-            'isCaseInsensitive':('i' in self._flags),
-            'maxLength':leng
-        })
+    def sample( self, maxlen=1, numsamples=1 ):
+        if not self.re: return None
+        if self.ast is None: self.analyze( )
+        state = {
+            'map'               : map_any,
+            'reduce'            : reduce_str,
+            'maxLength'         : maxlen if maxlen else 1,
+            'isCaseInsensitive' : ('i' in self.fl)
+        }
+        if 1 < numsamples:
+            return [walk('', self.ast, state) for i in range(numsamples)]
+        return walk('', self.ast, state)
     
     # experimental feature
     def minimum( self ):
-        if self._needsRefresh: self.analyze( )
-        return walk( 0, self._parts, {
-            'map':map_min,
-            'reduce':reduce_count
-        })
+        if not self.re: return 0
+        if self.ast is None: self.analyze( )
+        state = {
+            'map'               : map_min,
+            'reduce'            : reduce_len
+        }
+        return walk(0, self.ast, state)
     
     # experimental feature
     def peek( self ):
-        if self._needsRefresh: self.analyze( )
-        isCaseInsensitive = 'i' in self._flags
-
-        peek = walk({'positive':{},'negative':{}}, self._parts, {
-            'map':map_max,
-            'reduce':reduce_peek
-        })
+        if not self.re: return None
+        if self.ast is None: self.analyze( )
+        state = {
+            'map'               : map_max,
+            'reduce'            : reduce_peek
+        }
+        peek = walk({'positive':{},'negative':{}}, self.ast, state)
         
+        isCaseInsensitive = 'i' in self.fl
         for n,p in peek.items():
         
             cases = {}

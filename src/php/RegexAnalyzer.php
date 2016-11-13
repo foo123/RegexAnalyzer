@@ -514,7 +514,7 @@ class RegexAnalyzer
         }
     }
     
-    private static function reduce_count( $ret, &$node, &$state )
+    private static function reduce_len( $ret, &$node, &$state )
     {
         if ( isset($state->ret) )
         {
@@ -537,7 +537,7 @@ class RegexAnalyzer
         return $ret;
     }
     
-    private static function reduce_concat( $ret, &$node, &$state )
+    private static function reduce_str( $ret, &$node, &$state )
     {
         if ( isset($state->ret) )
         {
@@ -1093,116 +1093,123 @@ class RegexAnalyzer
     
     
     // A simple (js-flavored) regular expression analyzer
-    public $_regex = null;
-    public $_flags = null;
-    public $_parts = null;
-    public $_needsRefresh = false;
+    public $ast = null;
+    public $re = null;
+    public $fl = null;
     
-    public function __construct( $regex=null, $delim=null )
+    public function __construct( $re=null, $delim=null )
     {
-        if ( $regex ) $this->regex($regex, $delim);
+        if ( $re ) $this->set($re, $delim);
     }
     
     public function dispose( ) 
     {
-        $this->_regex = null;
-        $this->_flags = null;
-        $this->_parts = null;
+        $this->ast = null;
+        $this->re = null;
+        $this->fl = null;
         return $this;
     }
         
-    public function regex($regex, $delim=null) 
+    public function set($re, $delim=null) 
     {
-        if ( $regex )
+        if ( $re )
         {
-            $flags = array();
+            $delim = empty($delim) ? '/' : (string)$delim;
+            $re = strval($re); 
+            $fl = array();
+            $l = strlen($re);
             
-            $delim = $delim ? $delim : '/';
-            $r = strval($regex); 
-            $l = strlen($r);
-            $ch = $r[$l-1];
-            
-            // parse regex flags
-            while ( $delim != $ch )
+            // parse re flags, if any
+            while ( 0 < $l )
             {
-                $flags[ $ch ] = 1;
-                $r = substr($r, 0, $l-1);
-                $l--;
-                $ch = $r[$l-1];
+                $ch = $re[$l-1];
+                if ( $delim === $ch ) break;
+                else { $fl[ $ch ] = 1; $l--; }
             }
-            // remove regex delimiters
-            if ( $delim == $r[0] && $delim == $r[$l-1] )  $r = substr($r, 1, $l-2);
             
-            if ( $this->_regex !== $r ) $this->_needsRefresh = true;
-            $this->_regex = $r; $this->_flags = $flags;
+            if ( 0 < $l )
+            {
+                // remove re delimiters
+                if ( $delim === $re[0] && $delim === $re[$l-1] ) $re = substr($re, 1, $l-2);
+                else $re = substr($re, 0, $l);
+            }
+            else
+            {
+                $re = '';
+            }
+            
+            // re is different, reset the ast
+            if ( $this->re !== $re ) $this->ast = null;
+            $this->re = $re; $this->fl = $fl;
         }
         return $this;
-    }
-    
-    public function getRegex( $RF=null ) 
-    {
-        $RF = empty($RF) ? (!empty($this->_flags) ? $this->_flags : array()): (array)$RF;
-        return '/' . str_replace('/', '\\/', $this->_regex) . '/' . (!empty($RF['g'])||!empty($RF['G'])?'g':'').(!empty($RF['i'])||!empty($RF['I'])?'i':'').(!empty($RF['m'])||!empty($RF['M'])?'m':'');
-    }
-    
-    public function getParts( ) 
-    {
-        if ( $this->_needsRefresh ) $this->analyze( );
-        return $this->_parts;
     }
     
     public function analyze( ) 
     {
-        if ( $this->_needsRefresh )
-        {
-            $this->_parts = self::analyze_re( new RE_OBJ($this->_regex) );
-            $this->_needsRefresh = false;
-        }
+        if ( (null != $this->re) && (null === $this->ast) ) $this->ast = self::analyze_re( new RE_OBJ($this->re) );
         return $this;
     }
     
-    // experimental feature, implement (optimised) RE matching as well
-    public function match( $str ) 
+    public function compile( $flags=null ) 
     {
-        //return self::match( $this->_parts, $str, 0, isset($this->_flags['i']) );
-        return false;
+        if ( null == $this->re ) return null;
+        $flags = empty($flags) ? (!empty($this->fl) ? $this->fl : array()): (array)$flags;
+        return '/' . str_replace('/', '\\/', $this->re) . '/' . (!empty($flags['g'])||!empty($flags['G'])?'g':'').(!empty($flags['i'])||!empty($flags['I'])?'i':'').(!empty($flags['m'])||!empty($flags['M'])?'m':'');
     }
-        
-    // experimental feature
-    public function sample( $len=10 ) 
+    
+    public function tree( $flat=false ) 
     {
-        if ( $this->_needsRefresh ) $this->analyze( );
+        if ( null == $this->re ) return null;
+        if ( null === $this->ast ) $this->analyze( );
+        return true === $flat ? $this->ast->toObject() : $this->ast;
+    }
+    
+    // experimental feature
+    public function sample( $maxlen=1, $numsamples=1 ) 
+    {
+        if ( null == $this->re ) return null;
+        if ( null === $this->ast ) $this->analyze( );
         $state = (object)array(
-            'map'=>array(__CLASS__, 'map_any'),
-            'reduce'=>array(__CLASS__, 'reduce_concat'),
-            'isCaseInsensitive'=> !empty($this->_flags['i']),
-            'maxLength'=> (int)$len
+            'map'               => array(__CLASS__, 'map_any'),
+            'reduce'            => array(__CLASS__, 'reduce_str'),
+            'maxLength'         => (int)$maxlen,
+            'isCaseInsensitive' => !empty($this->fl['i'])
         );
-        return (string)self::walk('', $this->_parts, $state);
+        $numsamples = (int)$numsamples;
+        if ( 1 < $numsamples )
+        {
+            $samples = array_fill(0, $numsamples, null);
+            for($i=0; $i<$numsamples; $i++) $samples[$i] = (string)self::walk('', $this->ast, $state);
+            return $samples;
+        }
+        return (string)self::walk('', $this->ast, $state);
     }
     
     // experimental feature
     public function minimum( )
     {
-        if ( $this->_needsRefresh ) $this->analyze( );
+        if ( null == $this->re ) return 0;
+        if ( null === $this->ast ) $this->analyze( );
         $state = (object)array(
-            'map'=>array(__CLASS__, 'map_min'),
-            'reduce'=>array(__CLASS__, 'reduce_count')
+            'map'               => array(__CLASS__, 'map_min'),
+            'reduce'            => array(__CLASS__, 'reduce_len')
         );
-        return (int)self::walk(0, $this->_parts, $state);
+        return (int)self::walk(0, $this->ast, $state);
     }
     
     // experimental feature
     public function peek( ) 
     {
-        if ( $this->_needsRefresh ) $this->analyze( );
-        $isCaseInsensitive = !empty($this->_flags['i']);
+        if ( null == $this->re ) return null;
+        if ( null === $this->ast ) $this->analyze( );
         $state = (object)array(
-            'map'=>array(__CLASS__, 'map_max'),
-            'reduce'=>array(__CLASS__, 'reduce_peek')
+            'map'               => array(__CLASS__, 'map_max'),
+            'reduce'            => array(__CLASS__, 'reduce_peek')
         );
-        $peek = self::walk(array('positive'=>array(),'negative'=>array()), $this->_parts, $state);
+        $peek = self::walk(array('positive'=>array(),'negative'=>array()), $this->ast, $state);
         
+        $isCaseInsensitive = !empty($this->fl['i']);
         foreach ($peek as $n=>$p)
         {
             $cases = array();

@@ -25,10 +25,8 @@ RegexAnalyzer and RegexComposer
 
 These are used mostly as parts of other projects but uploaded here as standalone.
 
-The analyzer needs a couple of extensions but overall works good.
 
-
-See /test/js/test.js under /test folder for examples of how to use
+See `/test/js/test.js` under `/test` folder for examples of how to use
 
 
 **RegexAnalyzer Live Playground Example:**  
@@ -41,7 +39,7 @@ See /test/js/test.js under /test folder for examples of how to use
 [![Live Playground Example](/test/screenshot2.png)](https://foo123.github.com/examples/regex-composer/)
 
 
-**RegexComposer Example:**  (see /test/js/test.js)
+**RegexComposer Example:**  (see `/test/js/test.js`)
 
 ```javascript
 var echo = console.log;

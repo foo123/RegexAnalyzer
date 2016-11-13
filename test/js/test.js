@@ -58,31 +58,33 @@ echo("================");
 echo();
 
 var Analyzer = require('../../src/js/RegexAnalyzer.js'),
-    anal, peekChars, sampleStr, minLen, inregex = process.argv[2] || /xyz([abc0-9]){2,3}/i
+    anal, peekChars, sampleStr, minLen, inregex = /*process.argv[2] ||*/ /xyz([abc0-9]){2,3}/i
 ;
 
 echo("Testing Analyzer.VERSION = " + Analyzer.VERSION);
-echo("================");
+echo("=========================================");
 
 // test it
 anal = Analyzer( inregex );
 peekChars = anal.peek( );
-sampleStr = anal.sample( );
 minLen = anal.minimum( );
+sampleStr = anal.sample( 1, 5 );
+for(var i=0; i<5; i++)
+    sampleStr[i] = {sample:sampleStr[i], match:(inregex.test(sampleStr[i]) ? 'yes' : 'no')};
 
-echo("Input                         : " + inregex.toString( ));
-echo("Regular Expression            : " + anal._regex);
-echo("Regular Expression Flags      : " + Object.keys(anal._flags).join(','));
-echo("Regular Expression Structure :");
-echo(JSON.stringify(anal._parts.toObject(), null, 4));
-echo();
-echo("Regular Expression Peek Characters: ");
+echo("Input                                   : " + inregex.toString( ));
+echo("Regular Expression                      : " + anal.re);
+echo("Regular Expression Flags                : " + Object.keys(anal.fl).join(','));
+echo("=========================================");
+echo("Regular Expression Syntax Tree          : ");
+echo(JSON.stringify(anal.tree(true), null, 4));
+echo("=========================================");
+echo("Regular Expression Peek Characters      : ");
 echo(JSON.stringify({positive:Object.keys(peekChars.positive||{}),negative:Object.keys(peekChars.negative||{})}, null, 4));
-echo();
-echo("Regular Expression Minimum Length: ");
+echo("=========================================");
+echo("Regular Expression Minimum Length       : ");
 echo(minLen);
-echo();
-echo("Regular Expression Sample Match String: ");
-echo(sampleStr + ' -> ' + (inregex.test(sampleStr) ? 'Matched' : 'NOT Matched'));
-echo("================");
-echo();
+echo("=========================================");
+echo("Regular Expression Sample Match Strings : ");
+echo(JSON.stringify(sampleStr, null, 4));
+echo("=========================================");

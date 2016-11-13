@@ -459,7 +459,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             return node.val;
         }
     },
-    reduce_count = function reduce_count( ret, node, state ) {
+    reduce_len = function reduce_len( ret, node, state ) {
         if ( null != state.ret )
         {
             ret += state.ret;
@@ -480,7 +480,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
         
         return ret;
     },
-    reduce_concat = function reduce_concat( ret, node, state ) {
+    reduce_str = function reduce_str( ret, node, state ) {
         if ( null != state.ret )
         {
             ret += state.ret;
@@ -1021,117 +1021,128 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
 ;
 
 // A simple (js-flavored) regular expression analyzer
-var Analyzer = function Analyzer( regex, delim ) {
-    if ( !(this instanceof Analyzer) ) return new Analyzer(regex, delim);
-    if ( regex ) this.regex( regex, delim );
+var RegexAnalyzer = function RegexAnalyzer( re, delim ) {
+    if ( !(this instanceof RegexAnalyzer) ) return new RegexAnalyzer(re, delim);
+    if ( re ) this.set( re, delim );
 };
-Analyzer.VERSION = __version__;
-Analyzer.Node = Node;
-Analyzer.getCharRange = character_range;
-Analyzer[PROTO] = {
+RegexAnalyzer.VERSION = __version__;
+RegexAnalyzer.Node = Node;
+RegexAnalyzer.getCharRange = character_range;
+RegexAnalyzer[PROTO] = {
     
-    constructor: Analyzer,
+    constructor: RegexAnalyzer,
 
-    _regex: null,
-    _flags: null,
-    _parts: null,
-    _needsRefresh: false,
+    ast: null,
+    re: null,
+    fl: null,
 
     dispose: function( ) {
         var self = this;
-        self._regex = null;
-        self._flags = null;
-        self._parts = null;
+        self.ast = null;
+        self.re = null;
+        self.fl = null;
         return self;
     },
     
-    regex: function( regex, delim ) {
+    set: function( re, delim ) {
         var self = this;
-        if ( regex )
+        if ( re )
         {
             delim = delim || '/';
-            var flags = {}, r = regex.toString( ), l = r.length, ch = r[CHAR](l-1);
+            re = re.toString( );
+            var l = re.length, ch, fl = {};
             
-            // parse regex flags
-            while ( delim !== ch )
+            // parse re flags, if any
+            while ( 0 < l )
             {
-                flags[ ch ] = 1;
-                r = r.slice(0, -1);
-                l = r.length;
-                ch = r[CHAR](l-1);
+                ch = re[CHAR](l-1);
+                if ( delim === ch ) break;
+                else { fl[ ch ] = 1; l--; }
             }
-            // remove regex delimiters
-            if ( delim === r[CHAR](0) && delim === r[CHAR](l-1) )  r = r.slice(1, -1);
             
-            if ( self._regex !== r ) self._needsRefresh = true;
-            self._regex = r; self._flags = flags;
+            if ( 0 < l )
+            {
+                // remove re delimiters
+                if ( delim === re[CHAR](0) && delim === re[CHAR](l-1) ) re = re.slice(1, l-1);
+                else re = re.slice(0, l);
+            }
+            else
+            {
+                re = '';
+            }
+            
+            // re is different, reset the ast
+            if ( self.re !== re ) self.ast = null;
+            self.re = re; self.fl = fl;
         }
         return self;
-    },
-    
-    getRegex: function( RF ) {
-        RF = RF || this._flags || {};
-        return new RegExp(this._regex, (RF.g||RF.G?'g':'')+(RF.i||RF.I?'i':'')+(RF.m||RF.M?'m':''));
-    },
-    
-    getParts: function( ) {
-        var self = this;
-        if ( self._needsRefresh ) self.analyze( );
-        return self._parts;
     },
     
     analyze: function( ) {
         var self = this;
-        if ( self._needsRefresh )
-        {
-            self._parts = analyze_re( new RE_OBJ(self._regex) );
-            self._needsRefresh = false;
-        }
+        if ( (null != self.re) && (null === self.ast) ) self.ast = analyze_re( new RE_OBJ(self.re) );
         return self;
     },
     
-    // experimental feature, implement (optimised) RE matching as well
-    match: function( str ) {
-        //return match( self._parts, str, 0, self._flags && self._flags.i );
-        return false;
+    compile: function( flags ) {
+        var self = this;
+        if ( null == self.re ) return null;
+        flags = flags || self.fl || {};
+        return new RegExp(self.re, (flags.g||flags.G?'g':'')+(flags.i||flags.I?'i':'')+(flags.m||flags.M?'m':''));
+    },
+    
+    tree: function( flat ) {
+        var self = this;
+        if ( null == self.re ) return null;
+        if ( null === self.ast ) self.analyze( );
+        return true===flat ? self.ast.toObject() : self.ast;
     },
     
     // experimental feature
-    sample: function( len ) {
-        var self = this;
-        if ( self._needsRefresh ) self.analyze( );
-        return walk('', self._parts, {
-            map:map_any,
-            reduce:reduce_concat,
-            isCaseInsensitive: self._flags && self._flags.i,
-            maxLength: len||10
-        });
+    sample: function( maxlen, numsamples ) {
+        var self = this, state;
+        if ( null == self.re ) return null;
+        if ( null === self.ast ) self.analyze( );
+        state = {
+            map                 : map_any,
+            reduce              : reduce_str,
+            maxLength           : (maxlen|0) || 1,
+            isCaseInsensitive   : null != self.fl.i
+        };
+        numsamples = (numsamples|0) || 1;
+        if ( 1 < numsamples )
+        {
+            var samples = new Array(numsamples);
+            for(var i=0; i<numsamples; i++) samples[i] = walk('', self.ast, state);
+            return samples;
+        }
+        return walk('', self.ast, state);
     },
     
     // experimental feature
     minimum: function( ) {
-        var self = this;
-        if ( self._needsRefresh ) self.analyze( );
-        return walk(0, self._parts, {
-            map:map_min,
-            reduce:reduce_count
-        })|0;
+        var self = this, state;
+        if ( null == self.re ) return 0;
+        if ( null === self.ast ) self.analyze( );
+        state = {
+            map                 : map_min,
+            reduce              : reduce_len
+        };
+        return walk(0, self.ast, state)|0;
     },
     
     // experimental feature
     peek: function( ) {
-        var self = this, isCaseInsensitive,
-            peek, n, c, p, cases;
+        var self = this, state, isCaseInsensitive, peek, n, c, p, cases;
+        if ( null == self.re ) return null;
+        if ( null === self.ast ) self.analyze( );
+        state = {
+            map                 : map_max,
+            reduce              : reduce_peek
+        };
+        peek = walk({positive:{},negative:{}}, self.ast, state);
         
-        if ( self._needsRefresh ) self.analyze( );
-        
-        isCaseInsensitive = self._flags && self._flags.i;
-        
-        peek = walk({positive:{},negative:{}}, self._parts, {
-            map:map_max,
-            reduce:reduce_peek
-        });
-        
+        isCaseInsensitive = null != self.fl.i;
         for (n in peek)
         {
             cases = {};
@@ -1191,11 +1202,7 @@ Analyzer[PROTO] = {
         return peek;
     }
 };
-// aliases
-Analyzer[PROTO].getPeekChars = Analyzer[PROTO].peek;
-Analyzer[PROTO].generateSample = Analyzer[PROTO].sample;
-Analyzer[PROTO].minimumLength = Analyzer[PROTO].minimum;
 
 /* export the module */
-return Analyzer;
+return RegexAnalyzer;
 });

@@ -6,11 +6,12 @@ Expected: /^([_a-z][_a-z0-9]*|\*\*aabb\*\*|.|\s|\D+)*?$/i
 ================
 
 Testing Analyzer.VERSION = 0.5.0
-================
-Input                        : /xyz([abc0-9]){2,3}/i
-Regular Expression           : xyz([abc0-9]){2,3}
-Regular Expression Flags     : i
-Regular Expression Structure : 
+=========================================
+Input                                   : /xyz([abc0-9]){2,3}/i
+Regular Expression                      : xyz([abc0-9]){2,3}
+Regular Expression Flags                : i
+=========================================
+Regular Expression Syntax Tree          : 
 Array
 (
     [type] => Sequence
@@ -115,8 +116,8 @@ Array
 
 )
 
-
-Regular Expression Peek Characters: 
+=========================================
+Regular Expression Peek Characters      : 
 Array
 (
     [positive] => Array
@@ -131,11 +132,43 @@ Array
 
 )
 
-
-Regular Expression Minimum Length: 
+=========================================
+Regular Expression Minimum Length       : 
 5
+=========================================
+Regular Expression Sample Match Strings : 
+Array
+(
+    [0] => Array
+        (
+            [sample] => xyz7c
+            [match] => yes
+        )
 
-Regular Expression Sample Match String: 
-XYZ6Bc -> Matched
-================
+    [1] => Array
+        (
+            [sample] => XYZBb
+            [match] => yes
+        )
 
+    [2] => Array
+        (
+            [sample] => xyz07
+            [match] => yes
+        )
+
+    [3] => Array
+        (
+            [sample] => xyzBB
+            [match] => yes
+        )
+
+    [4] => Array
+        (
+            [sample] => xyza0
+            [match] => yes
+        )
+
+)
+
+=========================================

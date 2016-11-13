@@ -62,27 +62,28 @@ echo_();
 include('../../src/php/RegexAnalyzer.php');
 
 echo_("Testing Analyzer.VERSION = " . RegexAnalyzer::VERSION);
-echo_("================");
+echo_("=========================================");
 
 $inregex = '/xyz([abc0-9]){2,3}/i';
 $anal = new RegexAnalyzer($inregex);
 $peekChars = $anal->peek( );
-$sampleStr = $anal->sample( );
 $minLen = $anal->minimum( );
-
-echo_("Input                        : " . $inregex);
-echo_("Regular Expression           : " . $anal->_regex);
-echo_("Regular Expression Flags     : " . implode(',',array_keys($anal->_flags)));
-echo_("Regular Expression Structure : ");
-echo_(print_r($anal->_parts->toObject(), true));
-echo_();
-echo_("Regular Expression Peek Characters: ");
+$sampleStr = $anal->sample( 1, 5 );
+for($i=0; $i<5; $i++)
+    $sampleStr[$i] = array('sample'=>$sampleStr[$i],'match'=>preg_match($inregex, $sampleStr[$i], $m) ? 'yes' : 'no');
+echo_("Input                                   : " . $inregex);
+echo_("Regular Expression                      : " . $anal->re);
+echo_("Regular Expression Flags                : " . implode(',',array_keys($anal->fl)));
+echo_("=========================================");
+echo_("Regular Expression Syntax Tree          : ");
+echo_(print_r($anal->tree(true), true));
+echo_("=========================================");
+echo_("Regular Expression Peek Characters      : ");
 echo_(print_r(array('positive'=>array_keys($peekChars['positive']),'negative'=>array_keys($peekChars['negative'])), true));
-echo_();
-echo_("Regular Expression Minimum Length: ");
+echo_("=========================================");
+echo_("Regular Expression Minimum Length       : ");
 echo_($minLen);
-echo_();
-echo_("Regular Expression Sample Match String: ");
-echo_($sampleStr . ' -> ' . (preg_match($inregex, $sampleStr, $m) ? 'Matched' : 'NOT Matched'));
-echo_("================");
-echo_();
+echo_("=========================================");
+echo_("Regular Expression Sample Match Strings : ");
+echo_(print_r($sampleStr, true));
+echo_("=========================================");
