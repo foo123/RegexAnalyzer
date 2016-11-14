@@ -294,7 +294,9 @@ def walk( ret, node, state ):
             for ri in r:
                 state['node'] = node
                 ret = walk( ret, ri, state )
-                if ('stop' in state) and state['stop']: return ret
+                if ('stop' in state) and state['stop']:
+                    state['stop'] = None
+                    return ret
     
     elif T_CHARS == type or T_CHARRANGE == type or T_UNICODECHAR == type or T_HEXCHAR == type or T_SPECIAL == type or T_STRING == type:
         ret = state['reduce']( ret, node, state )

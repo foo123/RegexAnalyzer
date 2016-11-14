@@ -381,7 +381,11 @@ class RegexAnalyzer
                 {
                     $state->node = $node;
                     $ret = self::walk( $ret, $r[$i], $state );
-                    if ( isset($state->stop) ) return $ret;
+                    if ( isset($state->stop) )
+                    {
+                        $state->stop = null;
+                        return $ret;
+                    }
                 }
             }
         }

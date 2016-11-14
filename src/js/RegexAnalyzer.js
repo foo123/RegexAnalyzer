@@ -333,7 +333,11 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                 {
                     state.node = node;
                     ret = walk( ret, r[i], state );
-                    if ( state.stop ) return ret;
+                    if ( state.stop )
+                    {
+                        state.stop = null;
+                        return ret;
+                    }
                 }
             }
         }
