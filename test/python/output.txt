@@ -3,15 +3,15 @@ Testing Analyzer.VERSION = 0.5.0
 
 =========================================
 
-Input                                   : /xyz([abc0-9]){2,3}/i
+Input                                       : /xyz([abc0-9]){2,3}/i
 
-Regular Expression                      : xyz([abc0-9]){2,3}
+Regular Expression                          : xyz([abc0-9]){2,3}
 
-Regular Expression Flags                : i
+Regular Expression Flags                    : i
 
-=========================================
+=============================================
 
-Regular Expression Syntax Tree          : 
+Regular Expression Syntax Tree              : 
 
 {   'flags': {},
     'type': 'Sequence',
@@ -38,27 +38,27 @@ Regular Expression Syntax Tree          :
                                                                                  'value': [   '0',
                                                                                               '9']}]}]}}}]}
 
-=========================================
+=============================================
 
-Regular Expression Peek Characters      : 
+Regular Expression Peek Characters          : 
 
-{'negative': dict_keys([]), 'positive': dict_keys(['x', 'X'])}
+{'negative': [], 'positive': ['x', 'X']}
 
-=========================================
+=============================================
 
-Regular Expression Minimum Length       : 
+Regular Expression Minimum / Maximum Length : 
 
-5
+{'maximum': 6, 'minimum': 5}
 
-=========================================
+=============================================
 
-Regular Expression Sample Match Strings : 
+Regular Expression Sample Match Strings     : 
 
-[   {'match': 'yes', 'sample': 'xyzcb'},
-    {'match': 'yes', 'sample': 'XYZ7a'},
-    {'match': 'yes', 'sample': 'xyzAc'},
-    {'match': 'yes', 'sample': 'XYZCA'},
-    {'match': 'yes', 'sample': 'XYZ68'}]
+[   {'match': 'yes', 'sample': 'xyz04'},
+    {'match': 'yes', 'sample': 'XYZ7C'},
+    {'match': 'yes', 'sample': 'xyz1b'},
+    {'match': 'yes', 'sample': 'xyzB5'},
+    {'match': 'yes', 'sample': 'xyz5C'}]
 
-=========================================
+=============================================
 

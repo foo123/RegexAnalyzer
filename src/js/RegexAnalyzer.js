@@ -442,6 +442,63 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
     },
     map_max = function map_max( ret, node, state ) {
         var type = node.type;
+        if ( T_ALTERNATION === type )
+        {
+            var i, l = node.val.length, cur, max = l ? walk(0, node.val[0], state) : 0;
+            if ( -1 !== max )
+            {
+                for(i=1; i<l; i++)
+                {
+                    cur = walk(0, node.val[i], state);
+                    if ( -1 === cur )
+                    {
+                        max = -1;
+                        break;
+                    }
+                    else if ( cur > max )
+                    {
+                        max = cur;
+                    }
+                }
+            }
+            if ( l ) state.ret = max;
+            return null;
+        }
+        else if ( T_CHARGROUP === type )
+        {
+            return node.val.length ? node.val[0] : null;
+        }
+        else if ( T_QUANTIFIER === type )
+        {
+            max = walk(0, node.val, state);
+            if ( -1 === max )
+            {
+                state.ret = -1;
+            }
+            else if ( 0 < max )
+            {
+                if ( node.flags.MatchZeroOrMore || node.flags.MatchOneOrMore || ("unlimited" === node.flags.MatchMaximum) )
+                {
+                    state.ret = -1;
+                }
+                else if ( node.flags.MatchMaximum )
+                {
+                    state.ret = parseInt(node.flags.MatchMaximum,10)*max;
+                }
+                else
+                {
+                    state.ret = max;
+                }
+            }
+            return null;
+        }
+        else
+        {
+            return node.val;
+        }
+    },
+    map_1st = function map_1st( ret, node, state ) {
+        var type = node.type;
         if ( T_SEQUENCE === type )
         {
             var seq=[], i=0, l=node.val.length, n;
@@ -465,9 +522,11 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
     reduce_len = function reduce_len( ret, node, state ) {
         if ( null != state.ret )
         {
-            ret += state.ret;
+            if ( -1 === state.ret ) ret = -1;
+            else ret += state.ret;
             return ret;
         }
+        if ( -1 === ret ) return ret;
         if ( T_SPECIAL === node.type && node.flags.MatchEnd )
         {
             state.stop = 1;
@@ -1152,12 +1211,24 @@ RegexAnalyzer[PROTO] = {
     },
     
     // experimental feature
+    maximum: function( ) {
+        var self = this, state;
+        if ( null == self.re ) return 0;
+        if ( null === self.ast ) self.analyze( );
+        state = {
+            map                 : map_max,
+            reduce              : reduce_len
+        };
+        return walk(0, self.ast, state);
+    },
+    
+    // experimental feature
     peek: function( ) {
         var self = this, state, isCaseInsensitive, peek, n, c, p, cases;
         if ( null == self.re ) return null;
         if ( null === self.ast ) self.analyze( );
         state = {
-            map                 : map_max,
+            map                 : map_1st,
             reduce              : reduce_peek
         };
         peek = walk({positive:{},negative:{}}, self.ast, state);

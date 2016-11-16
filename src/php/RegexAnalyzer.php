@@ -494,6 +494,66 @@ class RegexAnalyzer
     private static function map_max( $ret, &$node, &$state )
     {
         $type = $node->type;
+        if ( self::T_ALTERNATION === $type )
+        {
+            $l = count($node->val);
+            $max = $l ? self::walk(0, $node->val[0], $state) : 0;
+            if ( -1 !== $max )
+            {
+                for($i=1; $i<$l; $i++)
+                {
+                    $cur = self::walk(0, $node->val[i], $state);
+                    if ( -1 === $cur )
+                    {
+                        $max = -1;
+                        break;
+                    }
+                    else if ( $cur > $max )
+                    {
+                        $max = $cur;
+                    }
+                }
+            }
+            if ( $l ) $state->ret = $max;
+            return null;
+        }
+        elseif ( self::T_CHARGROUP === $type )
+        {
+            return !empty($node->val) ? $node->val[0] : null;
+        }
+        elseif ( self::T_QUANTIFIER === $type )
+        {
+            $max = self::walk(0, $node->val, $state);
+            if ( -1 === $max )
+            {
+                $state->ret = -1;
+            }
+            elseif ( 0 < $max )
+            {
+                if ( !empty($node->flags->MatchZeroOrMore) || !empty($node->flags->MatchOneOrMore) || (isset($node->flags->MatchMaximum) && "unlimited" === $node->flags->MatchMaximum) )
+                {
+                    $state->ret = -1;
+                }
+                elseif ( isset($node->flags->MatchMaximum) )
+                {
+                    $state->ret = intval($node->flags->MatchMaximum,10)*$max;
+                }
+                else
+                {
+                    $state->ret = $max;
+                }
+            }
+            return null;
+        }
+        else
+        {
+            return $node->val;
+        }
+    }
+    
+    private static function map_1st( $ret, &$node, &$state )
+    {
+        $type = $node->type;
         if ( self::T_SEQUENCE === $type )
         {
             $seq = array();
@@ -520,9 +580,11 @@ class RegexAnalyzer
     {
         if ( isset($state->ret) )
         {
-            $ret += $state->ret;
+            if ( -1 === $state->ret ) $ret = -1;
+            else $ret += $state->ret;
             return $ret;
         }
+        if ( -1 === $ret ) return $ret;
         if ( self::T_SPECIAL === $node->type && isset($node->flags->MatchEnd) )
         {
             $state->stop = 1;
@@ -1216,12 +1278,24 @@ class RegexAnalyzer
     }
     
     // experimental feature
+    public function maximum( )
+    {
+        if ( null == $this->re ) return 0;
+        if ( null === $this->ast ) $this->analyze( );
+        $state = (object)array(
+            'map'               => array(__CLASS__, 'map_max'),
+            'reduce'            => array(__CLASS__, 'reduce_len')
+        );
+        return self::walk(0, $this->ast, $state);
+    }
+    
+    // experimental feature
     public function peek( ) 
     {
         if ( null == $this->re ) return null;
         if ( null === $this->ast ) $this->analyze( );
         $state = (object)array(
-            'map'               => array(__CLASS__, 'map_max'),
+            'map'               => array(__CLASS__, 'map_1st'),
             'reduce'            => array(__CLASS__, 'reduce_peek')
         );
         $peek = self::walk(array('positive'=>array(),'negative'=>array()), $this->ast, $state);

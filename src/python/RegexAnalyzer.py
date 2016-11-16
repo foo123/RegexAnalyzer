@@ -356,6 +356,43 @@ def map_min( ret, node, state ):
 
 def map_max( ret, node, state ):
     type = node.type
+    if T_ALTERNATION == type:
+        l = len(node.val)
+        max = walk(0, node.val[0], state) if l else 0
+        if -1 != max:
+            i = 1
+            while i<l:
+                cur = walk(0, node.val[i], state)
+                if -1 == cur:
+                    max = -1
+                    break
+                elif cur > max:
+                    max = cur
+                i += 1
+        if l: state['ret'] = max
+        return None
+    
+    elif T_CHARGROUP == type:
+        return node.val[0] if len(node.val) else None
+    
+    elif T_QUANTIFIER == type:
+        max = walk(0, node.val, state)
+        if -1 == max:
+            state['ret'] = -1
+        elif 0 < max:
+            if ('MatchZeroOrMore' in node.flags) or ('MatchOneOrMore' in node.flags) or (('MatchMaximum' in node.flags) and ("unlimited" == node.flags['MatchMaximum'])):
+                state['ret'] = -1
+            elif 'MatchMaximum' in node.flags:
+                state['ret'] = int(node.flags['MatchMaximum'],10)*max
+            else:
+                state['ret'] = max
+        return None
+    
+    else:
+        return node.val
+    
+def map_1st( ret, node, state ):
+    type = node.type
     if T_SEQUENCE == type:
         seq = []
         for n in node.val:
@@ -372,8 +409,10 @@ def map_max( ret, node, state ):
 
 def reduce_len( ret, node, state ):
     if ('ret' in state) and state['ret'] is not None:
-        ret += state['ret']
+        if -1 == state['ret']: ret = -1
+        else: ret += state['ret']
         return ret
+    if -1 == ret: return ret
     if T_SPECIAL == node.type and ('MatchEnd' not in node.flags):
         state['stop'] = 1
         return ret
@@ -992,11 +1031,21 @@ class RegexAnalyzer:
         return walk(0, self.ast, state)
     
     # experimental feature
+    def maximum( self ):
+        if not self.re: return 0
+        if self.ast is None: self.analyze( )
+        state = {
+            'map'               : map_max,
+            'reduce'            : reduce_len
+        }
+        return walk(0, self.ast, state)
+    
+    # experimental feature
     def peek( self ):
         if not self.re: return None
         if self.ast is None: self.analyze( )
         state = {
-            'map'               : map_max,
+            'map'               : map_1st,
             'reduce'            : reduce_peek
         }
         peek = walk({'positive':{},'negative':{}}, self.ast, state)

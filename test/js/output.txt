@@ -7,11 +7,11 @@ Expected: /^([_a-z][_a-z0-9]*|\*\*aabb\*\*|.|\s|\D+)*?$/i
 
 Testing Analyzer.VERSION = 0.5.0
 =========================================
-Input                                   : /xyz([abc0-9]){2,3}/i
-Regular Expression                      : xyz([abc0-9]){2,3}
-Regular Expression Flags                : i
-=========================================
-Regular Expression Syntax Tree          : 
+Input                                       : /xyz([abc0-9]){2,3}/i
+Regular Expression                          : xyz([abc0-9]){2,3}
+Regular Expression Flags                    : i
+=============================================
+Regular Expression Syntax Tree              : 
 {
     "type": "Sequence",
     "value": [
@@ -68,8 +68,8 @@ Regular Expression Syntax Tree          :
     ],
     "flags": {}
 }
-=========================================
-Regular Expression Peek Characters      : 
+=============================================
+Regular Expression Peek Characters          : 
 {
     "positive": [
         "x",
@@ -77,31 +77,34 @@ Regular Expression Peek Characters      :
     ],
     "negative": []
 }
-=========================================
-Regular Expression Minimum Length       : 
-5
-=========================================
-Regular Expression Sample Match Strings : 
+=============================================
+Regular Expression Minimum / Maximum Length : 
+{
+    "minimum": 5,
+    "maximum": 6
+}
+=============================================
+Regular Expression Sample Match Strings     : 
 [
     {
-        "sample": "XYZ1B",
+        "sample": "XYZ2b",
         "match": "yes"
     },
     {
-        "sample": "XYZac",
+        "sample": "xyzc6",
         "match": "yes"
     },
     {
-        "sample": "xyzB8",
+        "sample": "XYZa6",
         "match": "yes"
     },
     {
-        "sample": "XYZ67",
+        "sample": "xyz8C",
         "match": "yes"
     },
     {
-        "sample": "xyzb8",
+        "sample": "XYZ2c",
         "match": "yes"
     }
 ]
-=========================================
+=============================================
