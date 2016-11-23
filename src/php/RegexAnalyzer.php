@@ -2,7 +2,7 @@
 /**
 *
 *   RegexAnalyzer
-*   @version: 0.5.0
+*   @version: 0.5.1
 *
 *   A simple Regular Expression Analyzer for PHP, Python, Node/XPCOM/JS, ActionScript
 *   https://github.com/foo123/RegexAnalyzer
@@ -102,7 +102,7 @@ class RegexNode
 
 class RegexAnalyzer
 {
-    const VERSION = "0.5.0";
+    const VERSION = "0.5.1";
     const T_SEQUENCE = 1; 
     const T_ALTERNATION = 2; 
     const T_GROUP = 3;
@@ -1175,6 +1175,9 @@ class RegexAnalyzer
     public $ast = null;
     public $re = null;
     public $fl = null;
+    public $min = null;
+    public $max = null;
+    public $ch = null;
     
     public function __construct( $re=null, $delim=null )
     {
@@ -1186,9 +1189,21 @@ class RegexAnalyzer
         $this->ast = null;
         $this->re = null;
         $this->fl = null;
+        $this->min = null;
+        $this->max = null;
+        $this->ch = null;
         return $this;
     }
         
+    public function reset()
+    {
+        $this->ast = null;
+        $this->min = null;
+        $this->max = null;
+        $this->ch = null;
+        return $this;
+    }
+    
     public function set($re, $delim=null) 
     {
         if ( $re )
@@ -1217,8 +1232,8 @@ class RegexAnalyzer
                 $re = '';
             }
             
-            // re is different, reset the ast
-            if ( $this->re !== $re ) $this->ast = null;
+            // re is different, reset the ast, etc
+            if ( $this->re !== $re ) $this->reset();
             $this->re = $re; $this->fl = $fl;
         }
         return $this;
@@ -1269,37 +1284,60 @@ class RegexAnalyzer
     public function minimum( )
     {
         if ( null == $this->re ) return 0;
-        if ( null === $this->ast ) $this->analyze( );
-        $state = (object)array(
-            'map'               => array(__CLASS__, 'map_min'),
-            'reduce'            => array(__CLASS__, 'reduce_len')
-        );
-        return (int)self::walk(0, $this->ast, $state);
+        if ( null === $this->ast )
+        {
+            $this->analyze( );
+            $this->min = null;
+        }
+        if ( null === $this->min )
+        {
+            $state = (object)array(
+                'map'               => array(__CLASS__, 'map_min'),
+                'reduce'            => array(__CLASS__, 'reduce_len')
+            );
+            $this->min = (int)self::walk(0, $this->ast, $state);
+        }
+        return $this->min;
     }
     
     // experimental feature
     public function maximum( )
     {
         if ( null == $this->re ) return 0;
-        if ( null === $this->ast ) $this->analyze( );
-        $state = (object)array(
-            'map'               => array(__CLASS__, 'map_max'),
-            'reduce'            => array(__CLASS__, 'reduce_len')
-        );
-        return self::walk(0, $this->ast, $state);
+        if ( null === $this->ast )
+        {
+            $this->analyze( );
+            $this->max = null;
+        }
+        if ( null === $this->max )
+        {
+            $state = (object)array(
+                'map'               => array(__CLASS__, 'map_max'),
+                'reduce'            => array(__CLASS__, 'reduce_len')
+            );
+            $this->max = self::walk(0, $this->ast, $state);
+        }
+        return $this->max;
     }
     
     // experimental feature
     public function peek( ) 
     {
         if ( null == $this->re ) return null;
-        if ( null === $this->ast ) $this->analyze( );
-        $state = (object)array(
-            'map'               => array(__CLASS__, 'map_1st'),
-            'reduce'            => array(__CLASS__, 'reduce_peek')
-        );
-        $peek = self::walk(array('positive'=>array(),'negative'=>array()), $this->ast, $state);
-        
+        if ( null === $this->ast )
+        {
+            $this->analyze( );
+            $this->ch = null;
+        }
+        if ( null === $this->ch )
+        {
+            $state = (object)array(
+                'map'               => array(__CLASS__, 'map_1st'),
+                'reduce'            => array(__CLASS__, 'reduce_peek')
+            );
+            $this->ch = self::walk(array('positive'=>array(),'negative'=>array()), $this->ast, $state);
+        }
+        $peek = array('positive'=>array_merge(array(),$this->ch['positive']), 'negative'=>array_merge(array(),$this->ch['negative']));
         $isCaseInsensitive = !empty($this->fl['i']);
         foreach ($peek as $n=>$p)
         {

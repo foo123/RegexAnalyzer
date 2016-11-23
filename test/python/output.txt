@@ -1,5 +1,5 @@
 RegexAnalyzer Module loaded succesfully
-Testing Analyzer.VERSION = 0.5.0
+Testing Analyzer.VERSION = 0.5.1
 
 =========================================
 
@@ -54,11 +54,11 @@ Regular Expression Minimum / Maximum Length :
 
 Regular Expression Sample Match Strings     : 
 
-[   {'match': 'yes', 'sample': 'xyz04'},
-    {'match': 'yes', 'sample': 'XYZ7C'},
-    {'match': 'yes', 'sample': 'xyz1b'},
-    {'match': 'yes', 'sample': 'xyzB5'},
-    {'match': 'yes', 'sample': 'xyz5C'}]
+[   {'match': 'yes', 'sample': 'XYZ22'},
+    {'match': 'yes', 'sample': 'xyzcc'},
+    {'match': 'yes', 'sample': 'XYZ5A'},
+    {'match': 'yes', 'sample': 'xyzab'},
+    {'match': 'yes', 'sample': 'XYZ90'}]
 
 =============================================
 

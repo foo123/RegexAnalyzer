@@ -2,13 +2,13 @@
 ##
 #
 #   RegexAnalyzer
-#   @version: 0.5.0
+#   @version: 0.5.1
 #
 #   A simple Regular Expression Analyzer for PHP, Python, Node/XPCOM/JS, ActionScript
 #   https://github.com/foo123/RegexAnalyzer
 #
 ##
-import random, math, re
+import random, math, re, copy
 
 def is_nan(v):
     return math.isnan(v)
@@ -941,7 +941,7 @@ def analyze_re( re_obj ):
 
 class RegexAnalyzer:
     
-    VERSION = "0.5.0"
+    VERSION = "0.5.1"
     
     Node = Node
     
@@ -950,6 +950,9 @@ class RegexAnalyzer:
         self.ast = None
         self.re = None
         self.fl = None
+        self.min = None
+        self.max = None
+        self.ch = None
        
         if re is not None:   
             self.set(re, delim)
@@ -959,6 +962,16 @@ class RegexAnalyzer:
         self.ast = None
         self.re = None
         self.fl = None
+        self.min = None
+        self.max = None
+        self.ch = None
+        return self
+    
+    def reset(self):
+        self.ast = None
+        self.min = None
+        self.max = None
+        self.ch = None
         return self
     
     def set(self, re, delim=None):
@@ -985,8 +998,8 @@ class RegexAnalyzer:
             else:
                 re = ''
             
-            # re is different, reset the ast
-            if self.re != re: self.ast = None
+            # re is different, reset the ast, etc
+            if self.re != re: self.reset()
             self.re = re 
             self.fl = fl
         
@@ -1023,33 +1036,44 @@ class RegexAnalyzer:
     # experimental feature
     def minimum( self ):
         if not self.re: return 0
-        if self.ast is None: self.analyze( )
-        state = {
-            'map'               : map_min,
-            'reduce'            : reduce_len
-        }
-        return walk(0, self.ast, state)
+        if self.ast is None:
+            self.analyze( )
+            self.min = None
+        if self.min is None:
+            state = {
+                'map'               : map_min,
+                'reduce'            : reduce_len
+            }
+            self.min = walk(0, self.ast, state)
+        return self.min
     
     # experimental feature
     def maximum( self ):
         if not self.re: return 0
-        if self.ast is None: self.analyze( )
-        state = {
-            'map'               : map_max,
-            'reduce'            : reduce_len
-        }
-        return walk(0, self.ast, state)
+        if self.ast is None:
+            self.analyze( )
+            self.max = None
+        if self.max is None:
+            state = {
+                'map'               : map_max,
+                'reduce'            : reduce_len
+            }
+            self.max = walk(0, self.ast, state)
+        return self.max
     
     # experimental feature
     def peek( self ):
         if not self.re: return None
-        if self.ast is None: self.analyze( )
-        state = {
-            'map'               : map_1st,
-            'reduce'            : reduce_peek
-        }
-        peek = walk({'positive':{},'negative':{}}, self.ast, state)
-        
+        if self.ast is None:
+            self.analyze( )
+            self.ch = None
+        if self.ch is None:
+            state = {
+                'map'               : map_1st,
+                'reduce'            : reduce_peek
+            }
+            self.ch = walk({'positive':{},'negative':{}}, self.ast, state)
+        peek = {'positive':copy.copy(self.ch['positive']), 'negative':copy.copy(self.ch['negative'])}
         isCaseInsensitive = 'i' in self.fl
         for n,p in peek.items():
         

@@ -5,7 +5,7 @@ Composed: /^([_a-z][_a-z0-9]*|\*\*aabb\*\*|.|\s|\D+)*?$/i
 Expected: /^([_a-z][_a-z0-9]*|\*\*aabb\*\*|.|\s|\D+)*?$/i
 ================
 
-Testing Analyzer.VERSION = 0.5.0
+Testing Analyzer.VERSION = 0.5.1
 =========================================
 Input                                       : /xyz([abc0-9]){2,3}/i
 Regular Expression                          : xyz([abc0-9]){2,3}
@@ -87,23 +87,23 @@ Regular Expression Minimum / Maximum Length :
 Regular Expression Sample Match Strings     : 
 [
     {
-        "sample": "XYZ2b",
+        "sample": "xyz73",
         "match": "yes"
     },
     {
-        "sample": "xyzc6",
+        "sample": "xyz25",
         "match": "yes"
     },
     {
-        "sample": "XYZa6",
+        "sample": "XYZB8",
         "match": "yes"
     },
     {
-        "sample": "xyz8C",
+        "sample": "xyzb2",
         "match": "yes"
     },
     {
-        "sample": "XYZ2c",
+        "sample": "XYZ74",
         "match": "yes"
     }
 ]

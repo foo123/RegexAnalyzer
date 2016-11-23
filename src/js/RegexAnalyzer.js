@@ -1,7 +1,7 @@
 /**
 *
 *   RegexAnalyzer
-*   @version: 0.5.0
+*   @version: 0.5.1
 *
 *   A simple Regular Expression Analyzer for PHP, Python, Node/XPCOM/JS, ActionScript
 *   https://github.com/foo123/RegexAnalyzer
@@ -23,7 +23,7 @@ else if ( !(name in root) ) /* Browser/WebWorker/.. */
     /* module name */           "RegexAnalyzer",
     /* module factory */        function ModuleFactory__RegexAnalyzer( undef ){
 "use strict";
-var __version__ = "0.5.0",
+var __version__ = "0.5.1",
 
     PROTO = 'prototype', Obj = Object, Arr = Array, /*Str = String,*/ 
     Keys = Obj.keys, to_string = Obj[PROTO].toString, 
@@ -90,6 +90,12 @@ var __version__ = "0.5.0",
     T_SPECIAL = 7, T_CHARGROUP = 8, T_CHARS = 9,
     T_CHARRANGE = 10, T_STRING = 11;
 
+function clone( obj, cloned )
+{
+    cloned = cloned || {};
+    for (var p in obj) if ( obj[HAS](p) ) cloned[p] = obj[p];
+    return cloned;
+}
 var RE_OBJ = function( re ) {
     var self = this;
     self.re = re;
@@ -1114,12 +1120,27 @@ RegexAnalyzer[PROTO] = {
     ast: null,
     re: null,
     fl: null,
+    min: null,
+    max: null,
+    ch: null,
 
     dispose: function( ) {
         var self = this;
         self.ast = null;
         self.re = null;
         self.fl = null;
+        self.min = null;
+        self.max = null;
+        self.ch = null;
+        return self;
+    },
+    
+    reset: function( ) {
+        var self = this;
+        self.ast = null;
+        self.min = null;
+        self.max = null;
+        self.ch = null;
         return self;
     },
     
@@ -1150,8 +1171,8 @@ RegexAnalyzer[PROTO] = {
                 re = '';
             }
             
-            // re is different, reset the ast
-            if ( self.re !== re ) self.ast = null;
+            // re is different, reset the ast, etc
+            if ( self.re !== re ) self.reset();
             self.re = re; self.fl = fl;
         }
         return self;
@@ -1202,37 +1223,60 @@ RegexAnalyzer[PROTO] = {
     minimum: function( ) {
         var self = this, state;
         if ( null == self.re ) return 0;
-        if ( null === self.ast ) self.analyze( );
-        state = {
-            map                 : map_min,
-            reduce              : reduce_len
-        };
-        return walk(0, self.ast, state)|0;
+        if ( null === self.ast )
+        {
+            self.analyze( );
+            self.min = null;
+        }
+        if ( null === self.min )
+        {
+            state = {
+                map                 : map_min,
+                reduce              : reduce_len
+            };
+            self.min = walk(0, self.ast, state)|0;
+        }
+        return self.min;
     },
     
     // experimental feature
     maximum: function( ) {
         var self = this, state;
         if ( null == self.re ) return 0;
-        if ( null === self.ast ) self.analyze( );
-        state = {
-            map                 : map_max,
-            reduce              : reduce_len
-        };
-        return walk(0, self.ast, state);
+        if ( null === self.ast )
+        {
+            self.analyze( );
+            self.max = null;
+        }
+        if ( null === self.max )
+        {
+            state = {
+                map                 : map_max,
+                reduce              : reduce_len
+            };
+            self.max = walk(0, self.ast, state);
+        }
+        return self.max;
     },
     
     // experimental feature
     peek: function( ) {
         var self = this, state, isCaseInsensitive, peek, n, c, p, cases;
         if ( null == self.re ) return null;
-        if ( null === self.ast ) self.analyze( );
-        state = {
-            map                 : map_1st,
-            reduce              : reduce_peek
-        };
-        peek = walk({positive:{},negative:{}}, self.ast, state);
-        
+        if ( null === self.ast )
+        {
+            self.analyze( );
+            self.ch = null;
+        }
+        if ( null === self.ch )
+        {
+            state = {
+                map                 : map_1st,
+                reduce              : reduce_peek
+            };
+            self.ch = walk({positive:{},negative:{}}, self.ast, state);
+        }
+        peek = {positive:clone(self.ch.positive), negative:clone(self.ch.negative)};
         isCaseInsensitive = null != self.fl.i;
         for (n in peek)
         {
