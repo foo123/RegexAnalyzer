@@ -58,7 +58,7 @@ echo("================");
 echo();
 
 var Analyzer = require('../../src/js/RegexAnalyzer.js'),
-    anal, peekChars, sampleStr, minLen, maxLen, inregex = /*process.argv[2] ||*/ /xyz([abc0-9]){2,3}/i
+    anal, peekChars, sampleStr, minLen, maxLen, regexp, inregex = /*process.argv[2] || /xyz([abc0-9]){2,3}/i*/"/(?<named_group>[abc\\u0012]+)\\x12/gi"
 ;
 
 echo("Testing Analyzer.VERSION = " + Analyzer.VERSION);
@@ -69,9 +69,10 @@ anal = Analyzer( inregex );
 peekChars = anal.peek( );
 minLen = anal.minimum( );
 maxLen = anal.maximum( );
+regexp = anal.compile( );
 sampleStr = anal.sample( 1, 5 );
 for(var i=0; i<5; i++)
-    sampleStr[i] = {sample:sampleStr[i], match:(inregex.test(sampleStr[i]) ? 'yes' : 'no')};
+    sampleStr[i] = {sample:sampleStr[i], match:(regexp.test(sampleStr[i]) ? 'yes' : 'no')};
 
 echo("Input                                       : " + inregex.toString( ));
 echo("Regular Expression                          : " + anal.re);
@@ -79,6 +80,11 @@ echo("Regular Expression Flags                    : " + Object.keys(anal.fl).joi
 echo("=============================================");
 echo("Regular Expression Syntax Tree              : ");
 echo(JSON.stringify(anal.tree(true), null, 4));
+echo("=============================================");
+echo("Regular Expression Reconstructed Source     : " + anal.src);
+echo("=============================================");
+echo("Regular Expression (Named) Matched Groups   : ");
+echo(JSON.stringify(anal.grp, null, 4));
 echo("=============================================");
 echo("Regular Expression Peek Characters          : ");
 echo(JSON.stringify({positive:Object.keys(peekChars.positive||{}),negative:Object.keys(peekChars.negative||{})}, null, 4));

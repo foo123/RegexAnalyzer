@@ -5,29 +5,24 @@ Composed: /^([_a-z][_a-z0-9]*|\*\*aabb\*\*|.|\s|\D+)*?$/i
 Expected: /^([_a-z][_a-z0-9]*|\*\*aabb\*\*|.|\s|\D+)*?$/i
 ================
 
-Testing Analyzer.VERSION = 0.5.1
+Testing Analyzer.VERSION = 0.6.0
 =========================================
-Input                                       : /xyz([abc0-9]){2,3}/i
-Regular Expression                          : xyz([abc0-9]){2,3}
-Regular Expression Flags                    : i
+Input                                       : /(?<named_group>[abc\u0012]+)\x12/gi
+Regular Expression                          : (?<named_group>[abc\u0012]+)\x12
+Regular Expression Flags                    : i,g
 =============================================
 Regular Expression Syntax Tree              : 
 {
     "type": "Sequence",
     "value": [
         {
-            "type": "String",
-            "value": "xyz",
-            "flags": {}
-        },
-        {
-            "type": "Quantifier",
+            "type": "Group",
             "value": {
-                "type": "Group",
-                "value": {
-                    "type": "Sequence",
-                    "value": [
-                        {
+                "type": "Sequence",
+                "value": [
+                    {
+                        "type": "Quantifier",
+                        "value": {
                             "type": "CharacterGroup",
                             "value": [
                                 {
@@ -40,70 +35,92 @@ Regular Expression Syntax Tree              :
                                     "flags": {}
                                 },
                                 {
-                                    "type": "CharacterRange",
-                                    "value": [
-                                        "0",
-                                        "9"
-                                    ],
-                                    "flags": {}
+                                    "type": "UnicodeChar",
+                                    "value": "u0012",
+                                    "flags": {
+                                        "Char": "\u0012",
+                                        "Code": "0012"
+                                    }
                                 }
                             ],
                             "flags": {}
+                        },
+                        "flags": {
+                            "MatchOneOrMore": 1,
+                            "min": 1,
+                            "max": -1,
+                            "isGreedy": 1
                         }
-                    ],
-                    "flags": {}
-                },
-                "flags": {
-                    "GroupIndex": 1
-                }
+                    }
+                ],
+                "flags": {}
             },
             "flags": {
-                "val": "{2,3}",
-                "MatchMinimum": "2",
-                "MatchMaximum": "3",
-                "StartRepeats": 1,
-                "isGreedy": 1
+                "NamedGroup": 1,
+                "GroupName": "named_group",
+                "GroupIndex": 1
+            }
+        },
+        {
+            "type": "HexChar",
+            "value": "x12",
+            "flags": {
+                "Char": "\u0012",
+                "Code": "12"
             }
         }
     ],
     "flags": {}
 }
 =============================================
+Regular Expression Reconstructed Source     : ([abc\u0012]+)\x12
+=============================================
+Regular Expression (Named) Matched Groups   : 
+{
+    "1": 1,
+    "named_group": 1
+}
+=============================================
 Regular Expression Peek Characters          : 
 {
     "positive": [
-        "x",
-        "X"
+        "a",
+        "b",
+        "c",
+        "\u0012",
+        "A",
+        "B",
+        "C"
     ],
     "negative": []
 }
 =============================================
 Regular Expression Minimum / Maximum Length : 
 {
-    "minimum": 5,
-    "maximum": 6
+    "minimum": 2,
+    "maximum": "unlimited"
 }
 =============================================
 Regular Expression Sample Match Strings     : 
 [
     {
-        "sample": "xyz73",
+        "sample": "\u0012a\u0012",
         "match": "yes"
     },
     {
-        "sample": "xyz25",
+        "sample": "\u0012\u0012\u0012\u0012",
+        "match": "no"
+    },
+    {
+        "sample": "\u0012\u0012",
         "match": "yes"
     },
     {
-        "sample": "XYZB8",
-        "match": "yes"
+        "sample": "\u0012\u0012\u0012",
+        "match": "no"
     },
     {
-        "sample": "xyzb2",
-        "match": "yes"
-    },
-    {
-        "sample": "XYZ74",
+        "sample": "\u0012\u0012C\u0012\u0012",
         "match": "yes"
     }
 ]
