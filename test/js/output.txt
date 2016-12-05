@@ -7,9 +7,10 @@ Expected: /^([_a-z][_a-z0-9]*|\*\*aabb\*\*|.|\s|\D+)*?$/i
 
 Testing Analyzer.VERSION = 0.6.0
 =========================================
-Input                                       : /(?<named_group>[abc\u0012]+)\x12/gi
-Regular Expression                          : (?<named_group>[abc\u0012]+)\x12
+Input                                       : /(?<named_group>[ab\u0012cde]+)\x12/gi
+Regular Expression                          : (?<named_group>[ab\u0012cde]+)\x12
 Regular Expression Flags                    : i,g
+Regular Expression Reconstructed            : ([\u0012abcde]+)\x12
 =============================================
 Regular Expression Syntax Tree              : 
 {
@@ -26,21 +27,23 @@ Regular Expression Syntax Tree              :
                             "type": "CharacterGroup",
                             "value": [
                                 {
-                                    "type": "Characters",
-                                    "value": [
-                                        "a",
-                                        "b",
-                                        "c"
-                                    ],
-                                    "flags": {}
-                                },
-                                {
                                     "type": "UnicodeChar",
                                     "value": "u0012",
                                     "flags": {
                                         "Char": "\u0012",
                                         "Code": "0012"
                                     }
+                                },
+                                {
+                                    "type": "Characters",
+                                    "value": [
+                                        "a",
+                                        "b",
+                                        "c",
+                                        "d",
+                                        "e"
+                                    ],
+                                    "flags": {}
                                 }
                             ],
                             "flags": {}
@@ -73,8 +76,6 @@ Regular Expression Syntax Tree              :
     "flags": {}
 }
 =============================================
-Regular Expression Reconstructed Source     : ([abc\u0012]+)\x12
-=============================================
 Regular Expression (Named) Matched Groups   : 
 {
     "1": 1,
@@ -84,13 +85,17 @@ Regular Expression (Named) Matched Groups   :
 Regular Expression Peek Characters          : 
 {
     "positive": [
+        "\u0012",
         "a",
         "b",
         "c",
-        "\u0012",
+        "d",
+        "e",
         "A",
         "B",
-        "C"
+        "C",
+        "D",
+        "E"
     ],
     "negative": []
 }
@@ -104,24 +109,44 @@ Regular Expression Minimum / Maximum Length :
 Regular Expression Sample Match Strings     : 
 [
     {
-        "sample": "\u0012a\u0012",
-        "match": "yes"
+        "sample": "c\u0012",
+        "match": "yes",
+        "groups": {
+            "1": "c",
+            "named_group": "c"
+        }
     },
     {
-        "sample": "\u0012\u0012\u0012\u0012",
-        "match": "no"
+        "sample": "Db\u0012",
+        "match": "yes",
+        "groups": {
+            "1": "Db",
+            "named_group": "Db"
+        }
     },
     {
-        "sample": "\u0012\u0012",
-        "match": "yes"
+        "sample": "AB\u0012\u0012",
+        "match": "yes",
+        "groups": {
+            "1": "AB\u0012",
+            "named_group": "AB\u0012"
+        }
     },
     {
-        "sample": "\u0012\u0012\u0012",
-        "match": "no"
+        "sample": "d\u0012\u0012a\u0012",
+        "match": "yes",
+        "groups": {
+            "1": "d\u0012\u0012a",
+            "named_group": "d\u0012\u0012a"
+        }
     },
     {
-        "sample": "\u0012\u0012C\u0012\u0012",
-        "match": "yes"
+        "sample": "bb\u0012\u0012",
+        "match": "yes",
+        "groups": {
+            "1": "bb\u0012",
+            "named_group": "bb\u0012"
+        }
     }
 ]
 =============================================

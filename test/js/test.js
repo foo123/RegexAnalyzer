@@ -58,7 +58,7 @@ echo("================");
 echo();
 
 var Analyzer = require('../../src/js/RegexAnalyzer.js'),
-    anal, peekChars, sampleStr, minLen, maxLen, regexp, inregex = /*process.argv[2] || /xyz([abc0-9]){2,3}/i*/"/(?<named_group>[abc\\u0012]+)\\x12/gi"
+    anal, peekChars, sampleStr, minLen, maxLen, groups, regexp, inregex = /*process.argv[2] || /xyz([abc0-9]){2,3}/i*/"/(?<named_group>[ab\\u0012cde]+)\\x12/gi"
 ;
 
 echo("Testing Analyzer.VERSION = " + Analyzer.VERSION);
@@ -69,22 +69,28 @@ anal = Analyzer( inregex );
 peekChars = anal.peek( );
 minLen = anal.minimum( );
 maxLen = anal.maximum( );
-regexp = anal.compile( );
+regexp = anal.compile( {i:anal.fl.i?1:0} );
 sampleStr = anal.sample( 1, 5 );
+groups = anal.groups();
 for(var i=0; i<5; i++)
-    sampleStr[i] = {sample:sampleStr[i], match:(regexp.test(sampleStr[i]) ? 'yes' : 'no')};
+{
+    var m = sampleStr[i].match(regexp);
+    sampleStr[i] = {sample:sampleStr[i], match:(m ? 'yes' : 'no'), groups: {}};
+    for(var g in groups)
+        if ( groups.hasOwnProperty(g) )
+            sampleStr[i].groups[g] = m[regexp.group(g)];
+}
 
 echo("Input                                       : " + inregex.toString( ));
-echo("Regular Expression                          : " + anal.re);
+echo("Regular Expression                          : " + anal.input());
 echo("Regular Expression Flags                    : " + Object.keys(anal.fl).join(','));
+echo("Regular Expression Reconstructed            : " + anal.source());
 echo("=============================================");
 echo("Regular Expression Syntax Tree              : ");
 echo(JSON.stringify(anal.tree(true), null, 4));
 echo("=============================================");
-echo("Regular Expression Reconstructed Source     : " + anal.src);
-echo("=============================================");
 echo("Regular Expression (Named) Matched Groups   : ");
-echo(JSON.stringify(anal.grp, null, 4));
+echo(JSON.stringify(groups, null, 4));
 echo("=============================================");
 echo("Regular Expression Peek Characters          : ");
 echo(JSON.stringify({positive:Object.keys(peekChars.positive||{}),negative:Object.keys(peekChars.negative||{})}, null, 4));
