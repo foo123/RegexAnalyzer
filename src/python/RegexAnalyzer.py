@@ -2,7 +2,7 @@
 ##
 #
 #   RegexAnalyzer
-#   @version: 0.5.1
+#   @version: 0.6.0
 #
 #   A simple Regular Expression Analyzer for PHP, Python, Node/XPCOM/JS, ActionScript
 #   https://github.com/foo123/RegexAnalyzer
@@ -10,11 +10,50 @@
 ##
 import random, math, re, copy
 
+
+def is_array(x):
+    return isinstance(x,(list,tuple))
+    
+def is_string(x):
+    return isinstance(x,str)
+    
+TYPE_REGEXP = None
+def is_regexp(x):
+    global TYPE_REGEXP
+    if TYPE_REGEXP is None: TYPE_REGEXP = type(re.compile(r'[a-z]'))
+    return isinstance(x,TYPE_REGEXP)
+    
+def array( x ):
+    return x if is_array(x) else [x]
+
 def is_nan(v):
     return math.isnan(v)
     
 def rnd(a, b):
     return random.randint(a, b)
+
+def esc_re( s, esc, chargroup=False ):
+    es = ''
+    l = len(s)
+    i=0
+    if chargroup:
+        while i < l:
+            c = s[i]
+            i += 1
+            #escaped_re = /([.*+?^${}()|[\]\/\\\-])/g
+            es += (esc if ('?' == c) or ('+' == c) or ('-' == c) or ('^' == c) or ('$' == c) or ('|' == c) or ('{' == c) or ('}' == c) or ('(' == c) or (')' == c) or ('[' == c) or (']' == c) or ('/' == c) or (esc == c) else '') + c
+    else:
+        while i < l:
+            c = s[i]
+            i += 1
+            #escaped_re = /([.*+?^${}()|[\]\/\\\-])/g
+            es += (esc if ('?' == c) or ('*' == c) or ('+' == c) or ('.' == c) or ('^' == c) or ('$' == c) or ('|' == c) or ('{' == c) or ('}' == c) or ('(' == c) or (')' == c) or ('[' == c) or (']' == c) or ('/' == c) or (esc == c) else '') + c
+    return es
+
+def pad( s, n, z='0' ):
+    ps = str(s)
+    while len(ps) < n: ps += z + ps
+    return ps
 
 def char_code( c ):
     return ord(c[0])
@@ -24,14 +63,14 @@ def char_code_range( s ):
     
 def concat( p1, p2=None ):
     if p2:
-        if isinstance(p2, (list, tuple)):
+        if is_array(p2):
             for p in p2: p1[ p ] = 1
         else:
             for p in p2:  p1[ p ] = 1;
     return p1
 
 def character_range( first=None, last=None ):
-    if first and isinstance(first, (list, tuple)):
+    if first and is_array(first):
         last = first[1]
         first = first[0]
     
@@ -66,9 +105,10 @@ T_CHARGROUP = 8
 T_CHARS = 9
 T_CHARRANGE = 10
 T_STRING = 11
+T_COMMENT = 12
+ESC = '\\'
 
 class _G():
-    escapeChar = '\\'
     specialChars = {
         "." : "MatchAnyChar",
         "|" : "MatchEither",
@@ -116,9 +156,22 @@ class RE_OBJ():
         self.re = regex
         self.len = len(regex)
         self.pos = 0
+        self.index = 0
         self.groupIndex = 0
+        self.group = {}
         self.inGroup = 0
-        
+    
+    def dispose(self):
+        self.re = None
+        self.len = None
+        self.pos = None
+        self.index = None
+        self.groupIndex = None
+        self.group = None
+        self.inGroup = None
+    
+    def __del__(self):
+        self.dispose()
  
 
 class Node():
@@ -129,7 +182,7 @@ class Node():
                 'value': Node.toObjectStatic(v.val),
                 'flags': v.flags
             } 
-        elif isinstance(v,(list,tuple)):
+        elif is_array(v):
             return list(map(Node.toObjectStatic, v))
         return v
     
@@ -159,7 +212,13 @@ class Node():
             self.typeName = "HexChar"
         elif T_SPECIAL == type: 
             self.typeName = "Special"
+        elif T_COMMENT == type: 
+            self.typeName = "Comment"
+        else: self.typeName = "unspecified"
     
+    def __del__(self):
+        self.dispose()
+        
     def dispose(self):
         self.val = None
         self.flags = None
@@ -278,19 +337,23 @@ def case_insensitive( chars, asArray=False ):
         return random_upper_or_lower( chars )
     
 def walk( ret, node, state ):
-    if not node or not state: return ret
+    if (node is None) or (not state): return ret
     
-    type = node.type
+    type = node.type if isinstance(node, Node) else None
     
     # walk the tree
-    if T_ALTERNATION == type or T_SEQUENCE == type or T_CHARGROUP == type or T_GROUP == type or T_QUANTIFIER == type:
+    if type is None:
+        # custom, let reduce handle it
+        ret = state['reduce']( ret, node, state )
+        
+    elif (T_ALTERNATION == type) or (T_SEQUENCE == type) or (T_CHARGROUP == type) or (T_GROUP == type) or (T_QUANTIFIER == type):
         r = state['map']( ret, node, state )
         if ('ret' in state) and (state['ret'] is not None):
             ret = state['reduce']( ret, node, state )
             state['ret'] = None
         
         elif r is not None:
-            if not isinstance(r, (list,tuple)): r = [r]
+            r = array(r)
             for ri in r:
                 state['node'] = node
                 ret = walk( ret, ri, state )
@@ -298,33 +361,85 @@ def walk( ret, node, state ):
                     state['stop'] = None
                     return ret
     
-    elif T_CHARS == type or T_CHARRANGE == type or T_UNICODECHAR == type or T_HEXCHAR == type or T_SPECIAL == type or T_STRING == type:
+    elif (T_CHARS == type) or (T_CHARRANGE == type) or (T_UNICODECHAR == type) or (T_HEXCHAR == type) or (T_SPECIAL == type) or (T_STRING == type):
         ret = state['reduce']( ret, node, state )
+    
+    elif T_COMMENT == type:
+        # nothing
+        pass
     
     state['node'] = None
     return ret
 
+def map_src( ret, node, state ):
+    type = node.type
+    if T_ALTERNATION == type:
+        r = []
+        l = len(node.val)-1
+        for i in range(l):
+            r.append(node.val[i])
+            r.append('|')
+        r.append(node.val[l])
+        return r
+    
+    elif T_CHARGROUP == type:
+        return ['['+('^' if 'NegativeMatch' in node.flags else '')] + array(node.val) + [']']
+    
+    elif T_QUANTIFIER == type:
+        q = ''
+        if 'MatchZeroOrOne' in node.flags: q = '?'
+        elif 'MatchZeroOrMore' in node.flags: q = '*'
+        elif 'MatchOneOrMore' in node.flags: q = '+'
+        else: q = ('{'+str(node.flags['min'])+'}') if node.flags['min'] == node.flags['max'] else ('{'+str(node.flags['min'])+','+('' if -1==node.flags['max'] else str(node.flags['max']))+'}')
+        if (node.flags['min'] != node.flags['max']) and not node.flags['isGreedy']: q += '?'
+        return array(node.val) + [q]
+    
+    elif T_GROUP == type:
+        g = None
+        if 'NotCaptured' in node.flags:
+            g = ['(?:'] + array(node.val) + [')']
+        
+        elif 'LookAhead' in node.flags:
+            g = ['(?='] + array(node.val) + [')']
+        
+        elif 'NegativeLookAhead' in node.flags:
+            g = ['(?!'] + array(node.val) + [')']
+        
+        elif 'LookBehind' in node.flags:
+            g = ['(?<='] + array(node.val) + [')']
+        
+        elif 'NegativeLookBehind' in node.flags:
+            g = ['(?<!'] + array(node.val) + [')']
+        
+        else:
+            g = ['('] + array(node.val) + [')']
+        if 'GroupIndex' in node.flags:
+            ret['group'][str(node.flags['GroupIndex'])] = node.flags['GroupIndex']
+            if 'GroupName' in node.flags: ret['group'][node.flags['GroupName']] = node.flags['GroupIndex']
+        return g
+    
+    return node.val
+
 def map_any( ret, node, state ):
     type = node.type
-    if T_ALTERNATION == type or T_CHARGROUP == type:
+    if (T_ALTERNATION == type) or (T_CHARGROUP == type):
         return node.val[rnd(0, len(node.val)-1)] if len(node.val) else None
     
     elif T_QUANTIFIER == type:
         if len(ret) >= state['maxLength']:
-            numrepeats = 0 if ('MatchZeroOrMore' in node.flags) or ('MatchZeroOrOne' in node.flags) else (1 if ('MatchOneOrMore' in node.flags) else int(node.flags['MatchMinimum'], 10))
+            numrepeats = node.flags['min']
         
         else:
-            if ('MatchZeroOrMore' in node.flags) and node.flags['MatchZeroOrMore']:
-                numrepeats = rnd(0, 1+2*state['maxLength'])
-            elif ('MatchZeroOrOne' in node.flags) and node.flags['MatchZeroOrOne']:
-                numrepeats = rnd(0, 1)
-            elif ('MatchOneOrMore' in node.flags) and node.flags['MatchOneOrMore']:
-                numrepeats = rnd(1, 1+2*state['maxLength'])
-            else:
-                mmin = int(node.flags['MatchMinimum'], 10)
-                mmax = (mmin+1+2*state['maxLength']) if 'unlimited'==node.flags['MatchMaximum'] else int(node.flags['MatchMaximum'], 10)
-                numrepeats = rnd(mmin, mmax)
+            mmin = node.flags['min']
+            mmax = (mmin+1+2*state['maxLength']) if -1==node.flags['max'] else node.flags['max']
+            numrepeats = rnd(mmin, mmax)
         return [node.val] * numrepeats if numrepeats else None
+    
+    elif (T_GROUP == type) and ('GroupIndex' in node.flags):
+        sample = walk('', node.val, state)
+        state['group'][node.flags['GroupIndex']] = sample
+        state['ret'] = sample
+        return None
     
     else:
         return node.val
@@ -346,10 +461,14 @@ def map_min( ret, node, state ):
         return node.val[0] if len(node.val) else None
     
     elif T_QUANTIFIER == type:
-        if ('MatchMinimum' in node.flags):
-            if "0"==node.flags['MatchMinimum']: return None
-            return [node.val] * int(node.flags['MatchMinimum'],10)
-        return node.val if ('MatchOneOrMore' in node.flags) and node.flags['MatchOneOrMore'] else None
+        if 0==node.flags['min']: return None
+        return [node.val] * node.flags['min']
+    
+    elif (T_GROUP == type) and ('GroupIndex' in node.flags):
+        min = walk(0, node.val, state)
+        state['group'][node.flags['GroupIndex']] = min
+        state['ret'] = min
+        return None
     
     else:
         return node.val
@@ -380,12 +499,18 @@ def map_max( ret, node, state ):
         if -1 == max:
             state['ret'] = -1
         elif 0 < max:
-            if ('MatchZeroOrMore' in node.flags) or ('MatchOneOrMore' in node.flags) or (('MatchMaximum' in node.flags) and ("unlimited" == node.flags['MatchMaximum'])):
+            if -1 == node.flags['max']:
                 state['ret'] = -1
-            elif 'MatchMaximum' in node.flags:
-                state['ret'] = int(node.flags['MatchMaximum'],10)*max
+            elif 0 < node.flags['max']:
+                state['ret'] = node.flags['max']*max
             else:
                 state['ret'] = max
+        return None
+    
+    elif (T_GROUP == type) and ('GroupIndex' in node.flags):
+        max = walk(0, node.val, state)
+        state['group'][node.flags['GroupIndex']] = max
+        state['ret'] = max
         return None
     
     else:
@@ -397,7 +522,7 @@ def map_1st( ret, node, state ):
         seq = []
         for n in node.val:
             seq.append( n )
-            if (T_QUANTIFIER == n.type) and (('MatchZeroOrMore' in n.flags) or ('MatchZeroOrOne' in n.flags) or (('MatchMinimum' in n.flags) and "0" == n.flags['MatchMinimum'])):
+            if (T_QUANTIFIER == n.type) and (0 == n.flags['min']):
                 continue
             elif (T_SPECIAL == n.type) and (('MatchStart' in n.flags) or ('MatchEnd' in n.flags)):
                 continue
@@ -413,13 +538,18 @@ def reduce_len( ret, node, state ):
         else: ret += state['ret']
         return ret
     if -1 == ret: return ret
-    if T_SPECIAL == node.type and ('MatchEnd' not in node.flags):
+    
+    if isinstance(node, int):
+        ret += node
+        return ret
+        
+    if (T_SPECIAL == node.type) and ('MatchEnd' not in node.flags):
         state['stop'] = 1
         return ret
         
     type = node.type;
-    if T_CHARS == type or T_CHARRANGE == type or T_UNICODECHAR == type or T_HEXCHAR == type or (T_SPECIAL == type and ('MatchStart' not in node.flags) and ('MatchEnd' not in node.flags)):
-        ret += 1
+    if (T_CHARS == type) or (T_CHARRANGE == type) or (T_UNICODECHAR == type) or (T_HEXCHAR == type) or ((T_SPECIAL == type) and ('MatchStart' not in node.flags) and ('MatchEnd' not in node.flags)):
+        ret += (state['group'][node.val] if node.val in state['group'] else 0) if 'BackReference' in node.flags else 1
     
     elif T_STRING == type:
         ret += len(node.val)
@@ -430,7 +560,12 @@ def reduce_str( ret, node, state ):
     if ('ret' in state) and state['ret'] is not None:
         ret += str(state['ret'])
         return ret
-    if T_SPECIAL == node.type and ('MatchEnd' not in node.flags):
+    
+    if is_string(node):
+        ret += node
+        return ret
+        
+    if (T_SPECIAL == node.type) and ('MatchEnd' not in node.flags):
         state['stop'] = 1
         return ret
         
@@ -440,12 +575,18 @@ def reduce_str( ret, node, state ):
     if T_CHARS == type:
         sample = node.val
     elif T_CHARRANGE == type:
-        sample = character_range(node.val)
-    elif T_UNICODECHAR == type or T_HEXCHAR == type:
+        range = [node.val[0],node.val[1]]
+        if isinstance(range[0],Node) and (T_UNICODECHAR == range[0].type or T_HEXCHAR == range[0].type): range[0] = range[0].flags['Char']
+        if isinstance(range[1],Node) and (T_UNICODECHAR == range[1].type or T_HEXCHAR == range[1].type): range[1] = range[1].flags['Char']
+        sample = character_range(range)
+    elif (T_UNICODECHAR == type) or (T_HEXCHAR == type):
         sample = [node.flags['Char']]
-    elif T_SPECIAL == type and ('MatchStart' not in node.flags) and ('MatchEnd' not in node.flags):
+    elif (T_SPECIAL == type) and ('MatchStart' not in node.flags) and ('MatchEnd' not in node.flags):
         part = node.val
-        if 'D' == part: sample = [digit( False )]
+        if 'BackReference' in node.flags:
+            ret += state['group'][part] if part in state['group'] else ''
+            return ret
+        elif 'D' == part: sample = [digit( False )]
         elif 'W' == part: sample = [word( False )]
         elif 'S' == part: sample = [space( False )]
         elif 'd' == part: sample = [digit( )]
@@ -457,7 +598,47 @@ def reduce_str( ret, node, state ):
         sample = node.val
     
     if sample is not None:
-        ret += (case_insensitive(sample) if state['isCaseInsensitive'] else sample) if T_STRING == type else character(case_insensitive(sample, True) if state['isCaseInsensitive'] else sample, ('node' not in state) or ('NotMatch' not in state['node'].flags))
+        ret += (case_insensitive(sample) if state['isCaseInsensitive'] else sample) if T_STRING == type else character(case_insensitive(sample, True) if state['isCaseInsensitive'] else sample, ('node' not in state) or ('NegativeMatch' not in state['node'].flags))
+    
+    return ret
+
+def reduce_src( ret, node, state ):
+    if ('ret' in state) and state['ret'] is not None:
+        if 'src' in statep['ret']: ret['src'] += state['ret']['src']
+        if 'group' in state['ret']: ret['group'].update(state['ret']['group'])
+        return ret
+    
+    if is_string(node):
+        ret['src'] += node
+        return ret
+    
+    type = node.type
+    if T_CHARS == type:
+        ret['src'] += esc_re(''.join(node.val), ESC, 1) if state['escaped'] else ''.join(node.val)
+    elif T_CHARRANGE == type:
+        range = [node.val[0],node.val[1]]
+        if state['escaped']:
+            if isinstance(range[0],Node) and T_UNICODECHAR == range[0].type: range[0] = '\\u'+pad(range[0].flags['Code'],4)
+            elif isinstance(range[0],Node) and T_HEXCHAR == range[0].type: range[0] = '\\x'+pad(range[0].flags['Code'],2)
+            else: range[0] = esc_re(range[0], ESC, 1)
+            if isinstance(range[1],Node) and T_UNICODECHAR == range[1].type: range[1] = '\\u'+pad(range[1].flags['Code'],4)
+            elif isinstance(range[1],Node) and T_HEXCHAR == range[1].type: range[1] = '\\x'+pad(range[1].flags['Code'],2)
+            else: range[1] = esc_re(range[1], ESC, 1)
+        else:
+            if isinstance(range[0],Node) and (T_UNICODECHAR == range[0].type or T_HEXCHAR == range[0].type): range[0] = range[0].flags['Char']
+            if isinstance(range[0],Node) and (T_UNICODECHAR == range[1].type or T_HEXCHAR == range[1].type): range[1] = range[1].flags['Char']
+        ret['src'] += range[0]+'-'+range[1]
+    elif T_UNICODECHAR == type:
+        ret['src'] += '\\u'+pad(node.flags['Code'],4) if state['escaped'] else node.flags['Char']
+    elif T_HEXCHAR == type:
+        ret['src'] += '\\x'+pad(node.flags['Code'],2) if state['escaped'] else node.flags['Char']
+    elif T_SPECIAL == type:
+        if 'BackReference' in node.flags:
+            ret['src'] += '\\'+node.val
+        else:
+            ret['src'] += '\\'+node.val if ('MatchStart' not in node.flags) and ('MatchEnd' not in node.flags) else (''+node.val)
+    elif T_STRING == type:
+        ret['src'] += esc_re(node.val, ESC) if state['escaped'] else node.val
     
     return ret
 
@@ -466,7 +647,7 @@ def reduce_peek( ret, node, state ):
         ret['positive'] = concat( ret['positive'], state['ret']['positive'] )
         ret['negative'] = concat( ret['negative'], state['ret']['negative'] )
         return ret
-    if T_SPECIAL == node.type and ('MatchEnd' not in node.flags):
+    if (T_SPECIAL == node.type) and ('MatchEnd' not in node.flags):
         state['stop'] = 1
         return ret
         
@@ -478,10 +659,13 @@ def reduce_peek( ret, node, state ):
     if T_CHARS == type:
         ret[peek] = concat( ret[peek], node.val )
     elif T_CHARRANGE == type:
-        ret[peek] = concat( ret[peek], character_range(node.val) )
-    elif T_UNICODECHAR == type or T_HEXCHAR == type:
+        range = [node.val[0],node.val[1]]
+        if isinstance(range[0],Node) and (T_UNICODECHAR == range[0].type or T_HEXCHAR == range[0].type): range[0] = range[0].flags['Char']
+        if isinstance(range[1],Node) and (T_UNICODECHAR == range[1].type or T_HEXCHAR == range[1].type): range[1] = range[1].flags['Char']
+        ret[peek] = concat( ret[peek], character_range(range) )
+    elif (T_UNICODECHAR == type) or (T_HEXCHAR == type):
         ret[peek][node.flags['Char']] = 1
-    elif T_SPECIAL == type and ('MatchStart' not in node.flags) and ('MatchEnd' not in node.flags):
+    elif (T_SPECIAL == type) and ('BackReference' not in node.flags)  and ('MatchStart' not in node.flags) and ('MatchEnd' not in node.flags):
         part = node.val
         if 'D' == part:
             ret["positive" if inNegativeCharGroup else "negative"][ '\\d' ] = 1
@@ -500,7 +684,7 @@ def reduce_peek( ret, node, state ):
 def match_hex( s ):
     global _G
     m = False
-    if len(s) > 2 and 'x' == s[0]:
+    if (len(s) > 2) and ('x' == s[0]):
     
         if match_char_ranges(_G.HEXDIGITS_RANGES, s, 1, 2, 2): 
             m=s[0:3]
@@ -511,7 +695,7 @@ def match_hex( s ):
 def match_unicode( s ):
     global _G
     m = False
-    if len(s) > 4 and 'u' == s[0]:
+    if (len(s) > 4) and ('u' == s[0]):
     
         if match_char_ranges(_G.HEXDIGITS_RANGES, s, 1, 4, 4): 
             m=s[0:5]
@@ -525,7 +709,7 @@ def match_repeats( s ):
     m = False
     hasComma = False
     sl = len(s);
-    if sl > 2 and '{' == s[pos]:
+    if (sl > 2) and ('{' == s[pos]):
     
         m = ['', '', None]
         pos+=1
@@ -539,7 +723,7 @@ def match_repeats( s ):
             return False
         l=match_chars(_G.SPACES, s, pos)
         if l: pos += l
-        if pos<sl and ',' == s[pos]:
+        if (pos<sl) and (',' == s[pos]):
             pos += 1
             hasComma = True
         l=match_chars(_G.SPACES, s, pos)
@@ -550,7 +734,7 @@ def match_repeats( s ):
             pos += l
         l=match_chars(_G.SPACES, s, pos)
         if l: pos += l
-        if pos<sl and '}' == s[pos]:
+        if (pos<sl) and ('}' == s[pos]):
             pos+=1
             m[0] = s[0:pos]
             if not hasComma: m[2] = m[1]
@@ -564,6 +748,7 @@ def match_repeats( s ):
 def chargroup( re_obj ):
     global _G
     sequence = []
+    allchars = []
     chars = []
     flags = {}
     isRange = False
@@ -572,18 +757,19 @@ def chargroup( re_obj ):
     
     if '^' == re_obj.re[re_obj.pos]:
     
-        flags[ "NotMatch" ] = 1
+        flags[ "NegativeMatch" ] = 1
         re_obj.pos+=1
     
     lre = re_obj.len
     while re_obj.pos < lre:
     
         isUnicode = False
+        isHex = False
         prevch = ch
         ch = re_obj.re[re_obj.pos]
         re_obj.pos+=1
         
-        escaped = True if (_G.escapeChar == ch) else False
+        escaped = True if ESC == ch else False
         if escaped:  
             ch = re_obj.re[re_obj.pos]
             re_obj.pos+=1
@@ -595,8 +781,9 @@ def chargroup( re_obj ):
             
                 m = match_unicode( re_obj.re[re_obj.pos-1:] )
                 re_obj.pos += len(m[0])-1
-                ch = chr(int(m[1], 16))
+                ch = Node(T_UNICODECHAR, m[0], {"Char": chr(int(m[1], 16)), "Code": m[1]})
                 isUnicode = True
+                isHex = False
             
             
             # hex character
@@ -604,16 +791,16 @@ def chargroup( re_obj ):
             
                 m = match_hex( re_obj.re[re_obj.pos-1:] )
                 re_obj.pos += len(m[0])-1
-                ch = chr(int(m[1], 16))
+                ch = Node(T_HEXCHAR, m[0], {"Char": chr(int(m[1], 16)), "Code": m[1]})
                 isUnicode = True
-            
+                isHex = True
         
         
         if isRange:
         
             if len(chars):
             
-                sequence.append( Node(T_CHARS, chars) )
+                allchars = allchars + chars
                 chars = []
             
             range[1] = ch
@@ -624,11 +811,20 @@ def chargroup( re_obj ):
         
             if escaped:
             
-                if (not isUnicode) and (ch in _G.specialCharsEscaped) and ('/' != ch):
+                if isUnicode:
+                    
+                    if len(chars):
+                    
+                        allchars = allchars + chars
+                        chars = []
+            
+                    sequence.append( ch )
+                
+                elif (ch in _G.specialCharsEscaped) and ('/' != ch):
                 
                     if len(chars):
                     
-                        sequence.append( Node(T_CHARS, chars) )
+                        allchars = allchars + chars
                         chars = []
             
                     flag = {}
@@ -649,16 +845,19 @@ def chargroup( re_obj ):
                 
                     if len(chars):
                     
-                        sequence.append( Node(T_CHARS, chars) )
+                        allchars = allchars + chars
                         chars = []
                     
+                    # map all chars into one node
+                    if len(allchars): sequence.append( Node(T_CHARS, allchars) )
                     return Node(T_CHARGROUP, sequence, flags)
                 
                 
                 elif '-' == ch:
                 
                     range = [prevch, '']
-                    chars.pop()
+                    if isinstance(prevch,Node): sequence.pop()
+                    else: chars.pop()
                     isRange = True
                 
                 
@@ -671,9 +870,11 @@ def chargroup( re_obj ):
     
     if len(chars):
     
-        sequence.append( Node(T_CHARS, chars) )
+        allchars = allchars + chars
         chars = []
     
+    # map all chars into one node
+    if len(allchars): sequence.append( Node(T_CHARS, allchars) )
     return Node(T_CHARGROUP, sequence, flags)
 
 
@@ -689,27 +890,88 @@ def analyze_re( re_obj ):
     
     if re_obj.inGroup > 0:
         pre = re_obj.re[re_obj.pos:re_obj.pos+2]
+        pre3 = re_obj.re[re_obj.pos:re_obj.pos+3]
+        captured = 1
         
-        if "?:" == pre:
+        if "?P=" == pre3:
+            
+            flags[ "BackReference" ] = 1
+            flags[ "GroupName" ] = ''
+            re_obj.pos += 3
+            lre = re_obj.len
+            while re_obj.pos < lre:
+                ch = re_obj.re[ re_obj.pos ]
+                re_obj.pos += 1
+                if ")" == ch: break
+                flags[ "GroupName" ] += ch
+            flags[ "GroupIndex" ] = re_obj.group[flags[ "GroupName" ]] if flags[ "GroupName" ] in re_obj.group else None
+            return Node(T_SPECIAL, str(flags[ "GroupIndex" ]), flags)
+        
+        elif "?#" == pre:
+            flags[ "Comment" ] = 1
+            re_obj.pos += 2
+            word = ''
+            lre = re_obj.len
+            while re_obj.pos < lre:
+                ch = re_obj.re[ re_obj.pos ]
+                re_obj.pos += 1
+                if ")" == ch: break
+                word += ch
+            return Node(T_COMMENT, word)
+        
+        elif "?:" == pre:
         
             flags[ "NotCaptured" ] = 1
             re_obj.pos += 2
+            captured = 0
         
         
         elif "?=" == pre:
         
             flags[ "LookAhead" ] = 1
             re_obj.pos += 2
+            captured = 0
         
         
         elif "?!" == pre:
         
             flags[ "NegativeLookAhead" ] = 1
             re_obj.pos += 2
+            captured = 0
         
         
-        re_obj.groupIndex+=1
-        flags[ "GroupIndex" ] = re_obj.groupIndex
+        elif "?<=" == pre3:
+        
+            flags[ "LookBehind" ] = 1
+            re_obj.pos += 3
+            captured = 0
+        
+        
+        elif "?<!" == pre3:
+        
+            flags[ "NegativeLookBehind" ] = 1
+            re_obj.pos += 3
+            captured = 0
+        
+        
+        elif ("?<" == pre) or ("?P<" == pre3):
+        
+            flags[ "NamedGroup" ] = 1
+            flags[ "GroupName" ] = ''
+            re_obj.pos += 2 if "?<" == pre else 3
+            lre = re_obj.len
+            while re_obj.pos < lre:
+                ch = re_obj.re[ re_obj.pos ]
+                re_obj.pos += 1
+                if ">" == ch: break
+                flags[ "GroupName" ] += ch
+
+        re_obj.index+=1
+        if captured:
+            re_obj.groupIndex+=1
+            flags[ "GroupIndex" ] = re_obj.groupIndex
+            re_obj.group[str(flags[ "GroupIndex" ])] = flags[ "GroupIndex" ]
+            if "GroupName" in flags: re_obj.group[flags[ "GroupName" ]] = flags[ "GroupIndex" ]
     
     lre = re_obj.len
     while re_obj.pos < lre:
@@ -718,7 +980,7 @@ def analyze_re( re_obj ):
         re_obj.pos+=1
         
         #   \\abc
-        escaped = True if (_G.escapeChar == ch) else False
+        escaped = True if ESC == ch else False
         if escaped:  
             ch = re_obj.re[re_obj.pos]
             re_obj.pos+=1
@@ -776,7 +1038,7 @@ def analyze_re( re_obj ):
         else:
         
             # group end
-            if re_obj.inGroup > 0 and ')' == ch:
+            if (re_obj.inGroup > 0) and (')' == ch):
             
                 if wordlen:
                 
@@ -848,15 +1110,15 @@ def analyze_re( re_obj ):
                 
                 m = match_repeats( re_obj.re[re_obj.pos-1:] )
                 re_obj.pos += len(m[0])-1
-                flag = { 'val': m[0], "MatchMinimum": m[1], "MatchMaximum": m[2] if m[2] else "unlimited" }
+                flag = { 'val': m[0], "MatchMinimum": m[1], "MatchMaximum": m[2] if m[2] else "unlimited", 'min': int(m[1],10), 'max': int(m[2],10) if m[2] else -1}
                 flag[ _G.specialChars[ch] ] = 1
-                if re_obj.pos<lre and '?' == re_obj.re[re_obj.pos]:
+                if (re_obj.pos<lre) and ('?' == re_obj.re[re_obj.pos]):
                 
                     flag[ "isGreedy" ] = 0
                     re_obj.pos+=1
                 
                 else:
-                
+                    
                     flag[ "isGreedy" ] = 1
                 
                 prev = sequence.pop()
@@ -869,7 +1131,7 @@ def analyze_re( re_obj ):
             
             
             # quantifiers
-            elif '*' == ch or '+' == ch or '?' == ch:
+            elif ('*' == ch) or ('+' == ch) or ('?' == ch):
             
                 if wordlen:
                 
@@ -879,7 +1141,9 @@ def analyze_re( re_obj ):
                 
                 flag = {}
                 flag[ _G.specialChars[ch] ] = 1
-                if re_obj.pos<lre and '?' == re_obj.re[re_obj.pos]:
+                flag['min'] = 1 if '+' == ch else 0
+                flag['max'] = 1 if '?' == ch else -1
+                if (re_obj.pos<lre) and ('?' == re_obj.re[re_obj.pos]):
                 
                     flag[ "isGreedy" ] = 0
                     re_obj.pos+=1
@@ -911,6 +1175,29 @@ def analyze_re( re_obj ):
                 sequence.append( Node(T_SPECIAL, ch, flag) )
             
         
+            elif ('1' <= ch) and ('9' >= ch):
+            
+                if wordlen:
+                
+                    sequence.append( Node(T_STRING, word) )
+                    word = ''
+                    wordlen = 0
+                
+                word = ch
+                while re_obj.pos < lre:
+                    ch = re_obj.re[ re_obj.pos ]
+                    if ('0' <= ch) and ('9' >= ch):
+                        word += ch
+                        re_obj.pos += 1
+                    else: break
+                
+                flag = {}
+                flag[ 'BackReference' ] = 1
+                flag[ 'GroupIndex' ] = int(word, 10)
+                sequence.append( Node(T_SPECIAL, word, flag) )
+                word = ''
+            
+        
             else:
             
                 word += ch
@@ -939,9 +1226,12 @@ def analyze_re( re_obj ):
 
 
 
+# https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
+# https://docs.python.org/3/library/re.html
+# http://php.net/manual/en/reference.pcre.pattern.syntax.php
 class RegexAnalyzer:
     
-    VERSION = "0.5.1"
+    VERSION = "0.6.0"
     
     Node = Node
     
@@ -950,18 +1240,25 @@ class RegexAnalyzer:
         self.ast = None
         self.re = None
         self.fl = None
+        self.src = None
+        self.grp = None
         self.min = None
         self.max = None
         self.ch = None
        
         if re is not None:   
-            self.set(re, delim)
+            self.input(re, delim)
             
             
+    def __del__(self):
+        self.dispose()
+        
     def dispose( self ):
         self.ast = None
         self.re = None
         self.fl = None
+        self.src = None
+        self.grp = None
         self.min = None
         self.max = None
         self.ch = None
@@ -969,15 +1266,27 @@ class RegexAnalyzer:
     
     def reset(self):
         self.ast = None
+        self.src = None
+        self.grp = None
         self.min = None
         self.max = None
         self.ch = None
         return self
     
-    def set(self, re, delim=None):
+    # alias
+    def set(self, re, delim='/'):
+        return self.input(re,delim)
+        
+    def input(self, *args):
+        lenargs = len(args)
+        if not lenargs: return self.re
+        re = args[0] if lenargs > 0 else None
+        delim = args[1] if lenargs > 1 else None
+        
         if re:
             
             if not delim: delim = '/'
+            src = None
             re = str(re)
             fl = {}
             l = len(re)
@@ -1006,13 +1315,45 @@ class RegexAnalyzer:
         return self
         
     def analyze( self ):
-        if self.re and (self.ast is None): self.ast = analyze_re( RE_OBJ(self.re) )
+        if self.re and (self.ast is None):
+            re = RE_OBJ(self.re)
+            self.ast = analyze_re( re )
+            re.dispose()
         return self
+    
+    def synthesize( self, escaped=True ):
+        if None == self.re: return self
+        if self.ast is None:
+            self.analyze( )
+            self.src = None
+            self.grp = None
+            
+        if self.src is None:
+            state = {
+                'map'                 : map_src,
+                'reduce'              : reduce_src,
+                'escaped'             : escaped is not False,
+                'group'               : {}
+            }
+            re = walk({'src':'','group':{}}, self.ast, state)
+            self.src = re['src']
+            self.grp = re['group']
+        return self
+    
+    def source( self ):
+        if not self.re: return None
+        if self.src is None: self.synthesize()
+        return self.src
+    
+    def groups( self, raw=False ):
+        if not self.re: return None
+        if self.grp is None: self.synthesize()
+        return sel.grp if raw is True else self.grp.copy()
     
     def compile( self, flags=None ):
         if not self.re: return None
         flags = (self.fl if self.fl else {}) if not flags else flags
-        return re.compile(self.re, re.I if 'i' in flags else None)
+        return re.compile(self.source(), re.I if ('i' in flags) or ('I' in flags) else None)
     
     def tree( self, flat=False ):
         if not self.re: return None
@@ -1027,7 +1368,8 @@ class RegexAnalyzer:
             'map'               : map_any,
             'reduce'            : reduce_str,
             'maxLength'         : maxlen if maxlen else 1,
-            'isCaseInsensitive' : ('i' in self.fl)
+            'isCaseInsensitive' : ('i' in self.fl),
+            'group'             : {}
         }
         if 1 < numsamples:
             return [walk('', self.ast, state) for i in range(numsamples)]
@@ -1042,7 +1384,8 @@ class RegexAnalyzer:
         if self.min is None:
             state = {
                 'map'               : map_min,
-                'reduce'            : reduce_len
+                'reduce'            : reduce_len,
+                'group'             : {}
             }
             self.min = walk(0, self.ast, state)
         return self.min
@@ -1056,7 +1399,8 @@ class RegexAnalyzer:
         if self.max is None:
             state = {
                 'map'               : map_max,
-                'reduce'            : reduce_len
+                'reduce'            : reduce_len,
+                'group'             : {}
             }
             self.max = walk(0, self.ast, state)
         return self.max
@@ -1070,7 +1414,8 @@ class RegexAnalyzer:
         if self.ch is None:
             state = {
                 'map'               : map_1st,
-                'reduce'            : reduce_peek
+                'reduce'            : reduce_peek,
+                'group'             : {}
             }
             self.ch = walk({'positive':{},'negative':{}}, self.ast, state)
         peek = {'positive':copy.copy(self.ch['positive']), 'negative':copy.copy(self.ch['negative'])}

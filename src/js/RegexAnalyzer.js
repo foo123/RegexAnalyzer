@@ -87,7 +87,7 @@ var __version__ = "0.6.0",
     T_SEQUENCE = 1, T_ALTERNATION = 2, T_GROUP = 3,
     T_QUANTIFIER = 4, T_UNICODECHAR = 5, T_HEXCHAR = 6,
     T_SPECIAL = 7, T_CHARGROUP = 8, T_CHARS = 9,
-    T_CHARRANGE = 10, T_STRING = 11;
+    T_CHARRANGE = 10, T_STRING = 11, T_COMMENT = 12;
 
 function is_array( x )
 {
@@ -101,22 +101,49 @@ function is_regexp( x )
 {
     return (x instanceof RegExp) || ('[object RegExp]' === to_string.call(x));
 }
+function array( x )
+{
+    return is_array(x) ? x : [x];
+}
 function clone( obj, cloned )
 {
     cloned = cloned || {};
     for (var p in obj) if ( obj[HAS](p) ) cloned[p] = obj[p];
     return cloned;
 }
-var RE_OBJ = function( re ) {
+function RE_OBJ( re )
+{
     var self = this;
     self.re = re;
     self.len = re.length;
     self.pos = 0;
-    self._groupIndex = 0;
+    self.index = 0;
     self.groupIndex = 0;
+    self.group = {};
     self.inGroup = 0;
-},
-Node = function Node( type, value, flags ) {
+}
+RE_OBJ[PROTO] = {
+     constructor: RE_OBJ
+    ,re: null
+    ,len: null
+    ,pos: null
+    ,g: null
+    ,groupIndex: null
+    ,inGroup: null
+    ,groups: null
+    ,dispose: function( ) {
+        var self = this;
+        self.re = null;
+        self.len = null;
+        self.pos = null;
+        self.index = null;
+        self.groupIndex = null;
+        self.group = null;
+        self.inGroup = null;
+    }
+};
+function Node( type, value, flags )
+{
     var self = this;
     if ( !(self instanceof Node) ) return new Node(type, value, flags);
     self.type = type;
@@ -146,6 +173,8 @@ Node = function Node( type, value, flags ) {
             self.typeName = "HexChar"; break;
         case T_SPECIAL: 
             self.typeName = "Special"; break;
+        case T_COMMENT: 
+            self.typeName = "Comment"; break;
         default: 
             self.typeName = "unspecified"; break;
     }
@@ -159,7 +188,7 @@ Node.toObjectStatic = function toObject( v ) {
             flags: v.flags
         }; 
     }
-    else if (v instanceof Array)
+    else if (is_array(v))
     {
         return v.map(toObject);
     }
@@ -193,8 +222,8 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             {
                 c = s[CHAR](i++);
                 //escaped_re = /([.*+?^${}()|[\]\/\\\-])/g
-                es += (('?' === c) || ('*' === c) || ('+' === c) ||
-                        ('-' === c) || ('^' === c) || ('$' === c) || ('|' === c) || 
+                es += (('?' === c) || /*('*' === c) ||*/ ('+' === c) ||
+                        ('-' === c) || /*('.' === c) ||*/ ('^' === c) || ('$' === c) || ('|' === c) || 
                         ('{' === c) || ('}' === c) || ('(' === c) || (')' === c) ||
                         ('[' === c) || (']' === c) || ('/' === c) || (esc === c) ? esc : '') + c;
             }
@@ -206,7 +235,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                 c = s[CHAR](i++);
                 //escaped_re = /([.*+?^${}()|[\]\/\\\-])/g
                 es += (('?' === c) || ('*' === c) || ('+' === c) ||
-                    ('.' === c) || ('^' === c) || ('$' === c) || ('|' === c) || 
+                    /*('-' === c) ||*/ ('.' === c) || ('^' === c) || ('$' === c) || ('|' === c) || 
                     ('{' === c) || ('}' === c) || ('(' === c) || (')' === c) ||
                     ('[' === c) || (']' === c) || ('/' === c) || (esc === c) ? esc : '') + c;
             }
@@ -361,8 +390,8 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             ret = state.reduce( ret, node, state );
         }
         
-        else if ( T_ALTERNATION === type || T_SEQUENCE === type ||
-            T_CHARGROUP === type || T_GROUP === type || T_QUANTIFIER === type
+        else if ( (T_ALTERNATION === type) || (T_SEQUENCE === type) ||
+            (T_CHARGROUP === type) || (T_GROUP === type) || (T_QUANTIFIER === type)
         )
         {
             r = state.map( ret, node, state );
@@ -373,7 +402,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             }
             else if ( null != r )
             {
-                if ( !is_array(r) ) r = [r];
+                r = array(r);
                 for(i=0,l=r?r.length:0; i<l; i++)
                 {
                     state.node = node;
@@ -387,12 +416,17 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             }
         }
         
-        else if ( T_CHARS === type || T_CHARRANGE === type ||
-                T_UNICODECHAR === type || T_HEXCHAR === type ||
-                T_SPECIAL === type || T_STRING === type
+        else if ( (T_CHARS === type) || (T_CHARRANGE === type) ||
+                (T_UNICODECHAR === type) || (T_HEXCHAR === type) ||
+                (T_SPECIAL === type) || (T_STRING === type)
         )
         {
             ret = state.reduce( ret, node, state );
+        }
+        
+        else if ( T_COMMENT === type )
+        {
+            /* nothing */
         }
         
         state.node = null;
@@ -402,53 +436,54 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
         return node.val;
     },*/
     map_src = function map_src( ret, node, state ) {
-        var type = node.type, r;
+        var type = node.type;
         if ( T_ALTERNATION === type )
         {
-            r = [];
+            var r = [];
             for(var i=0,l=node.val.length-1; i<l; i++) r.push(node.val[i],'|');
-            r.push(node.val[node.val.length-1]);
+            r.push(node.val[l]);
             return r;
         }
         else if ( T_CHARGROUP === type )
         {
-            return [].concat('['+(node.flags.NegativeMatch?'^':'')).concat(node.val).concat(']');
+            return [].concat('['+(node.flags.NegativeMatch?'^':'')).concat(array(node.val)).concat(']');
         }
         else if ( T_QUANTIFIER === type )
         {
             var q = '';
-            if ( node.flags.MatchZeroOrOne ) q = '?'+(node.flags.isGreedy?'':'?');
-            else if ( node.flags.MatchZeroOrMore ) q = '*'+(node.flags.isGreedy?'':'?');
-            else if ( node.flags.MatchOneOrMore ) q = '+'+(node.flags.isGreedy?'':'?');
+            if ( node.flags.MatchZeroOrOne ) q = '?';
+            else if ( node.flags.MatchZeroOrMore ) q = '*';
+            else if ( node.flags.MatchOneOrMore ) q = '+';
             else q = node.flags.min === node.flags.max ? ('{'+node.flags.min+'}') : ('{'+node.flags.min+','+(-1===node.flags.max?'':node.flags.max)+'}');
-            return [].concat(node.val).concat(q);
+            if ( (node.flags.min !== node.flags.max) && !node.flags.isGreedy ) q += '?';
+            return [].concat(array(node.val)).concat(q);
         }
         else if ( T_GROUP === type )
         {
             var g = null;
             if ( node.flags.NotCaptured )
             {
-                g = [].concat('(?:').concat(node.val).concat(')');
+                g = [].concat('(?:').concat(array(node.val)).concat(')');
             }
             else if ( node.flags.LookAhead )
             {
-                g = [].concat('(?=').concat(node.val).concat(')');
+                g = [].concat('(?=').concat(array(node.val)).concat(')');
             }
             else if ( node.flags.NegativeLookAhead )
             {
-                g = [].concat('(?!').concat(node.val).concat(')');
-            }
-            /*else if ( node.flags.NegativeMatch )
-            {
-                g = [].concat('((?:').concat(node.val).concat(')|[\\s\\S]+)');
+                g = [].concat('(?!').concat(array(node.val)).concat(')');
             }
             else if ( node.flags.LookBehind )
             {
-                g = null;
-            }*/
+                g = [].concat('(?<=').concat(array(node.val)).concat(')');
+            }
+            else if ( node.flags.NegativeLookBehind )
+            {
+                g = [].concat('(?<!').concat(array(node.val)).concat(')');
+            }
             else
             {
-                g = [].concat('(').concat(node.val).concat(')');
+                g = [].concat('(').concat(array(node.val)).concat(')');
             }
             if ( null != node.flags.GroupIndex )
             {
@@ -461,7 +496,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
     },
     map_any = function map_any( ret, node, state ) {
         var type = node.type;
-        if ( T_ALTERNATION === type || T_CHARGROUP === type )
+        if ( (T_ALTERNATION === type) || (T_CHARGROUP === type) )
         {
             return node.val.length ? node.val[rnd(0, node.val.length-1)] : null;
         }
@@ -488,6 +523,13 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             {
                 return null;
             }
+        }
+        else if ( (T_GROUP === type) && node.flags.GroupIndex )
+        {
+            var sample = walk('', node.val, state);
+            state.group[node.flags.GroupIndex] = sample;
+            state.ret = sample;
+            return null;
         }
         else
         {
@@ -518,6 +560,13 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             var i, nrepeats = node.flags.min, repeats = new Array(nrepeats);
             for(i=0; i<nrepeats; i++) repeats[i] = node.val;
             return repeats;
+        }
+        else if ( (T_GROUP === type) && node.flags.GroupIndex )
+        {
+            var min = walk(0, node.val, state);
+            state.group[node.flags.GroupIndex] = min;
+            state.ret = min;
+            return null;
         }
         else
         {
@@ -576,6 +625,13 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             }
             return null;
         }
+        else if ( (T_GROUP === type) && node.flags.GroupIndex )
+        {
+            var max = walk(0, node.val, state);
+            state.group[node.flags.GroupIndex] = max;
+            state.ret = max;
+            return null;
+        }
         else
         {
             return node.val;
@@ -611,6 +667,13 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             return ret;
         }
         if ( -1 === ret ) return ret;
+        
+        if ( node === +node )
+        {
+            ret += node;
+            return ret;
+        }
+        
         if ( (T_SPECIAL === node.type) && node.flags.MatchEnd )
         {
             state.stop = 1;
@@ -618,12 +681,12 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
         }
         var type = node.type;
         
-        if ( T_CHARS === type || T_CHARRANGE === type ||
-            T_UNICODECHAR === type || T_HEXCHAR === type ||
-            (T_SPECIAL === type && !node.flags.MatchStart && !node.flags.MatchEnd)
+        if ( (T_CHARS === type) || (T_CHARRANGE === type) ||
+            (T_UNICODECHAR === type) || (T_HEXCHAR === type) ||
+            ((T_SPECIAL === type) && !node.flags.MatchStart && !node.flags.MatchEnd)
         )
         {
-            ret += 1;
+            ret += node.flags.BackReference ? state.group[node.flags.GroupIndex]||0 : 1;
         }
         else if ( T_STRING === type )
         {
@@ -638,6 +701,13 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             ret += state.ret;
             return ret;
         }
+        
+        if ( is_string(node) )
+        {
+            ret += node;
+            return ret;
+        }
+        
         if ( (T_SPECIAL === node.type) && node.flags.MatchEnd )
         {
             state.stop = 1;
@@ -663,7 +733,12 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
         else if ( (T_SPECIAL === type) && !node.flags.MatchStart && !node.flags.MatchEnd )
         {
             var part = node.val;
-            if ('D' === part)
+            if (node.flags.BackReference)
+            {
+                ret += state.group[HAS](part) ? state.group[part] : '';
+                return ret;
+            }
+            else if ('D' === part)
             {
                 sample = [digit( false )];
             }
@@ -718,6 +793,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             if ( state.ret.group ) ret.group = clone(state.ret.group, ret.group);
             return ret;
         }
+        
         if ( is_string(node) )
         {
             ret.src += node;
@@ -740,14 +816,13 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                 if ( T_UNICODECHAR === range[1].type ) range[1] = '\\u'+pad(range[1].flags.Code,4);
                 else if ( T_HEXCHAR === range[1].type ) range[1] = '\\x'+pad(range[1].flags.Code,2);
                 else range[1] = esc_re(range[1], ESC, 1);
-                ret.src += range[0]+'-'+range[1];
             }
             else
             {
                 if ( T_UNICODECHAR === range[0].type || T_HEXCHAR === range[0].type ) range[0] = range[0].flags.Char;
                 if ( T_UNICODECHAR === range[1].type || T_HEXCHAR === range[1].type ) range[1] = range[1].flags.Char;
-                ret.src += range[0]+'-'+range[1];
             }
+            ret.src += range[0]+'-'+range[1];
         }
         else if ( T_UNICODECHAR === type )
         {
@@ -759,7 +834,14 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
         }
         else if ( T_SPECIAL === type )
         {
-            ret.src += !node.flags.MatchStart && !node.flags.MatchEnd ? ('\\'+node.val) : (''+node.val);
+            if ( node.flags.BackReference )
+            {
+                ret.src += '\\'+node.val;
+            }
+            else
+            {
+                ret.src += !node.flags.MatchStart && !node.flags.MatchEnd ? ('\\'+node.val) : (''+node.val);
+            }
         }
         else if ( T_STRING === type )
         {
@@ -775,7 +857,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             ret.negative = concat( ret.negative, state.ret.negative );
             return ret;
         }
-        if ( T_SPECIAL === node.type && node.flags.MatchEnd )
+        if ( (T_SPECIAL === node.type) && node.flags.MatchEnd )
         {
             state.stop = 1;
             return ret;
@@ -800,7 +882,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
         {
             ret[peek][node.flags.Char] = 1;
         }
-        else if ( (T_SPECIAL === type) && !node.flags.MatchStart && !node.flags.MatchEnd )
+        else if ( (T_SPECIAL === type) && !node.flags.BackReference && !node.flags.MatchStart && !node.flags.MatchEnd )
         {
             var part = node.val;
             if ('D' === part)
@@ -1011,14 +1093,46 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
     analyze_re = function analyze_re( re_obj ) {
         var lre, ch, m, word = '', wordlen = 0,
             alternation = [], sequence = [], flags = {},
-            flag, escaped = false, pre, captured;
+            flag, escaped = false, pre, pre3, captured;
         
         if ( re_obj.inGroup > 0 )
         {
             pre = re_obj.re.substr(re_obj.pos, 2);
+            pre3 = re_obj.re.substr(re_obj.pos, 3);
             captured = 1;
             
-            if ( "?:" === pre )
+            if ( "?P=" === pre3 )
+            {
+                flags[ "BackReference" ] = 1;
+                flags[ "GroupName" ] = '';
+                re_obj.pos += 3;
+                lre = re_obj.len;
+                while ( re_obj.pos < lre )
+                {
+                    ch = re_obj.re[CHAR]( re_obj.pos++ );
+                    if ( ")" === ch ) break;
+                    flags[ "GroupName" ] += ch;
+                }
+                flags[ "GroupIndex" ] = re_obj.group[HAS](flags[ "GroupName" ]) ? re_obj.group[flags[ "GroupName" ]] : null;
+                return Node(T_SPECIAL, String(flags[ "GroupIndex" ]), flags);
+            }
+            
+            else if ( "?#" === pre )
+            {
+                flags[ "Comment" ] = 1;
+                re_obj.pos += 2;
+                word = '';
+                lre = re_obj.len;
+                while ( re_obj.pos < lre )
+                {
+                    ch = re_obj.re[CHAR]( re_obj.pos++ );
+                    if ( ")" === ch ) break;
+                    word += ch;
+                }
+                return Node(T_COMMENT, word);
+            }
+            
+            else if ( "?:" === pre )
             {
                 flags[ "NotCaptured" ] = 1;
                 re_obj.pos += 2;
@@ -1039,24 +1153,25 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                 captured = 0;
             }
             
-            /*else if ( "?^" === pre )
-            {
-                flags[ "NegativeMatch" ] = 1;
-                re_obj.pos += 2;
-            }
-            
-            else if ( "?&" === pre )
+            else if ( "?<=" === pre3 )
             {
                 flags[ "LookBehind" ] = 1;
-                re_obj.pos += 2;
+                re_obj.pos += 3;
                 captured = 0;
-            }*/
+            }
             
-            else if ( "?<" === pre )
+            else if ( "?<!" === pre3 )
+            {
+                flags[ "NegativeLookBehind" ] = 1;
+                re_obj.pos += 3;
+                captured = 0;
+            }
+            
+            else if ( ("?<" === pre) || ("?P<" === pre3) )
             {
                 flags[ "NamedGroup" ] = 1;
                 flags[ "GroupName" ] = '';
-                re_obj.pos += 2;
+                re_obj.pos += "?<" === pre ? 2 : 3;
                 lre = re_obj.len;
                 while ( re_obj.pos < lre )
                 {
@@ -1066,8 +1181,14 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                 }
             }
             
-            ++re_obj._groupIndex;
-            if ( captured ) flags[ "GroupIndex" ] = ++re_obj.groupIndex;
+            ++re_obj.index;
+            if ( captured )
+            {
+                ++re_obj.groupIndex;
+                flags[ "GroupIndex" ] = re_obj.groupIndex;
+                re_obj.group[flags[ "GroupIndex" ]] = flags[ "GroupIndex" ];
+                if ( flags[ "GroupName" ] ) re_obj.group[flags[ "GroupName" ]] = flags[ "GroupIndex" ];
+            }
         }
         
         lre = re_obj.len;
@@ -1109,7 +1230,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                     sequence.push( Node(T_HEXCHAR, m[0], {"Char": fromCharCode(parseInt(m[1], 16)), "Code": m[1]}) );
                 }
                 
-                else if ( specialCharsEscaped[HAS](ch) && ('/' !== ch))
+                else if ( specialCharsEscaped[HAS](ch) && ('/' !== ch) )
                 {
                     if ( wordlen )
                     {
@@ -1120,6 +1241,28 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                     flag = {};
                     flag[ specialCharsEscaped[ch] ] = 1;
                     sequence.push( Node(T_SPECIAL, ch, flag) );
+                }
+                
+                else if ( ('1' <= ch) && ('9' >= ch) )
+                {
+                    if ( wordlen )
+                    {
+                        sequence.push( Node(T_STRING, word) );
+                        word = '';
+                        wordlen = 0;
+                    }
+                    word = ch;
+                    while (re_obj.pos < lre)
+                    {
+                        ch = re_obj.re[CHAR]( re_obj.pos );
+                        if ( ('0' <= ch) && ('9' >= ch) ) { word += ch; re_obj.pos++; }
+                        else break;
+                    }
+                    flag = {};
+                    flag[ 'BackReference' ] = 1;
+                    flag[ 'GroupIndex' ] = parseInt(word, 10);
+                    sequence.push( Node(T_SPECIAL, word, flag) );
+                    word = '';
                 }
                 
                 else
@@ -1206,15 +1349,15 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                     re_obj.pos += m[0].length-1;
                     flag = { val: m[0], "MatchMinimum": m[1], "MatchMaximum": m[2] || "unlimited", "min": parseInt(m[1],10), "max": m[2] ? parseInt(m[2],10) : -1 };
                     flag[ specialChars[ch] ] = 1;
-                    /*if ( (re_obj.pos < lre) && ('?' === re_obj.re[CHAR](re_obj.pos)) )
+                    if ( (re_obj.pos < lre) && ('?' === re_obj.re[CHAR](re_obj.pos)) )
                     {
                         flag[ "isGreedy" ] = 0;
                         re_obj.pos++;
                     }
                     else
-                    {*/
+                    {
                         flag[ "isGreedy" ] = 1;
-                    /*}*/
+                    }
                     var prev = sequence.pop();
                     if ( (T_STRING === prev.type) && (prev.val.length > 1) )
                     {
@@ -1296,7 +1439,10 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
     }
 ;
 
-// A simple (js-flavored) regular expression analyzer
+// A simple regular expression analyzer
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
+// https://docs.python.org/3/library/re.html
+// http://php.net/manual/en/reference.pcre.pattern.syntax.php
 var RegexAnalyzer = function RegexAnalyzer( re, delim ) {
     if ( !(this instanceof RegexAnalyzer) ) return new RegexAnalyzer(re, delim);
     if ( re ) this.input( re, delim );
@@ -1348,7 +1494,7 @@ RegexAnalyzer[PROTO] = {
         {
             delim = delim || '/';
             var src, l, ch, fl = {};
-            src = is_regexp(re) ? re.source : null;
+            src = /*is_regexp(re) ? re.source :*/ null;
             re = re.toString( );
             l = re.length;
             
@@ -1375,14 +1521,19 @@ RegexAnalyzer[PROTO] = {
             if ( self.re !== re ) self.reset();
             self.re = re; self.fl = fl;
             // no need to reconstruct source, it is already regexp
-            if ( null !== src ) { self.src = src; self.grp = {}; }
+            //if ( null !== src ) { self.src = src; self.grp = {}; }
         }
         return self;
     },
     
     analyze: function( ) {
         var self = this;
-        if ( (null != self.re) && (null === self.ast) ) self.ast = analyze_re( new RE_OBJ(self.re) );
+        if ( (null != self.re) && (null === self.ast) )
+        {
+            var re = new RE_OBJ(self.re);
+            self.ast = analyze_re( re );
+            re.dispose();
+        }
         return self;
     },
     
@@ -1400,21 +1551,13 @@ RegexAnalyzer[PROTO] = {
             state = {
                 map                 : map_src,
                 reduce              : reduce_src,
-                escaped             : false !== escaped
+                escaped             : false !== escaped,
+                group               : {}
             };
             re = walk({src:'',group:{}}, self.ast, state);
             self.src = re.src; self.grp = re.group;
         }
         return self;
-    },
-    
-    compile: function( flags ) {
-        var self = this, regexp;
-        if ( null == self.re ) return null;
-        flags = flags || self.fl || {};
-        regexp = new RegExp(self.source(), (flags.g||flags.G?'g':'')+(flags.i||flags.I?'i':'')+(flags.m||flags.M?'m':''));
-        regexp.$group = self.groups();
-        return regexp;
     },
     
     source: function( ) {
@@ -1429,6 +1572,15 @@ RegexAnalyzer[PROTO] = {
         if ( null == self.re ) return null;
         if ( null === self.grp ) self.synthesize();
         return true===raw ? sel.grp : clone(self.grp);
+    },
+    
+    compile: function( flags ) {
+        var self = this, regexp;
+        if ( null == self.re ) return null;
+        flags = flags || self.fl || {};
+        regexp = new RegExp(self.source(), (flags.g||flags.G?'g':'')+(flags.i||flags.I?'i':'')+(flags.m||flags.M?'m':''));
+        regexp.$group = self.groups();
+        return regexp;
     },
     
     tree: function( flat ) {
@@ -1447,7 +1599,8 @@ RegexAnalyzer[PROTO] = {
             map                 : map_any,
             reduce              : reduce_str,
             maxLength           : (maxlen|0) || 1,
-            isCaseInsensitive   : null != self.fl.i
+            isCaseInsensitive   : null != self.fl.i,
+            group               : {}
         };
         numsamples = (numsamples|0) || 1;
         if ( 1 < numsamples )
@@ -1472,7 +1625,8 @@ RegexAnalyzer[PROTO] = {
         {
             state = {
                 map                 : map_min,
-                reduce              : reduce_len
+                reduce              : reduce_len,
+                group               : {}
             };
             self.min = walk(0, self.ast, state)|0;
         }
@@ -1492,7 +1646,8 @@ RegexAnalyzer[PROTO] = {
         {
             state = {
                 map                 : map_max,
-                reduce              : reduce_len
+                reduce              : reduce_len,
+                group               : {}
             };
             self.max = walk(0, self.ast, state);
         }
@@ -1512,7 +1667,8 @@ RegexAnalyzer[PROTO] = {
         {
             state = {
                 map                 : map_1st,
-                reduce              : reduce_peek
+                reduce              : reduce_peek,
+                group               : {}
             };
             self.ch = walk({positive:{},negative:{}}, self.ast, state);
         }

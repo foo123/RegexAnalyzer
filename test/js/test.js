@@ -58,7 +58,7 @@ echo("================");
 echo();
 
 var Analyzer = require('../../src/js/RegexAnalyzer.js'),
-    anal, peekChars, sampleStr, minLen, maxLen, groups, regexp, inregex = /*process.argv[2] || /xyz([abc0-9]){2,3}/i*/"/(?<named_group>[ab\\u0012cde]+)\\x12/gi"
+    anal, peekChars, sampleStr, minLen, maxLen, groups, regexp, inregex = /*process.argv[2] || /xyz([abc0-9]){2,3}/i*/"/(?P<named_group>[abcde]+)fgh(?P=named_group)(?# a comment)/i"
 ;
 
 echo("Testing Analyzer.VERSION = " + Analyzer.VERSION);
@@ -76,15 +76,18 @@ for(var i=0; i<5; i++)
 {
     var m = sampleStr[i].match(regexp);
     sampleStr[i] = {sample:sampleStr[i], match:(m ? 'yes' : 'no'), groups: {}};
-    for(var g in groups)
-        if ( groups.hasOwnProperty(g) )
-            sampleStr[i].groups[g] = m[regexp.group(g)];
+    if ( m )
+    {
+        for(var g in groups)
+            if ( groups.hasOwnProperty(g) )
+                sampleStr[i].groups[g] = m[regexp.group(g)];
+    }
 }
 
 echo("Input                                       : " + inregex.toString( ));
 echo("Regular Expression                          : " + anal.input());
 echo("Regular Expression Flags                    : " + Object.keys(anal.fl).join(','));
-echo("Regular Expression Reconstructed            : " + anal.source());
+echo("Reconstructed Regular Expression            : " + anal.source());
 echo("=============================================");
 echo("Regular Expression Syntax Tree              : ");
 echo(JSON.stringify(anal.tree(true), null, 4));

@@ -1,13 +1,15 @@
 RegexAnalyzer Module loaded succesfully
-Testing Analyzer.VERSION = 0.5.1
+Testing Analyzer.VERSION = 0.6.0
 
 =========================================
 
-Input                                       : /xyz([abc0-9]){2,3}/i
+Input                                       : /(?P<named_group>[abcde]+)fgh(?P=named_group)(?# a comment)/i
 
-Regular Expression                          : xyz([abc0-9]){2,3}
+Regular Expression                          : (?P<named_group>[abcde]+)fgh(?P=named_group)(?# a comment)
 
 Regular Expression Flags                    : i
+
+Reconstructed Regular Expression            : ([abcde]+)fgh\1
 
 =============================================
 
@@ -15,50 +17,62 @@ Regular Expression Syntax Tree              :
 
 {   'flags': {},
     'type': 'Sequence',
-    'value': [   {'flags': {}, 'type': 'String', 'value': 'xyz'},
-                 {   'flags': {   'MatchMaximum': '3',
-                                  'MatchMinimum': '2',
-                                  'StartRepeats': 1,
-                                  'isGreedy': 1,
-                                  'val': '{2,3}'},
-                     'type': 'Quantifier',
-                     'value': {   'flags': {'GroupIndex': 1},
-                                  'type': 'Group',
-                                  'value': {   'flags': {},
-                                               'type': 'Sequence',
-                                               'value': [   {   'flags': {   },
+    'value': [   {   'flags': {   'GroupIndex': 1,
+                                  'GroupName': 'named_group',
+                                  'NamedGroup': 1},
+                     'type': 'Group',
+                     'value': {   'flags': {},
+                                  'type': 'Sequence',
+                                  'value': [   {   'flags': {   'MatchOneOrMore': 1,
+                                                                'isGreedy': 1,
+                                                                'max': -1,
+                                                                'min': 1},
+                                                   'type': 'Quantifier',
+                                                   'value': {   'flags': {   },
                                                                 'type': 'CharacterGroup',
                                                                 'value': [   {   'flags': {   },
                                                                                  'type': 'Characters',
                                                                                  'value': [   'a',
                                                                                               'b',
-                                                                                              'c']},
-                                                                             {   'flags': {   },
-                                                                                 'type': 'CharacterRange',
-                                                                                 'value': [   '0',
-                                                                                              '9']}]}]}}}]}
+                                                                                              'c',
+                                                                                              'd',
+                                                                                              'e']}]}}]}},
+                 {'flags': {}, 'type': 'String', 'value': 'fgh'},
+                 {   'flags': {   'BackReference': 1,
+                                  'GroupIndex': 1,
+                                  'GroupName': 'named_group'},
+                     'type': 'Special',
+                     'value': '1'},
+                 {'flags': {}, 'type': 'Comment', 'value': ' a comment'}]}
+
+=============================================
+
+Regular Expression (Named) Matched Groups   : 
+
+{'1': 1, 'named_group': 1}
 
 =============================================
 
 Regular Expression Peek Characters          : 
 
-{'negative': [], 'positive': ['x', 'X']}
+{   'negative': [],
+    'positive': ['a', 'A', 'c', 'b', 'e', 'd', 'C', 'B', 'E', 'D']}
 
 =============================================
 
 Regular Expression Minimum / Maximum Length : 
 
-{'maximum': 6, 'minimum': 5}
+{'maximum': 'unlimited', 'minimum': 4}
 
 =============================================
 
 Regular Expression Sample Match Strings     : 
 
-[   {'match': 'yes', 'sample': 'XYZ22'},
-    {'match': 'yes', 'sample': 'xyzcc'},
-    {'match': 'yes', 'sample': 'XYZ5A'},
-    {'match': 'yes', 'sample': 'xyzab'},
-    {'match': 'yes', 'sample': 'XYZ90'}]
+[   {'groups': {}, 'match': 'no', 'sample': 'cECCFGH'},
+    {'groups': {}, 'match': 'no', 'sample': 'CECaFGH'},
+    {'groups': {}, 'match': 'no', 'sample': 'EdDFGH'},
+    {'groups': {}, 'match': 'no', 'sample': 'BbECFGH'},
+    {'groups': {}, 'match': 'no', 'sample': 'bcFGH'}]
 
 =============================================
 

@@ -7,10 +7,10 @@ Expected: /^([_a-z][_a-z0-9]*|\*\*aabb\*\*|.|\s|\D+)*?$/i
 
 Testing Analyzer.VERSION = 0.6.0
 =========================================
-Input                                       : /(?<named_group>[ab\u0012cde]+)\x12/gi
-Regular Expression                          : (?<named_group>[ab\u0012cde]+)\x12
-Regular Expression Flags                    : i,g
-Regular Expression Reconstructed            : ([\u0012abcde]+)\x12
+Input                                       : /(?P<named_group>[abcde]+)fgh(?P=named_group)(?# a comment)/i
+Regular Expression                          : (?P<named_group>[abcde]+)fgh(?P=named_group)(?# a comment)
+Regular Expression Flags                    : i
+Reconstructed Regular Expression            : ([abcde]+)fgh\1
 =============================================
 Regular Expression Syntax Tree              : 
 {
@@ -26,14 +26,6 @@ Regular Expression Syntax Tree              :
                         "value": {
                             "type": "CharacterGroup",
                             "value": [
-                                {
-                                    "type": "UnicodeChar",
-                                    "value": "u0012",
-                                    "flags": {
-                                        "Char": "\u0012",
-                                        "Code": "0012"
-                                    }
-                                },
                                 {
                                     "type": "Characters",
                                     "value": [
@@ -65,12 +57,23 @@ Regular Expression Syntax Tree              :
             }
         },
         {
-            "type": "HexChar",
-            "value": "x12",
+            "type": "String",
+            "value": "fgh",
+            "flags": {}
+        },
+        {
+            "type": "Special",
+            "value": "1",
             "flags": {
-                "Char": "\u0012",
-                "Code": "12"
+                "BackReference": 1,
+                "GroupName": "named_group",
+                "GroupIndex": 1
             }
+        },
+        {
+            "type": "Comment",
+            "value": " a comment",
+            "flags": {}
         }
     ],
     "flags": {}
@@ -85,7 +88,6 @@ Regular Expression (Named) Matched Groups   :
 Regular Expression Peek Characters          : 
 {
     "positive": [
-        "\u0012",
         "a",
         "b",
         "c",
@@ -102,50 +104,50 @@ Regular Expression Peek Characters          :
 =============================================
 Regular Expression Minimum / Maximum Length : 
 {
-    "minimum": 2,
+    "minimum": 5,
     "maximum": "unlimited"
 }
 =============================================
 Regular Expression Sample Match Strings     : 
 [
     {
-        "sample": "c\u0012",
+        "sample": "AafghAa",
         "match": "yes",
         "groups": {
-            "1": "c",
-            "named_group": "c"
+            "1": "Aa",
+            "named_group": "Aa"
         }
     },
     {
-        "sample": "Db\u0012",
+        "sample": "BAfghBA",
         "match": "yes",
         "groups": {
-            "1": "Db",
-            "named_group": "Db"
+            "1": "BA",
+            "named_group": "BA"
         }
     },
     {
-        "sample": "AB\u0012\u0012",
+        "sample": "BBDfghBBD",
         "match": "yes",
         "groups": {
-            "1": "AB\u0012",
-            "named_group": "AB\u0012"
+            "1": "BBD",
+            "named_group": "BBD"
         }
     },
     {
-        "sample": "d\u0012\u0012a\u0012",
+        "sample": "cCFGHcC",
         "match": "yes",
         "groups": {
-            "1": "d\u0012\u0012a",
-            "named_group": "d\u0012\u0012a"
+            "1": "cC",
+            "named_group": "cC"
         }
     },
     {
-        "sample": "bb\u0012\u0012",
+        "sample": "cEFGHcE",
         "match": "yes",
         "groups": {
-            "1": "bb\u0012",
-            "named_group": "bb\u0012"
+            "1": "cE",
+            "named_group": "cE"
         }
     }
 ]

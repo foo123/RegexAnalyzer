@@ -29,22 +29,30 @@ echo_("Testing Analyzer.VERSION = " + RegexAnalyzer.VERSION)
 echo_("=========================================")
 
 # test it
-inregex = '/xyz([abc0-9]){2,3}/i'
+inregex = '/(?P<named_group>[abcde]+)fgh(?P=named_group)(?# a comment)/i'
 anal = RegexAnalyzer( inregex )
 peekChars = anal.peek( )
 minLen = anal.minimum( )
 maxLen = anal.maximum( )
+regexp = anal.compile( {'i':1 if 'i' in anal.fl else 0} )
 sampleStr = anal.sample( 1, 5 )
-test_regex = anal.compile( )
+groups = anal.groups()
 for i in range(5):
-    sampleStr[i] = {'sample':sampleStr[i], 'match':'yes' if test_regex.match(sampleStr[i]) else 'no'}
+    m = regexp.match(sampleStr[i])
+    sampleStr[i] = {'sample':sampleStr[i], 'match':'yes' if m else 'no', 'groups': {}}
+    if m:
+        for group,index in groups.items(): sampleStr[i]['groups'][group] = m.group(index)
 
 echo_("Input                                       : " + inregex)
-echo_("Regular Expression                          : " + anal.re)
+echo_("Regular Expression                          : " + anal.input())
 echo_("Regular Expression Flags                    : " + ','.join(anal.fl.keys()))
+echo_("Reconstructed Regular Expression            : " + anal.source())
 echo_("=============================================")
 echo_("Regular Expression Syntax Tree              : ")
 echo_(pprint.pformat(anal.tree(True), 4))
+echo_("=============================================")
+echo_("Regular Expression (Named) Matched Groups   : ")
+echo_(pprint.pformat(groups, 4))
 echo_("=============================================")
 echo_("Regular Expression Peek Characters          : ")
 echo_(pprint.pformat({'positive':list(peekChars['positive'].keys()),'negative':list(peekChars['negative'].keys())}, 4))

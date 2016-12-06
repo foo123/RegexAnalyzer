@@ -64,20 +64,34 @@ include('../../src/php/RegexAnalyzer.php');
 echo_("Testing Analyzer.VERSION = " . RegexAnalyzer::VERSION);
 echo_("=========================================");
 
-$inregex = '/xyz([abc0-9]){2,3}/i';
+$inregex = '/(?P<named_group>[abcde]+)fgh(?P=named_group)(?# a comment)/i';
 $anal = new RegexAnalyzer($inregex);
 $peekChars = $anal->peek( );
 $minLen = $anal->minimum( );
 $maxLen = $anal->maximum( );
+$regexp = $anal->compile( array('i'=>!empty($anal->fl['i'])?1:0,'u'=>1) );
+$groups = $anal->groups();
 $sampleStr = $anal->sample( 1, 5 );
 for($i=0; $i<5; $i++)
-    $sampleStr[$i] = array('sample'=>$sampleStr[$i],'match'=>preg_match($inregex, $sampleStr[$i], $m) ? 'yes' : 'no');
+{
+    $succ = preg_match($regexp, $sampleStr[$i], $m);
+    $sampleStr[$i] = array('sample'=>$sampleStr[$i],'match'=>$succ ? 'yes' : 'no', 'groups'=>array());
+    if ( $succ )
+    {
+        foreach($groups as $group=>$index)
+            $sampleStr[$i]['groups'][$group] = isset($m[$index]) ? $m[$index] : null;
+    }
+}
 echo_("Input                                       : " . $inregex);
-echo_("Regular Expression                          : " . $anal->re);
+echo_("Regular Expression                          : " . $anal->input());
 echo_("Regular Expression Flags                    : " . implode(',',array_keys($anal->fl)));
+echo_("Reconstructed Regular Expression            : " . $anal->source());
 echo_("=============================================");
 echo_("Regular Expression Syntax Tree              : ");
 echo_(print_r($anal->tree(true), true));
+echo_("=============================================");
+echo_("Regular Expression (Named) Matched Groups   : ");
+echo_(print_r($groups, true));
 echo_("=============================================");
 echo_("Regular Expression Peek Characters          : ");
 echo_(print_r(array('positive'=>array_keys($peekChars['positive']),'negative'=>array_keys($peekChars['negative'])), true));
