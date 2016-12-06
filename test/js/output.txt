@@ -34,11 +34,9 @@ Regular Expression Syntax Tree              :
                                         "c",
                                         "d",
                                         "e"
-                                    ],
-                                    "flags": {}
+                                    ]
                                 }
-                            ],
-                            "flags": {}
+                            ]
                         },
                         "flags": {
                             "MatchOneOrMore": 1,
@@ -47,8 +45,7 @@ Regular Expression Syntax Tree              :
                             "isGreedy": 1
                         }
                     }
-                ],
-                "flags": {}
+                ]
             },
             "flags": {
                 "NamedGroup": 1,
@@ -58,8 +55,7 @@ Regular Expression Syntax Tree              :
         },
         {
             "type": "String",
-            "value": "fgh",
-            "flags": {}
+            "value": "fgh"
         },
         {
             "type": "Special",
@@ -72,11 +68,9 @@ Regular Expression Syntax Tree              :
         },
         {
             "type": "Comment",
-            "value": " a comment",
-            "flags": {}
+            "value": " a comment"
         }
-    ],
-    "flags": {}
+    ]
 }
 =============================================
 Regular Expression (Named) Matched Groups   : 
@@ -111,43 +105,43 @@ Regular Expression Minimum / Maximum Length :
 Regular Expression Sample Match Strings     : 
 [
     {
-        "sample": "AafghAa",
+        "sample": "dCFGHdC",
         "match": "yes",
         "groups": {
-            "1": "Aa",
-            "named_group": "Aa"
+            "1": "dC",
+            "named_group": "dC"
         }
     },
     {
-        "sample": "BAfghBA",
+        "sample": "bDFGHbD",
         "match": "yes",
         "groups": {
-            "1": "BA",
-            "named_group": "BA"
+            "1": "bD",
+            "named_group": "bD"
         }
     },
     {
-        "sample": "BBDfghBBD",
+        "sample": "AfghA",
         "match": "yes",
         "groups": {
-            "1": "BBD",
-            "named_group": "BBD"
+            "1": "A",
+            "named_group": "A"
         }
     },
     {
-        "sample": "cCFGHcC",
+        "sample": "ccfghcc",
         "match": "yes",
         "groups": {
-            "1": "cC",
-            "named_group": "cC"
+            "1": "cc",
+            "named_group": "cc"
         }
     },
     {
-        "sample": "cEFGHcE",
+        "sample": "BAdAfghBAdA",
         "match": "yes",
         "groups": {
-            "1": "cE",
-            "named_group": "cE"
+            "1": "BAdA",
+            "named_group": "BAdA"
         }
     }
 ]

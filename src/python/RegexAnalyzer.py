@@ -181,7 +181,10 @@ class Node():
                 'type': v.typeName,
                 'value': Node.toObjectStatic(v.val),
                 'flags': v.flags
-            } 
+            } if v.flags and len(v.flags) else {
+                'type': v.typeName,
+                'value': Node.toObjectStatic(v.val)
+            }
         elif is_array(v):
             return list(map(Node.toObjectStatic, v))
         return v
@@ -437,7 +440,7 @@ def map_any( ret, node, state ):
     
     elif (T_GROUP == type) and ('GroupIndex' in node.flags):
         sample = walk('', node.val, state)
-        state['group'][node.flags['GroupIndex']] = sample
+        state['group'][str(node.flags['GroupIndex'])] = sample
         state['ret'] = sample
         return None
     
@@ -466,7 +469,7 @@ def map_min( ret, node, state ):
     
     elif (T_GROUP == type) and ('GroupIndex' in node.flags):
         min = walk(0, node.val, state)
-        state['group'][node.flags['GroupIndex']] = min
+        state['group'][str(node.flags['GroupIndex'])] = min
         state['ret'] = min
         return None
     
@@ -509,7 +512,7 @@ def map_max( ret, node, state ):
     
     elif (T_GROUP == type) and ('GroupIndex' in node.flags):
         max = walk(0, node.val, state)
-        state['group'][node.flags['GroupIndex']] = max
+        state['group'][str(node.flags['GroupIndex'])] = max
         state['ret'] = max
         return None
     
@@ -543,7 +546,7 @@ def reduce_len( ret, node, state ):
         ret += node
         return ret
         
-    if (T_SPECIAL == node.type) and ('MatchEnd' not in node.flags):
+    if (T_SPECIAL == node.type) and ('MatchEnd' in node.flags):
         state['stop'] = 1
         return ret
         
@@ -565,7 +568,7 @@ def reduce_str( ret, node, state ):
         ret += node
         return ret
         
-    if (T_SPECIAL == node.type) and ('MatchEnd' not in node.flags):
+    if (T_SPECIAL == node.type) and ('MatchEnd' in node.flags):
         state['stop'] = 1
         return ret
         
@@ -908,7 +911,7 @@ def analyze_re( re_obj ):
             return Node(T_SPECIAL, str(flags[ "GroupIndex" ]), flags)
         
         elif "?#" == pre:
-            flags[ "Comment" ] = 1
+            
             re_obj.pos += 2
             word = ''
             lre = re_obj.len
@@ -1027,6 +1030,28 @@ def analyze_re( re_obj ):
                 flag[ _G.specialCharsEscaped[ch] ] = 1
                 sequence.append( Node(T_SPECIAL, ch, flag) )
             
+            
+            elif ('1' <= ch) and ('9' >= ch):
+            
+                if wordlen:
+                
+                    sequence.append( Node(T_STRING, word) )
+                    word = ''
+                    wordlen = 0
+                
+                word = ch
+                while re_obj.pos < lre:
+                    ch = re_obj.re[ re_obj.pos ]
+                    if ('0' <= ch) and ('9' >= ch):
+                        word += ch
+                        re_obj.pos += 1
+                    else: break
+                
+                flag = {}
+                flag[ 'BackReference' ] = 1
+                flag[ 'GroupIndex' ] = int(word, 10)
+                sequence.append( Node(T_SPECIAL, word, flag) )
+                word = ''
             
             else:
             
@@ -1229,14 +1254,18 @@ def analyze_re( re_obj ):
 # https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
 # https://docs.python.org/3/library/re.html
 # http://php.net/manual/en/reference.pcre.pattern.syntax.php
+# A simple regular expression analyzer
 class RegexAnalyzer:
+    """
+    RegexAnalyzer for Python
+    https://github.com/foo123/RegexAnalyzer
+    """
     
     VERSION = "0.6.0"
     
     Node = Node
     
-    # A simple (js-flavored) regular expression analyzer
-    def __init__(self, re=None, delim=None):
+    def __init__(self, re=None, delim='/'):
         self.ast = None
         self.re = None
         self.fl = None
@@ -1285,27 +1314,28 @@ class RegexAnalyzer:
         
         if re:
             
-            if not delim: delim = '/'
-            src = None
-            re = str(re)
+            if delim is False: delim = False
+            elif not delim: delim = '/'
+            re = str(re.pattern if is_regexp(re) else re)
             fl = {}
             l = len(re)
             
             # parse re flags, if any
-            while 0 < l:
-                ch = re[l-1]
-                if delim == ch:
-                    break
+            if delim:
+                while 0 < l:
+                    ch = re[l-1]
+                    if delim == ch:
+                        break
+                    else:
+                        fl[ ch ] = 1
+                        l -= 1
+                
+                if 0 < l:
+                    # remove re delimiters
+                    if delim == re[0] and delim == re[l-1]: re = re[1:l-1]
+                    else: re = re[0:l]
                 else:
-                    fl[ ch ] = 1
-                    l -= 1
-            
-            if 0 < l:
-                # remove re delimiters
-                if delim == re[0] and delim == re[l-1]:  re = re[1:l-1]
-                else: re = re[0:l]
-            else:
-                re = ''
+                    re = ''
             
             # re is different, reset the ast, etc
             if self.re != re: self.reset()
@@ -1353,7 +1383,7 @@ class RegexAnalyzer:
     def compile( self, flags=None ):
         if not self.re: return None
         flags = (self.fl if self.fl else {}) if not flags else flags
-        return re.compile(self.source(), re.I if ('i' in flags) or ('I' in flags) else None)
+        return re.compile(self.source(), (re.I if ('i' in flags) or ('I' in flags) else 0) | (re.M if ('m' in flags) or ('M' in flags) else 0) | (re.S if ('s' in flags) or ('S' in flags) else 0))
     
     def tree( self, flat=False ):
         if not self.re: return None

@@ -51,15 +51,19 @@ class RegexNode
     {
         if ($v instanceof RegexNode)
         {
-            return array(
+            $fl = (array)$v->flags;
+            return !empty($fl) ? array(
                 'type'=> $v->typeName,
                 'value'=> self::toObjectStatic($v->val),
                 'flags'=> $v->flags
+            ) : array(
+                'type'=> $v->typeName,
+                'value'=> self::toObjectStatic($v->val)
             ); 
         }
         elseif ( is_array($v) )
         {
-            return array_map(array('RegexNode','toObjectStatic'), $v);
+            return array_map(array(__CLASS__,'toObjectStatic'), $v);
         }
         return $v;
     }
@@ -1511,7 +1515,7 @@ class RegexAnalyzer
     }
     
     
-    // A simple (js-flavored) regular expression analyzer
+    // A simple regular expression analyzer
     public $ast = null;
     public $re = null;
     public $fl = null;
@@ -1521,7 +1525,7 @@ class RegexAnalyzer
     public $max = null;
     public $ch = null;
     
-    public function __construct( $re=null, $delim=null )
+    public function __construct( $re=null, $delim='/' )
     {
         if ( $re ) $this->input($re, $delim);
     }
@@ -1556,39 +1560,41 @@ class RegexAnalyzer
     }
     
     // alias
-    public function set($re=null, $delim=null)
+    public function set($re=null, $delim='/')
     {
         return $this->input($re, $delim);
     }
     
-    public function input($re=null, $delim=null) 
+    public function input($re=null, $delim='/') 
     {
         if ( !func_num_args() ) return $this->re;
         if ( $re )
         {
-            $delim = empty($delim) ? '/' : (string)$delim;
-            $src = null;
-            $re = strval($re); 
+            $delim = false === $delim ? false : (empty($delim) ? '/' : (string)$delim);
+            $re = (string)$re;
             $fl = array();
             $l = strlen($re);
             
-            // parse re flags, if any
-            while ( 0 < $l )
+            if ( $delim )
             {
-                $ch = $re[$l-1];
-                if ( $delim === $ch ) break;
-                else { $fl[ $ch ] = 1; $l--; }
-            }
-            
-            if ( 0 < $l )
-            {
-                // remove re delimiters
-                if ( $delim === $re[0] && $delim === $re[$l-1] ) $re = substr($re, 1, $l-2);
-                else $re = substr($re, 0, $l);
-            }
-            else
-            {
-                $re = '';
+                // parse re flags, if any
+                while ( 0 < $l )
+                {
+                    $ch = $re[$l-1];
+                    if ( $delim === $ch ) break;
+                    else { $fl[ $ch ] = 1; $l--; }
+                }
+                
+                if ( 0 < $l )
+                {
+                    // remove re delimiters
+                    if ( $delim === $re[0] && $delim === $re[$l-1] ) $re = substr($re, 1, $l-2);
+                    else $re = substr($re, 0, $l);
+                }
+                else
+                {
+                    $re = '';
+                }
             }
             
             // re is different, reset the ast, etc
@@ -1650,7 +1656,7 @@ class RegexAnalyzer
     {
         if ( null == $this->re ) return null;
         $flags = empty($flags) ? (!empty($this->fl) ? $this->fl : array()): (array)$flags;
-        $regexp = '/' . $this->source() . '/' . (!empty($flags['x'])||!empty($flags['X'])?'x':'').(!empty($flags['i'])||!empty($flags['I'])?'i':'').(!empty($flags['m'])||!empty($flags['M'])?'m':'').(!empty($flags['u'])||!empty($flags['U'])?'u':'');
+        $regexp = '/' . $this->source() . '/' . (!empty($flags['x'])?'x':'').(!empty($flags['X'])?'X':'').(!empty($flags['i'])||!empty($flags['I'])?'i':'').(!empty($flags['m'])||!empty($flags['M'])?'m':'').(!empty($flags['u'])?'u':'').(!empty($flags['U'])?'U':'').(!empty($flags['s'])?'s':'').(!empty($flags['S'])?'S':'');
         return $regexp;
     }
     

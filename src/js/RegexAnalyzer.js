@@ -182,10 +182,13 @@ function Node( type, value, flags )
 Node.toObjectStatic = function toObject( v ) {
     if (v instanceof Node)
     {
-        return {
+        return v.flags && Object.keys(v.flags).length ? {
             type: v.typeName,
             value: toObject(v.val),
             flags: v.flags
+        } : {
+            type: v.typeName,
+            value: toObject(v.val)
         }; 
     }
     else if (is_array(v))
@@ -1439,10 +1442,10 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
     }
 ;
 
-// A simple regular expression analyzer
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
 // https://docs.python.org/3/library/re.html
 // http://php.net/manual/en/reference.pcre.pattern.syntax.php
+// A simple regular expression analyzer
 var RegexAnalyzer = function RegexAnalyzer( re, delim ) {
     if ( !(this instanceof RegexAnalyzer) ) return new RegexAnalyzer(re, delim);
     if ( re ) this.input( re, delim );
@@ -1492,36 +1495,36 @@ RegexAnalyzer[PROTO] = {
         if ( !arguments.length ) return self.re;
         if ( re )
         {
-            delim = delim || '/';
-            var src, l, ch, fl = {};
-            src = /*is_regexp(re) ? re.source :*/ null;
+            delim = false === delim ? false : (delim || '/');
+            var l, ch, fl = {};
             re = re.toString( );
             l = re.length;
             
-            // parse re flags, if any
-            while ( 0 < l )
+            if ( delim )
             {
-                ch = re[CHAR](l-1);
-                if ( delim === ch ) break;
-                else { fl[ ch ] = 1; l--; }
-            }
-            
-            if ( 0 < l )
-            {
-                // remove re delimiters
-                if ( (delim === re[CHAR](0)) && (delim === re[CHAR](l-1)) ) re = re.slice(1, l-1);
-                else re = re.slice(0, l);
-            }
-            else
-            {
-                re = '';
+                // parse re flags, if any
+                while ( 0 < l )
+                {
+                    ch = re[CHAR](l-1);
+                    if ( delim === ch ) break;
+                    else { fl[ ch ] = 1; l--; }
+                }
+                
+                if ( 0 < l )
+                {
+                    // remove re delimiters
+                    if ( (delim === re[CHAR](0)) && (delim === re[CHAR](l-1)) ) re = re.slice(1, l-1);
+                    else re = re.slice(0, l);
+                }
+                else
+                {
+                    re = '';
+                }
             }
             
             // re is different, reset the ast, etc
             if ( self.re !== re ) self.reset();
             self.re = re; self.fl = fl;
-            // no need to reconstruct source, it is already regexp
-            //if ( null !== src ) { self.src = src; self.grp = {}; }
         }
         return self;
     },
@@ -1578,7 +1581,7 @@ RegexAnalyzer[PROTO] = {
         var self = this, regexp;
         if ( null == self.re ) return null;
         flags = flags || self.fl || {};
-        regexp = new RegExp(self.source(), (flags.g||flags.G?'g':'')+(flags.i||flags.I?'i':'')+(flags.m||flags.M?'m':''));
+        regexp = new RegExp(self.source(), (flags.g||flags.G?'g':'')+(flags.i||flags.I?'i':'')+(flags.m||flags.M?'m':'')+(flags.y||flags.Y?'y':''));
         regexp.$group = self.groups();
         return regexp;
     },

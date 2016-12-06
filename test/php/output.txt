@@ -46,16 +46,8 @@ Array
                                                                             [4] => e
                                                                         )
 
-                                                                    [flags] => stdClass Object
-                                                                        (
-                                                                        )
-
                                                                 )
 
-                                                        )
-
-                                                    [flags] => stdClass Object
-                                                        (
                                                         )
 
                                                 )
@@ -70,10 +62,6 @@ Array
 
                                         )
 
-                                )
-
-                            [flags] => stdClass Object
-                                (
                                 )
 
                         )
@@ -91,10 +79,6 @@ Array
                 (
                     [type] => String
                     [value] => fgh
-                    [flags] => stdClass Object
-                        (
-                        )
-
                 )
 
             [2] => Array
@@ -114,16 +98,8 @@ Array
                 (
                     [type] => Comment
                     [value] =>  a comment
-                    [flags] => stdClass Object
-                        (
-                        )
-
                 )
 
-        )
-
-    [flags] => stdClass Object
-        (
         )
 
 )
@@ -174,60 +150,60 @@ Array
 (
     [0] => Array
         (
-            [sample] => afgha
+            [sample] => cBBCFGHcBBC
             [match] => yes
             [groups] => Array
                 (
-                    [1] => a
-                    [named_group] => a
+                    [1] => cBBC
+                    [named_group] => cBBC
                 )
 
         )
 
     [1] => Array
         (
-            [sample] => eEFGHeE
+            [sample] => EfghE
             [match] => yes
             [groups] => Array
                 (
-                    [1] => eE
-                    [named_group] => eE
+                    [1] => E
+                    [named_group] => E
                 )
 
         )
 
     [2] => Array
         (
-            [sample] => adbEfghadbE
+            [sample] => BEfghBE
             [match] => yes
             [groups] => Array
                 (
-                    [1] => adbE
-                    [named_group] => adbE
+                    [1] => BE
+                    [named_group] => BE
                 )
 
         )
 
     [3] => Array
         (
-            [sample] => dAdaFGHdAda
+            [sample] => bbbfghbbb
             [match] => yes
             [groups] => Array
                 (
-                    [1] => dAda
-                    [named_group] => dAda
+                    [1] => bbb
+                    [named_group] => bbb
                 )
 
         )
 
     [4] => Array
         (
-            [sample] => bAfghbA
+            [sample] => BCfghBC
             [match] => yes
             [groups] => Array
                 (
-                    [1] => bA
-                    [named_group] => bA
+                    [1] => BC
+                    [named_group] => BC
                 )
 
         )

@@ -15,35 +15,31 @@ Reconstructed Regular Expression            : ([abcde]+)fgh\1
 
 Regular Expression Syntax Tree              : 
 
-{   'flags': {},
-    'type': 'Sequence',
+{   'type': 'Sequence',
     'value': [   {   'flags': {   'GroupIndex': 1,
                                   'GroupName': 'named_group',
                                   'NamedGroup': 1},
                      'type': 'Group',
-                     'value': {   'flags': {},
-                                  'type': 'Sequence',
+                     'value': {   'type': 'Sequence',
                                   'value': [   {   'flags': {   'MatchOneOrMore': 1,
                                                                 'isGreedy': 1,
                                                                 'max': -1,
                                                                 'min': 1},
                                                    'type': 'Quantifier',
-                                                   'value': {   'flags': {   },
-                                                                'type': 'CharacterGroup',
-                                                                'value': [   {   'flags': {   },
-                                                                                 'type': 'Characters',
+                                                   'value': {   'type': 'CharacterGroup',
+                                                                'value': [   {   'type': 'Characters',
                                                                                  'value': [   'a',
                                                                                               'b',
                                                                                               'c',
                                                                                               'd',
                                                                                               'e']}]}}]}},
-                 {'flags': {}, 'type': 'String', 'value': 'fgh'},
+                 {'type': 'String', 'value': 'fgh'},
                  {   'flags': {   'BackReference': 1,
                                   'GroupIndex': 1,
                                   'GroupName': 'named_group'},
                      'type': 'Special',
                      'value': '1'},
-                 {'flags': {}, 'type': 'Comment', 'value': ' a comment'}]}
+                 {'type': 'Comment', 'value': ' a comment'}]}
 
 =============================================
 
@@ -62,17 +58,27 @@ Regular Expression Peek Characters          :
 
 Regular Expression Minimum / Maximum Length : 
 
-{'maximum': 'unlimited', 'minimum': 4}
+{'maximum': 'unlimited', 'minimum': 5}
 
 =============================================
 
 Regular Expression Sample Match Strings     : 
 
-[   {'groups': {}, 'match': 'no', 'sample': 'cECCFGH'},
-    {'groups': {}, 'match': 'no', 'sample': 'CECaFGH'},
-    {'groups': {}, 'match': 'no', 'sample': 'EdDFGH'},
-    {'groups': {}, 'match': 'no', 'sample': 'BbECFGH'},
-    {'groups': {}, 'match': 'no', 'sample': 'bcFGH'}]
+[   {   'groups': {'1': 'DCbd', 'named_group': 'DCbd'},
+        'match': 'yes',
+        'sample': 'DCbdfghDCbd'},
+    {   'groups': {'1': 'BaC', 'named_group': 'BaC'},
+        'match': 'yes',
+        'sample': 'BaCfghBaC'},
+    {   'groups': {'1': 'C', 'named_group': 'C'},
+        'match': 'yes',
+        'sample': 'CfghC'},
+    {   'groups': {'1': 'bDD', 'named_group': 'bDD'},
+        'match': 'yes',
+        'sample': 'bDDFGHbDD'},
+    {   'groups': {'1': 'aE', 'named_group': 'aE'},
+        'match': 'yes',
+        'sample': 'aEFGHaE'}]
 
 =============================================
 
