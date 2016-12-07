@@ -64,21 +64,21 @@ Regular Expression Minimum / Maximum Length :
 
 Regular Expression Sample Match Strings     : 
 
-[   {   'groups': {'1': 'DCbd', 'named_group': 'DCbd'},
+[   {   'groups': {'1': 'Bc', 'named_group': 'Bc'},
         'match': 'yes',
-        'sample': 'DCbdfghDCbd'},
-    {   'groups': {'1': 'BaC', 'named_group': 'BaC'},
+        'sample': 'BcfghBc'},
+    {   'groups': {'1': 'aAA', 'named_group': 'aAA'},
         'match': 'yes',
-        'sample': 'BaCfghBaC'},
-    {   'groups': {'1': 'C', 'named_group': 'C'},
+        'sample': 'aAAFGHaAA'},
+    {   'groups': {'1': 'a', 'named_group': 'a'},
         'match': 'yes',
-        'sample': 'CfghC'},
-    {   'groups': {'1': 'bDD', 'named_group': 'bDD'},
+        'sample': 'afgha'},
+    {   'groups': {'1': 'BCB', 'named_group': 'BCB'},
         'match': 'yes',
-        'sample': 'bDDFGHbDD'},
-    {   'groups': {'1': 'aE', 'named_group': 'aE'},
+        'sample': 'BCBfghBCB'},
+    {   'groups': {'1': 'EDDc', 'named_group': 'EDDc'},
         'match': 'yes',
-        'sample': 'aEFGHaE'}]
+        'sample': 'EDDcFGHEDDc'}]
 
 =============================================
 

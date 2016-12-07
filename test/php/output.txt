@@ -150,60 +150,60 @@ Array
 (
     [0] => Array
         (
-            [sample] => cBBCFGHcBBC
+            [sample] => efghe
             [match] => yes
             [groups] => Array
                 (
-                    [1] => cBBC
-                    [named_group] => cBBC
+                    [1] => e
+                    [named_group] => e
                 )
 
         )
 
     [1] => Array
         (
-            [sample] => EfghE
+            [sample] => EbfghEb
             [match] => yes
             [groups] => Array
                 (
-                    [1] => E
-                    [named_group] => E
+                    [1] => Eb
+                    [named_group] => Eb
                 )
 
         )
 
     [2] => Array
         (
-            [sample] => BEfghBE
+            [sample] => BefghBe
             [match] => yes
             [groups] => Array
                 (
-                    [1] => BE
-                    [named_group] => BE
+                    [1] => Be
+                    [named_group] => Be
                 )
 
         )
 
     [3] => Array
         (
-            [sample] => bbbfghbbb
+            [sample] => CfghC
             [match] => yes
             [groups] => Array
                 (
-                    [1] => bbb
-                    [named_group] => bbb
+                    [1] => C
+                    [named_group] => C
                 )
 
         )
 
     [4] => Array
         (
-            [sample] => BCfghBC
+            [sample] => CAFGHCA
             [match] => yes
             [groups] => Array
                 (
-                    [1] => BC
-                    [named_group] => BC
+                    [1] => CA
+                    [named_group] => CA
                 )
 
         )

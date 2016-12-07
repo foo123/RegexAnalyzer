@@ -132,22 +132,53 @@ class RegexNode
 class RegexAnalyzer
 {
     const VERSION = "0.6.0";
-    const T_SEQUENCE = 1; 
-    const T_ALTERNATION = 2; 
-    const T_GROUP = 3;
-    const T_QUANTIFIER = 4; 
-    const T_UNICODECHAR = 5; 
-    const T_HEXCHAR = 6;
-    const T_SPECIAL = 7;
-    const T_CHARGROUP = 8; 
-    const T_CHARS = 9;
-    const T_CHARRANGE = 10; 
-    const T_STRING = 11;
-    const T_COMMENT = 12;
+    const T_SEQUENCE = 1;
+    const T_ALTERNATION = 2;
+    const T_GROUP = 4;
+    const T_CHARGROUP = 8;
+    const T_QUANTIFIER = 16;
+    const T_UNICODECHAR = 32;
+    const T_HEXCHAR = 64;
+    const T_SPECIAL = 128;
+    const T_CHARS = 256;
+    const T_CHARRANGE = 512;
+    const T_STRING = 1024;
+    const T_COMMENT = 2048;
     const ESC = '\\';
     
-    public static $specialChars = null;
-    public static $specialCharsEscaped = null;
+    public static $specialChars = array(
+        "." => "MatchAnyChar",
+        "|" => "MatchEither",
+        "?" => "MatchZeroOrOne",
+        "*" => "MatchZeroOrMore",
+        "+" => "MatchOneOrMore",
+        "^" => "MatchStart",
+        "$" => "MatchEnd",
+        "{" => "StartRepeats",
+        "}" => "EndRepeats",
+        "(" => "StartGroup",
+        ")" => "EndGroup",
+        "[" => "StartCharGroup",
+        "]" => "EndCharGroup"
+    );
+    public static $specialCharsEscaped = array(
+        "\\" => "ESC",
+        "/" => "/",
+        "0" => "NULChar",
+        "f" => "FormFeed",
+        "n" => "LineFeed",
+        "r" => "CarriageReturn",
+        "t" => "HorizontalTab",
+        "v" => "VerticalTab",
+        "b" => "MatchWordBoundary",
+        "B" => "MatchNonWordBoundary",
+        "s" => "MatchSpaceChar",
+        "S" => "MatchNonSpaceChar",
+        "w" => "MatchWordChar",
+        "W" => "MatchNonWordChar",
+        "d" => "MatchDigitChar",
+        "D" => "MatchNonDigitChar"
+    );
     public static $BSPACES = null;
     public static $SPACES = null;
     public static $PUNCTS = null;
@@ -168,39 +199,6 @@ class RegexAnalyzer
         static $inited = false;
         if ( $inited ) return;
         
-        self::$specialChars = array(
-            "." => "MatchAnyChar",
-            "|" => "MatchEither",
-            "?" => "MatchZeroOrOne",
-            "*" => "MatchZeroOrMore",
-            "+" => "MatchOneOrMore",
-            "^" => "MatchStart",
-            "$" => "MatchEnd",
-            "{" => "StartRepeats",
-            "}" => "EndRepeats",
-            "(" => "StartGroup",
-            ")" => "EndGroup",
-            "[" => "StartCharGroup",
-            "]" => "EndCharGroup"
-        );
-        self::$specialCharsEscaped = array(
-            "\\" => "EscapeChar",
-            "/" => "/",
-            "0" => "NULChar",
-            "f" => "FormFeed",
-            "n" => "LineFeed",
-            "r" => "CarriageReturn",
-            "t" => "HorizontalTab",
-            "v" => "VerticalTab",
-            "b" => "MatchWordBoundary",
-            "B" => "MatchNonWordBoundary",
-            "s" => "MatchSpaceChar",
-            "S" => "MatchNonSpaceChar",
-            "w" => "MatchWordChar",
-            "W" => "MatchNonWordChar",
-            "d" => "MatchDigitChar",
-            "D" => "MatchNonDigitChar"
-        );
         self::$BSPACES = array("\r","\n");
         self::$SPACES = array(" ","\t","\v");
         self::$PUNCTS = array("~","!","@","#","$","%","^","&","*","(",")","-","+","=","[","]","{","}","\\","|",";",":",",",".","/","<",">","?");
@@ -443,9 +441,12 @@ class RegexAnalyzer
             $ret = call_user_func( $state->reduce, $ret, $node, $state );
         }
         
-        elseif ( (self::T_ALTERNATION === $type) || (self::T_SEQUENCE === $type) ||
-            (self::T_CHARGROUP === $type) || (self::T_GROUP === $type) || (self::T_QUANTIFIER === $type)
-        )
+        elseif ( $state->IGNORE & $type )
+        {
+            /* nothing */
+        }
+        
+        elseif ( $state->MAP & $type )
         {
             $r = call_user_func( $state->map, $ret, $node, $state );
             if ( isset($state->ret) )
@@ -469,17 +470,9 @@ class RegexAnalyzer
             }
         }
         
-        elseif ( (self::T_CHARS === $type) || (self::T_CHARRANGE === $type) ||
-                (self::T_UNICODECHAR === $type) || (self::T_HEXCHAR === $type) ||
-                (self::T_SPECIAL === $type) || (self::T_STRING === $type)
-        )
+        elseif ( $state->REDUCE & $type )
         {
             $ret = call_user_func( $state->reduce, $ret, $node, $state );
-        }
-        
-        elseif ( self::T_COMMENT === $type )
-        {
-            /* nothing */
         }
         
         $state->node = null;
@@ -801,7 +794,7 @@ class RegexAnalyzer
             $part = $node->val;
             if (isset($node->flags->BackReference))
             {
-                $ret .= isset($state->group[$part]) ? $state->group[$part]:'';
+                $ret .= isset($state->group[$part]) ? $state->group[$part] : '';
                 return $ret;
             }
             elseif ('D' === $part)
@@ -834,7 +827,7 @@ class RegexAnalyzer
             }
             else
             {
-                $sample = array('\\' . $part);
+                $sample = array(self::ESC . $part);
             }
         }
         elseif ( self::T_STRING === $type )
@@ -877,11 +870,11 @@ class RegexAnalyzer
             $range = array($node->val[0],$node->val[1]);
             if ( $state->escaped )
             {
-                if ( ($range[0] instanceof RegexNode) && (self::T_UNICODECHAR === $range[0]->type) ) $range[0] = '\\u'.self::pad($range[0]->flags->Code,4);
-                elseif ( ($range[0] instanceof RegexNode) && (self::T_HEXCHAR === $range[0]->type) ) $range[0] = '\\x'.self::pad($range[0]->flags->Code,2);
+                if ( ($range[0] instanceof RegexNode) && (self::T_UNICODECHAR === $range[0]->type) ) $range[0] = self::ESC.'u'.self::pad($range[0]->flags->Code,4);
+                elseif ( ($range[0] instanceof RegexNode) && (self::T_HEXCHAR === $range[0]->type) ) $range[0] = self::ESC.'x'.self::pad($range[0]->flags->Code,2);
                 else $range[0] = self::esc_re($range[0], self::ESC, 1);
-                if ( ($range[1] instanceof RegexNode) && (self::T_UNICODECHAR === $range[1]->type) ) $range[1] = '\\u'.self::pad($range[1]->flags->Code,4);
-                elseif ( ($range[1] instanceof RegexNode) && (self::T_HEXCHAR === $range[1]->type) ) $range[1] = '\\x'.self::pad($range[1]->flags->Code,2);
+                if ( ($range[1] instanceof RegexNode) && (self::T_UNICODECHAR === $range[1]->type) ) $range[1] = self::ESC.'u'.self::pad($range[1]->flags->Code,4);
+                elseif ( ($range[1] instanceof RegexNode) && (self::T_HEXCHAR === $range[1]->type) ) $range[1] = self::ESC.'x'.self::pad($range[1]->flags->Code,2);
                 else $range[1] = self::esc_re($range[1], self::ESC, 1);
             }
             else
@@ -893,21 +886,21 @@ class RegexAnalyzer
         }
         elseif ( self::T_UNICODECHAR === $type )
         {
-            $ret->src .= $state->escaped ? '\\u'.self::pad($node->flags->Code,4) : $node->flags->Char;
+            $ret->src .= $state->escaped ? self::ESC.'u'.self::pad($node->flags->Code,4) : $node->flags->Char;
         }
         elseif ( self::T_HEXCHAR === $type )
         {
-            $ret->src .= $state->escaped ? '\\x'.self::pad($node->flags->Code,2) : $node->flags->Char;
+            $ret->src .= $state->escaped ? self::ESC.'x'.self::pad($node->flags->Code,2) : $node->flags->Char;
         }
         elseif ( self::T_SPECIAL === $type )
         {
             if ( !empty($node->flags->BackReference) )
             {
-                $ret->src .= '\\'.$node->val/*.'(?#)'*/;
+                $ret->src .= self::ESC.$node->val/*.'(?#)'*/;
             }
             else
             {
-                $ret->src .= empty($node->flags->MatchStart) && empty($node->flags->MatchEnd) ? ('\\'.$node->val) : (''.$node->val);
+                $ret->src .= empty($node->flags->MatchStart) && empty($node->flags->MatchEnd) ? (self::ESC.$node->val) : (''.$node->val);
             }
         }
         elseif ( self::T_STRING === $type )
@@ -965,7 +958,7 @@ class RegexAnalyzer
             }
             else
             {
-                $ret[$peek]['\\' . $part] = 1;
+                $ret[$peek][self::ESC . $part] = 1;
             }
         }
         elseif ( self::T_STRING === $type )
@@ -1627,6 +1620,9 @@ class RegexAnalyzer
         if ( null === $this->src )
         {
             $state = (object)array(
+                'MAP'                 => self::T_SEQUENCE|self::T_ALTERNATION|self::T_GROUP|self::T_CHARGROUP|self::T_QUANTIFIER,
+                'REDUCE'              => self::T_UNICODECHAR|self::T_HEXCHAR|self::T_SPECIAL|self::T_CHARS|self::T_CHARRANGE|self::T_STRING,
+                'IGNORE'              => self::T_COMMENT,
                 'map'                 => array(__CLASS__,'map_src'),
                 'reduce'              => array(__CLASS__,'reduce_src'),
                 'escaped'             => false !== $escaped,
@@ -1656,8 +1652,7 @@ class RegexAnalyzer
     {
         if ( null == $this->re ) return null;
         $flags = empty($flags) ? (!empty($this->fl) ? $this->fl : array()): (array)$flags;
-        $regexp = '/' . $this->source() . '/' . (!empty($flags['x'])?'x':'').(!empty($flags['X'])?'X':'').(!empty($flags['i'])||!empty($flags['I'])?'i':'').(!empty($flags['m'])||!empty($flags['M'])?'m':'').(!empty($flags['u'])?'u':'').(!empty($flags['U'])?'U':'').(!empty($flags['s'])?'s':'').(!empty($flags['S'])?'S':'');
-        return $regexp;
+        return '/' . $this->source() . '/' . (!empty($flags['x'])?'x':'').(!empty($flags['X'])?'X':'').(!empty($flags['i'])||!empty($flags['I'])?'i':'').(!empty($flags['m'])||!empty($flags['M'])?'m':'').(!empty($flags['u'])?'u':'').(!empty($flags['U'])?'U':'').(!empty($flags['s'])?'s':'').(!empty($flags['S'])?'S':'');
     }
     
     public function tree( $flat=false ) 
@@ -1673,6 +1668,9 @@ class RegexAnalyzer
         if ( null == $this->re ) return null;
         if ( null === $this->ast ) $this->analyze( );
         $state = (object)array(
+            'MAP'               => self::T_SEQUENCE|self::T_ALTERNATION|self::T_GROUP|self::T_CHARGROUP|self::T_QUANTIFIER,
+            'REDUCE'            => self::T_UNICODECHAR|self::T_HEXCHAR|self::T_SPECIAL|self::T_CHARS|self::T_CHARRANGE|self::T_STRING,
+            'IGNORE'            => self::T_COMMENT,
             'map'               => array(__CLASS__, 'map_any'),
             'reduce'            => array(__CLASS__, 'reduce_str'),
             'maxLength'         => (int)$maxlen,
@@ -1701,6 +1699,9 @@ class RegexAnalyzer
         if ( null === $this->min )
         {
             $state = (object)array(
+                'MAP'               => self::T_SEQUENCE|self::T_ALTERNATION|self::T_GROUP|self::T_CHARGROUP|self::T_QUANTIFIER,
+                'REDUCE'            => self::T_UNICODECHAR|self::T_HEXCHAR|self::T_SPECIAL|self::T_CHARS|self::T_CHARRANGE|self::T_STRING,
+                'IGNORE'            => self::T_COMMENT,
                 'map'               => array(__CLASS__, 'map_min'),
                 'reduce'            => array(__CLASS__, 'reduce_len'),
                 'group'             => array()
@@ -1722,6 +1723,9 @@ class RegexAnalyzer
         if ( null === $this->max )
         {
             $state = (object)array(
+                'MAP'               => self::T_SEQUENCE|self::T_ALTERNATION|self::T_GROUP|self::T_CHARGROUP|self::T_QUANTIFIER,
+                'REDUCE'            => self::T_UNICODECHAR|self::T_HEXCHAR|self::T_SPECIAL|self::T_CHARS|self::T_CHARRANGE|self::T_STRING,
+                'IGNORE'            => self::T_COMMENT,
                 'map'               => array(__CLASS__, 'map_max'),
                 'reduce'            => array(__CLASS__, 'reduce_len'),
                 'group'             => array()
@@ -1743,6 +1747,9 @@ class RegexAnalyzer
         if ( null === $this->ch )
         {
             $state = (object)array(
+                'MAP'               => self::T_SEQUENCE|self::T_ALTERNATION|self::T_GROUP|self::T_CHARGROUP|self::T_QUANTIFIER,
+                'REDUCE'            => self::T_UNICODECHAR|self::T_HEXCHAR|self::T_SPECIAL|self::T_CHARS|self::T_CHARRANGE|self::T_STRING,
+                'IGNORE'            => self::T_COMMENT,
                 'map'               => array(__CLASS__, 'map_1st'),
                 'reduce'            => array(__CLASS__, 'reduce_peek'),
                 'group'             => array()
@@ -1799,13 +1806,13 @@ class RegexAnalyzer
                     $cases[ $this->specialChars['$'] ] = 1;
                 }*/
                 
-                else if ( '\\' !== $c[0] && $isCaseInsensitive )
+                else if ( (self::ESC !== $c[0]) && $isCaseInsensitive )
                 {
                     $cases[ strtolower($c) ] = 1;
                     $cases[ strtoupper($c) ] = 1;
                 }
                 
-                else if ( '\\' === $c[0] )
+                else if ( self::ESC === $c[0] )
                 {
                     unset( $p[$c] );
                 }

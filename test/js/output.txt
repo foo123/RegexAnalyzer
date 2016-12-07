@@ -105,43 +105,43 @@ Regular Expression Minimum / Maximum Length :
 Regular Expression Sample Match Strings     : 
 [
     {
-        "sample": "dCFGHdC",
+        "sample": "ACbfghACb",
         "match": "yes",
         "groups": {
-            "1": "dC",
-            "named_group": "dC"
+            "1": "ACb",
+            "named_group": "ACb"
         }
     },
     {
-        "sample": "bDFGHbD",
+        "sample": "bbCFGHbbC",
         "match": "yes",
         "groups": {
-            "1": "bD",
-            "named_group": "bD"
+            "1": "bbC",
+            "named_group": "bbC"
         }
     },
     {
-        "sample": "AfghA",
+        "sample": "CDfghCD",
         "match": "yes",
         "groups": {
-            "1": "A",
-            "named_group": "A"
+            "1": "CD",
+            "named_group": "CD"
         }
     },
     {
-        "sample": "ccfghcc",
+        "sample": "dDcfghdDc",
         "match": "yes",
         "groups": {
-            "1": "cc",
-            "named_group": "cc"
+            "1": "dDc",
+            "named_group": "dDc"
         }
     },
     {
-        "sample": "BAdAfghBAdA",
+        "sample": "deCfghdeC",
         "match": "yes",
         "groups": {
-            "1": "BAdA",
-            "named_group": "BAdA"
+            "1": "deC",
+            "named_group": "deC"
         }
     }
 ]

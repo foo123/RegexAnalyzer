@@ -26,9 +26,9 @@ else if ( !(name in root) ) /* Browser/WebWorker/.. */
 var __version__ = "0.6.0",
 
     PROTO = 'prototype', Obj = Object, Arr = Array, /*Str = String,*/ 
-    Keys = Obj.keys, to_string = Obj[PROTO].toString, 
+    Keys = Obj.keys, to_string = Obj[PROTO].toString, hasOwnProperty = Obj[PROTO].hasOwnProperty,
     fromCharCode = String.fromCharCode, CHAR = 'charAt', CHARCODE = 'charCodeAt', toJSON = JSON.stringify,
-    INF = Infinity, HAS = 'hasOwnProperty', ESC = '\\',
+    INF = Infinity, ESC = '\\',
     specialChars = {
         "." : "MatchAnyChar",
         "|" : "MatchEither",
@@ -67,7 +67,7 @@ var __version__ = "0.6.0",
         \uhhhh matches the Unicode character with four characters of hexadecimal code hhhh.        
     */
     specialCharsEscaped = {
-        "\\" : "EscapeChar",
+        "\\" : "ESC",
         "/" : "/",
         "0" : "NULChar",
         "f" : "FormFeed",
@@ -84,11 +84,24 @@ var __version__ = "0.6.0",
         "d" : "MatchDigitChar",
         "D" : "MatchNonDigitChar"
     },
-    T_SEQUENCE = 1, T_ALTERNATION = 2, T_GROUP = 3,
-    T_QUANTIFIER = 4, T_UNICODECHAR = 5, T_HEXCHAR = 6,
-    T_SPECIAL = 7, T_CHARGROUP = 8, T_CHARS = 9,
-    T_CHARRANGE = 10, T_STRING = 11, T_COMMENT = 12;
+    T_SEQUENCE = 1,
+    T_ALTERNATION = 2,
+    T_GROUP = 4,
+    T_CHARGROUP = 8,
+    T_QUANTIFIER = 16,
+    T_UNICODECHAR = 32,
+    T_HEXCHAR = 64,
+    T_SPECIAL = 128,
+    T_CHARS = 256,
+    T_CHARRANGE = 512,
+    T_STRING = 1024,
+    T_COMMENT = 2048
+;
 
+function HAS( o, x )
+{
+    return hasOwnProperty.call(o, x);
+}
 function is_array( x )
 {
     return (x instanceof Array) || ('[object Array]' === to_string.call(x));
@@ -108,7 +121,7 @@ function array( x )
 function clone( obj, cloned )
 {
     cloned = cloned || {};
-    for (var p in obj) if ( obj[HAS](p) ) cloned[p] = obj[p];
+    for (var p in obj) if ( HAS(obj,p) ) cloned[p] = obj[p];
     return cloned;
 }
 function RE_OBJ( re )
@@ -275,7 +288,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             }
             else
             {
-                for (p in p2) if ( p2[HAS](p) ) p1[p] = 1;
+                for (p in p2) if ( HAS(p2,p) ) p1[p] = 1;
             }
         }
         return p1;
@@ -393,9 +406,12 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             ret = state.reduce( ret, node, state );
         }
         
-        else if ( (T_ALTERNATION === type) || (T_SEQUENCE === type) ||
-            (T_CHARGROUP === type) || (T_GROUP === type) || (T_QUANTIFIER === type)
-        )
+        else if ( state.IGNORE & type )
+        {
+            /* nothing */
+        }
+        
+        else if ( state.MAP & type )
         {
             r = state.map( ret, node, state );
             if ( null != state.ret )
@@ -419,17 +435,9 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             }
         }
         
-        else if ( (T_CHARS === type) || (T_CHARRANGE === type) ||
-                (T_UNICODECHAR === type) || (T_HEXCHAR === type) ||
-                (T_SPECIAL === type) || (T_STRING === type)
-        )
+        else if ( state.REDUCE & type )
         {
             ret = state.reduce( ret, node, state );
-        }
-        
-        else if ( T_COMMENT === type )
-        {
-            /* nothing */
         }
         
         state.node = null;
@@ -738,7 +746,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             var part = node.val;
             if (node.flags.BackReference)
             {
-                ret += state.group[HAS](part) ? state.group[part] : '';
+                ret += HAS(state.group,part) ? state.group[part] : '';
                 return ret;
             }
             else if ('D' === part)
@@ -771,7 +779,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             }
             else
             {
-                sample = ['\\' + part];
+                sample = [ESC + part];
             }
         }
         else if ( T_STRING === type )
@@ -813,11 +821,11 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             var range = [node.val[0],node.val[1]];
             if ( state.escaped )
             {
-                if ( T_UNICODECHAR === range[0].type ) range[0] = '\\u'+pad(range[0].flags.Code,4);
-                else if ( T_HEXCHAR === range[0].type ) range[0] = '\\x'+pad(range[0].flags.Code,2);
+                if ( T_UNICODECHAR === range[0].type ) range[0] = ESC+'u'+pad(range[0].flags.Code,4);
+                else if ( T_HEXCHAR === range[0].type ) range[0] = ESC+'x'+pad(range[0].flags.Code,2);
                 else range[0] = esc_re(range[0], ESC, 1);
-                if ( T_UNICODECHAR === range[1].type ) range[1] = '\\u'+pad(range[1].flags.Code,4);
-                else if ( T_HEXCHAR === range[1].type ) range[1] = '\\x'+pad(range[1].flags.Code,2);
+                if ( T_UNICODECHAR === range[1].type ) range[1] = ESC+'u'+pad(range[1].flags.Code,4);
+                else if ( T_HEXCHAR === range[1].type ) range[1] = ESC+'x'+pad(range[1].flags.Code,2);
                 else range[1] = esc_re(range[1], ESC, 1);
             }
             else
@@ -829,21 +837,21 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
         }
         else if ( T_UNICODECHAR === type )
         {
-            ret.src += state.escaped ? '\\u'+pad(node.flags.Code,4) : node.flags.Char;
+            ret.src += state.escaped ? ESC+'u'+pad(node.flags.Code,4) : node.flags.Char;
         }
         else if ( T_HEXCHAR === type )
         {
-            ret.src += state.escaped ? '\\x'+pad(node.flags.Code,2) : node.flags.Char;
+            ret.src += state.escaped ? ESC+'x'+pad(node.flags.Code,2) : node.flags.Char;
         }
         else if ( T_SPECIAL === type )
         {
             if ( node.flags.BackReference )
             {
-                ret.src += '\\'+node.val;
+                ret.src += ESC+node.val;
             }
             else
             {
-                ret.src += !node.flags.MatchStart && !node.flags.MatchEnd ? ('\\'+node.val) : (''+node.val);
+                ret.src += !node.flags.MatchStart && !node.flags.MatchEnd ? (ESC+node.val) : (''+node.val);
             }
         }
         else if ( T_STRING === type )
@@ -902,7 +910,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             }
             else
             {
-                ret[peek]['\\' + part] = 1;
+                ret[peek][ESC + part] = 1;
             }
         }
         else if ( T_STRING === type )
@@ -1036,7 +1044,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                         sequence.push( ch );
                     }
                     
-                    else if ( specialCharsEscaped[HAS](ch) && ('/' !== ch) )
+                    else if ( HAS(specialCharsEscaped,ch) && ('/' !== ch) )
                     {
                         if ( chars.length )
                         {
@@ -1116,7 +1124,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                     if ( ")" === ch ) break;
                     flags[ "GroupName" ] += ch;
                 }
-                flags[ "GroupIndex" ] = re_obj.group[HAS](flags[ "GroupName" ]) ? re_obj.group[flags[ "GroupName" ]] : null;
+                flags[ "GroupIndex" ] = HAS(re_obj.group,flags[ "GroupName" ]) ? re_obj.group[flags[ "GroupName" ]] : null;
                 return Node(T_SPECIAL, String(flags[ "GroupIndex" ]), flags);
             }
             
@@ -1233,7 +1241,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                     sequence.push( Node(T_HEXCHAR, m[0], {"Char": fromCharCode(parseInt(m[1], 16)), "Code": m[1]}) );
                 }
                 
-                else if ( specialCharsEscaped[HAS](ch) && ('/' !== ch) )
+                else if ( HAS(specialCharsEscaped,ch) && ('/' !== ch) )
                 {
                     if ( wordlen )
                     {
@@ -1402,7 +1410,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                 }
             
                 // special characters like ^, $, ., etc..
-                else if ( specialChars[HAS](ch) )
+                else if ( HAS(specialChars,ch) )
                 {
                     if ( wordlen )
                     {
@@ -1552,6 +1560,9 @@ RegexAnalyzer[PROTO] = {
         if ( null === self.src )
         {
             state = {
+                MAP                 : T_SEQUENCE|T_ALTERNATION|T_GROUP|T_CHARGROUP|T_QUANTIFIER,
+                REDUCE              : T_UNICODECHAR|T_HEXCHAR|T_SPECIAL|T_CHARS|T_CHARRANGE|T_STRING,
+                IGNORE              : T_COMMENT,
                 map                 : map_src,
                 reduce              : reduce_src,
                 escaped             : false !== escaped,
@@ -1578,12 +1589,10 @@ RegexAnalyzer[PROTO] = {
     },
     
     compile: function( flags ) {
-        var self = this, regexp;
+        var self = this;
         if ( null == self.re ) return null;
         flags = flags || self.fl || {};
-        regexp = new RegExp(self.source(), (flags.g||flags.G?'g':'')+(flags.i||flags.I?'i':'')+(flags.m||flags.M?'m':'')+(flags.y||flags.Y?'y':''));
-        regexp.$group = self.groups();
-        return regexp;
+        return new RegExp(self.source(), (flags.g||flags.G?'g':'')+(flags.i||flags.I?'i':'')+(flags.m||flags.M?'m':'')+(flags.y||flags.Y?'y':''));
     },
     
     tree: function( flat ) {
@@ -1599,6 +1608,9 @@ RegexAnalyzer[PROTO] = {
         if ( null == self.re ) return null;
         if ( null === self.ast ) self.analyze( );
         state = {
+            MAP                 : T_SEQUENCE|T_ALTERNATION|T_GROUP|T_CHARGROUP|T_QUANTIFIER,
+            REDUCE              : T_UNICODECHAR|T_HEXCHAR|T_SPECIAL|T_CHARS|T_CHARRANGE|T_STRING,
+            IGNORE              : T_COMMENT,
             map                 : map_any,
             reduce              : reduce_str,
             maxLength           : (maxlen|0) || 1,
@@ -1627,6 +1639,9 @@ RegexAnalyzer[PROTO] = {
         if ( null === self.min )
         {
             state = {
+                MAP                 : T_SEQUENCE|T_ALTERNATION|T_GROUP|T_CHARGROUP|T_QUANTIFIER,
+                REDUCE              : T_UNICODECHAR|T_HEXCHAR|T_SPECIAL|T_CHARS|T_CHARRANGE|T_STRING,
+                IGNORE              : T_COMMENT,
                 map                 : map_min,
                 reduce              : reduce_len,
                 group               : {}
@@ -1648,6 +1663,9 @@ RegexAnalyzer[PROTO] = {
         if ( null === self.max )
         {
             state = {
+                MAP                 : T_SEQUENCE|T_ALTERNATION|T_GROUP|T_CHARGROUP|T_QUANTIFIER,
+                REDUCE              : T_UNICODECHAR|T_HEXCHAR|T_SPECIAL|T_CHARS|T_CHARRANGE|T_STRING,
+                IGNORE              : T_COMMENT,
                 map                 : map_max,
                 reduce              : reduce_len,
                 group               : {}
@@ -1669,9 +1687,12 @@ RegexAnalyzer[PROTO] = {
         if ( null === self.ch )
         {
             state = {
+                MAP                 : T_SEQUENCE|T_ALTERNATION|T_GROUP|T_CHARGROUP|T_QUANTIFIER,
+                REDUCE              : T_UNICODECHAR|T_HEXCHAR|T_SPECIAL|T_CHARS|T_CHARRANGE|T_STRING,
+                IGNORE              : T_COMMENT,
                 map                 : map_1st,
                 reduce              : reduce_peek,
-                group               : {}
+                group               : {},
             };
             self.ch = walk({positive:{},negative:{}}, self.ast, state);
         }
@@ -1720,13 +1741,13 @@ RegexAnalyzer[PROTO] = {
                     cases[ specialChars['$'] ] = 1;
                 }*/
                 
-                else if ( '\\' !== c[CHAR](0) && isCaseInsensitive )
+                else if ( (ESC !== c[CHAR](0)) && isCaseInsensitive )
                 {
                     cases[ c.toLowerCase() ] = 1;
                     cases[ c.toUpperCase() ] = 1;
                 }
                 
-                else if ( '\\' === c[CHAR](0) )
+                else if ( ESC === c[CHAR](0) )
                 {
                     delete p[c];
                 }
@@ -1739,12 +1760,14 @@ RegexAnalyzer[PROTO] = {
 // alias
 RegexAnalyzer[PROTO].set = RegexAnalyzer[PROTO].input;
 
+/*
 // custom method to access named groups feature, if any
 RegExp[PROTO].$group = null;
 RegExp[PROTO].group = function( group ){
     group = group || 0;
     return this.$group && this.$group.hasOwnProperty(group) ? this.$group[group] : group;
 };
+*/
 
 /* export the module */
 return RegexAnalyzer;

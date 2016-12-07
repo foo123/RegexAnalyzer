@@ -96,16 +96,16 @@ ALL = SPACES+PUNCTS+DIGITS+ALPHAS
 
 T_SEQUENCE = 1
 T_ALTERNATION = 2
-T_GROUP = 3
-T_QUANTIFIER = 4
-T_UNICODECHAR = 5
-T_HEXCHAR = 6
-T_SPECIAL = 7
+T_GROUP = 4
 T_CHARGROUP = 8
-T_CHARS = 9
-T_CHARRANGE = 10
-T_STRING = 11
-T_COMMENT = 12
+T_QUANTIFIER = 16
+T_UNICODECHAR = 32
+T_HEXCHAR = 64
+T_SPECIAL = 128
+T_CHARS = 256
+T_CHARRANGE = 512
+T_STRING = 1024
+T_COMMENT = 2048
 ESC = '\\'
 
 class _G():
@@ -125,7 +125,7 @@ class _G():
         "]" : "EndCharGroup"
     }
     specialCharsEscaped = {
-        "\\" : "EscapeChar",
+        "\\" : "ESC",
         "/" : "/",
         "0" : "NULChar",
         "f" : "FormFeed",
@@ -349,7 +349,11 @@ def walk( ret, node, state ):
         # custom, let reduce handle it
         ret = state['reduce']( ret, node, state )
         
-    elif (T_ALTERNATION == type) or (T_SEQUENCE == type) or (T_CHARGROUP == type) or (T_GROUP == type) or (T_QUANTIFIER == type):
+    elif state['IGNORE'] & type:
+        # nothing
+        pass
+    
+    elif state['MAP'] & type:
         r = state['map']( ret, node, state )
         if ('ret' in state) and (state['ret'] is not None):
             ret = state['reduce']( ret, node, state )
@@ -364,12 +368,8 @@ def walk( ret, node, state ):
                     state['stop'] = None
                     return ret
     
-    elif (T_CHARS == type) or (T_CHARRANGE == type) or (T_UNICODECHAR == type) or (T_HEXCHAR == type) or (T_SPECIAL == type) or (T_STRING == type):
+    elif state['REDUCE'] & type:
         ret = state['reduce']( ret, node, state )
-    
-    elif T_COMMENT == type:
-        # nothing
-        pass
     
     state['node'] = None
     return ret
@@ -596,7 +596,7 @@ def reduce_str( ret, node, state ):
         elif 'w' == part: sample = [word( )]
         elif 's' == part: sample = [space( )]
         elif ('.' == part) and ('MatchAnyChar' in node.flags): sample = [any( )]
-        else: sample = ['\\' + part]
+        else: sample = [ESC + part]
     elif T_STRING == type:
         sample = node.val
     
@@ -621,25 +621,25 @@ def reduce_src( ret, node, state ):
     elif T_CHARRANGE == type:
         range = [node.val[0],node.val[1]]
         if state['escaped']:
-            if isinstance(range[0],Node) and T_UNICODECHAR == range[0].type: range[0] = '\\u'+pad(range[0].flags['Code'],4)
-            elif isinstance(range[0],Node) and T_HEXCHAR == range[0].type: range[0] = '\\x'+pad(range[0].flags['Code'],2)
+            if isinstance(range[0],Node) and T_UNICODECHAR == range[0].type: range[0] = ESC+'u'+pad(range[0].flags['Code'],4)
+            elif isinstance(range[0],Node) and T_HEXCHAR == range[0].type: range[0] = ESC+'x'+pad(range[0].flags['Code'],2)
             else: range[0] = esc_re(range[0], ESC, 1)
-            if isinstance(range[1],Node) and T_UNICODECHAR == range[1].type: range[1] = '\\u'+pad(range[1].flags['Code'],4)
-            elif isinstance(range[1],Node) and T_HEXCHAR == range[1].type: range[1] = '\\x'+pad(range[1].flags['Code'],2)
+            if isinstance(range[1],Node) and T_UNICODECHAR == range[1].type: range[1] = ESC+'u'+pad(range[1].flags['Code'],4)
+            elif isinstance(range[1],Node) and T_HEXCHAR == range[1].type: range[1] = ESC+'x'+pad(range[1].flags['Code'],2)
             else: range[1] = esc_re(range[1], ESC, 1)
         else:
             if isinstance(range[0],Node) and (T_UNICODECHAR == range[0].type or T_HEXCHAR == range[0].type): range[0] = range[0].flags['Char']
             if isinstance(range[0],Node) and (T_UNICODECHAR == range[1].type or T_HEXCHAR == range[1].type): range[1] = range[1].flags['Char']
         ret['src'] += range[0]+'-'+range[1]
     elif T_UNICODECHAR == type:
-        ret['src'] += '\\u'+pad(node.flags['Code'],4) if state['escaped'] else node.flags['Char']
+        ret['src'] += ESC+'u'+pad(node.flags['Code'],4) if state['escaped'] else node.flags['Char']
     elif T_HEXCHAR == type:
-        ret['src'] += '\\x'+pad(node.flags['Code'],2) if state['escaped'] else node.flags['Char']
+        ret['src'] += ESC+'x'+pad(node.flags['Code'],2) if state['escaped'] else node.flags['Char']
     elif T_SPECIAL == type:
         if 'BackReference' in node.flags:
-            ret['src'] += '\\'+node.val
+            ret['src'] += ESC+node.val
         else:
-            ret['src'] += '\\'+node.val if ('MatchStart' not in node.flags) and ('MatchEnd' not in node.flags) else (''+node.val)
+            ret['src'] += ESC+node.val if ('MatchStart' not in node.flags) and ('MatchEnd' not in node.flags) else( ''+node.val)
     elif T_STRING == type:
         ret['src'] += esc_re(node.val, ESC) if state['escaped'] else node.val
     
@@ -677,7 +677,7 @@ def reduce_peek( ret, node, state ):
         elif 'S' == part:
             ret["positive" if inNegativeCharGroup else "negative"][ '\\s' ] = 1
         else:
-            ret[peek]['\\' + part] = 1
+            ret[peek][ESC + part] = 1
     elif T_STRING == type:
         ret["positive"][node.val[0]] = 1
     
@@ -1360,6 +1360,9 @@ class RegexAnalyzer:
             
         if self.src is None:
             state = {
+                'MAP'                 : T_SEQUENCE|T_ALTERNATION|T_GROUP|T_CHARGROUP|T_QUANTIFIER,
+                'REDUCE'              : T_UNICODECHAR|T_HEXCHAR|T_SPECIAL|T_CHARS|T_CHARRANGE|T_STRING,
+                'IGNORE'              : T_COMMENT,
                 'map'                 : map_src,
                 'reduce'              : reduce_src,
                 'escaped'             : escaped is not False,
@@ -1395,6 +1398,9 @@ class RegexAnalyzer:
         if not self.re: return None
         if self.ast is None: self.analyze( )
         state = {
+            'MAP'               : T_SEQUENCE|T_ALTERNATION|T_GROUP|T_CHARGROUP|T_QUANTIFIER,
+            'REDUCE'            : T_UNICODECHAR|T_HEXCHAR|T_SPECIAL|T_CHARS|T_CHARRANGE|T_STRING,
+            'IGNORE'            : T_COMMENT,
             'map'               : map_any,
             'reduce'            : reduce_str,
             'maxLength'         : maxlen if maxlen else 1,
@@ -1413,6 +1419,9 @@ class RegexAnalyzer:
             self.min = None
         if self.min is None:
             state = {
+                'MAP'               : T_SEQUENCE|T_ALTERNATION|T_GROUP|T_CHARGROUP|T_QUANTIFIER,
+                'REDUCE'            : T_UNICODECHAR|T_HEXCHAR|T_SPECIAL|T_CHARS|T_CHARRANGE|T_STRING,
+                'IGNORE'            : T_COMMENT,
                 'map'               : map_min,
                 'reduce'            : reduce_len,
                 'group'             : {}
@@ -1428,6 +1437,9 @@ class RegexAnalyzer:
             self.max = None
         if self.max is None:
             state = {
+                'MAP'               : T_SEQUENCE|T_ALTERNATION|T_GROUP|T_CHARGROUP|T_QUANTIFIER,
+                'REDUCE'            : T_UNICODECHAR|T_HEXCHAR|T_SPECIAL|T_CHARS|T_CHARRANGE|T_STRING,
+                'IGNORE'            : T_COMMENT,
                 'map'               : map_max,
                 'reduce'            : reduce_len,
                 'group'             : {}
@@ -1443,6 +1455,9 @@ class RegexAnalyzer:
             self.ch = None
         if self.ch is None:
             state = {
+                'MAP'               : T_SEQUENCE|T_ALTERNATION|T_GROUP|T_CHARGROUP|T_QUANTIFIER,
+                'REDUCE'            : T_UNICODECHAR|T_HEXCHAR|T_SPECIAL|T_CHARS|T_CHARRANGE|T_STRING,
+                'IGNORE'            : T_COMMENT,
                 'map'               : map_1st,
                 'reduce'            : reduce_peek,
                 'group'             : {}
@@ -1481,13 +1496,13 @@ class RegexAnalyzer:
                     cases[ _G.specialChars['.'] ] = 1
                 
                 
-                elif '\\' != c[0] and isCaseInsensitive:
+                elif (ESC != c[0]) and isCaseInsensitive:
                 
                     cases[ c.lower() ] = 1
                     cases[ c.upper() ] = 1
                 
                 
-                elif '\\' == c[0]:
+                elif ESC == c[0]:
                 
                     del p[c]
                 

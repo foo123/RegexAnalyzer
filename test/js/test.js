@@ -79,8 +79,8 @@ for(var i=0; i<5; i++)
     if ( m )
     {
         for(var g in groups)
-            if ( groups.hasOwnProperty(g) )
-                sampleStr[i].groups[g] = m[regexp.group(g)];
+            if ( Object.prototype.hasOwnProperty.call(groups,g) )
+                sampleStr[i].groups[g] = m[groups[g]];
     }
 }
 
