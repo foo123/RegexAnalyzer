@@ -261,7 +261,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
     pad = function( s, n, z ) {
         var ps = String(s);
         z = z || '0';
-        while ( ps.length < n ) ps += z + ps;
+        while ( ps.length < n ) ps = z + ps;
         return ps;
     },
     char_code = function( c ) { return c[CHARCODE](0); },

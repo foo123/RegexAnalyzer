@@ -244,7 +244,7 @@ class RegexAnalyzer
     private static function pad( $s, $n, $z='0' )
     {
         $ps = (string)$s;
-        while ( strlen($ps) < $n ) $ps .= $z . $ps;
+        while ( strlen($ps) < $n ) $ps = $z . $ps;
         return $ps;
     }
     private static function to_array( $x )

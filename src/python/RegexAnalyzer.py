@@ -52,7 +52,7 @@ def esc_re( s, esc, chargroup=False ):
 
 def pad( s, n, z='0' ):
     ps = str(s)
-    while len(ps) < n: ps += z + ps
+    while len(ps) < n: ps = z + ps
     return ps
 
 def char_code( c ):
