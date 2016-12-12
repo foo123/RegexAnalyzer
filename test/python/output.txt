@@ -1,20 +1,24 @@
-RegexAnalyzer Module loaded succesfully
-Testing Analyzer.VERSION = 0.6.0
+Regex Module loaded succesfully
+Regex.VERSION = 1.0.0
+Testing Regex.Composer
+===============================================================
+Partial        : [_a-z][_a-z0-9]*
+Composed       : ^(?:[_a-z][_a-z0-9]*|(\*\*aabb\*\*)|.|\s|\D+)*?\1$
+Expected       : ^(?:[_a-z][_a-z0-9]*|(\*\*aabb\*\*)|.|\s|\D+)*?\1$
+Output         : {   'flags': 2,
+    'groups': {'1': 1, 'token': 1},
+    'pattern': <_sre.SRE_Pattern object at 0x0130C7E0>,
+    'source': '^(?:[_a-z][_a-z0-9]*|(\\*\\*aabb\\*\\*)|.|\\s|\\D+)*?\\1$'}
+===============================================================
 
-=========================================
-
+Testing Regex.Analyzer
+===============================================================
 Input                                       : /(?P<named_group>[abcde]+)fgh(?P=named_group)(?# a comment)/i
-
 Regular Expression                          : (?P<named_group>[abcde]+)fgh(?P=named_group)(?# a comment)
-
 Regular Expression Flags                    : i
-
 Reconstructed Regular Expression            : ([abcde]+)fgh\1
-
-=============================================
-
+===============================================================
 Regular Expression Syntax Tree              : 
-
 {   'type': 'Sequence',
     'value': [   {   'flags': {   'GroupIndex': 1,
                                   'GroupName': 'named_group',
@@ -40,45 +44,31 @@ Regular Expression Syntax Tree              :
                      'type': 'Special',
                      'value': '1'},
                  {'type': 'Comment', 'value': ' a comment'}]}
-
-=============================================
-
+===============================================================
 Regular Expression (Named) Matched Groups   : 
-
 {'1': 1, 'named_group': 1}
-
-=============================================
-
+===============================================================
 Regular Expression Peek Characters          : 
-
 {   'negative': [],
     'positive': ['a', 'A', 'c', 'b', 'e', 'd', 'C', 'B', 'E', 'D']}
-
-=============================================
-
+===============================================================
 Regular Expression Minimum / Maximum Length : 
-
 {'maximum': 'unlimited', 'minimum': 5}
-
-=============================================
-
+===============================================================
 Regular Expression Sample Match Strings     : 
-
-[   {   'groups': {'1': 'Bc', 'named_group': 'Bc'},
+[   {   'groups': {'1': 'EeDA', 'named_group': 'EeDA'},
         'match': 'yes',
-        'sample': 'BcfghBc'},
-    {   'groups': {'1': 'aAA', 'named_group': 'aAA'},
+        'sample': 'EeDAFGHEeDA'},
+    {   'groups': {'1': 'cDBA', 'named_group': 'cDBA'},
         'match': 'yes',
-        'sample': 'aAAFGHaAA'},
-    {   'groups': {'1': 'a', 'named_group': 'a'},
+        'sample': 'cDBAfghcDBA'},
+    {   'groups': {'1': 'AED', 'named_group': 'AED'},
         'match': 'yes',
-        'sample': 'afgha'},
-    {   'groups': {'1': 'BCB', 'named_group': 'BCB'},
+        'sample': 'AEDFGHAED'},
+    {   'groups': {'1': 'cadA', 'named_group': 'cadA'},
         'match': 'yes',
-        'sample': 'BCBfghBCB'},
-    {   'groups': {'1': 'EDDc', 'named_group': 'EDDc'},
+        'sample': 'cadAFGHcadA'},
+    {   'groups': {'1': 'dC', 'named_group': 'dC'},
         'match': 'yes',
-        'sample': 'EDDcFGHEDDc'}]
-
-=============================================
-
+        'sample': 'dCFGHdC'}]
+===============================================================

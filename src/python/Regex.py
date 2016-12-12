@@ -1,11 +1,11 @@
 # -*- coding: UTF-8 -*-
 ##
 #
-#   RegexAnalyzer
-#   @version: 0.6.0
+#   Regex
+#   @version: 1.0.0
 #
-#   A simple Regular Expression Analyzer for PHP, Python, Node/XPCOM/JS, ActionScript
-#   https://github.com/foo123/RegexAnalyzer
+#   A simple & generic Regular Expression Analyzer & Composer for PHP, Python, Node/XPCOM/JS, Java, C/C++, ActionScript
+#   https://github.com/foo123/Analyzer
 #
 ##
 import random, math, re, copy
@@ -36,17 +36,16 @@ def esc_re( s, esc, chargroup=False ):
     es = ''
     l = len(s)
     i=0
+    #escaped_re = /([.*+?^${}()|[\]\/\\\-])/g
     if chargroup:
         while i < l:
             c = s[i]
             i += 1
-            #escaped_re = /([.*+?^${}()|[\]\/\\\-])/g
-            es += (esc if ('?' == c) or ('+' == c) or ('-' == c) or ('^' == c) or ('$' == c) or ('|' == c) or ('{' == c) or ('}' == c) or ('(' == c) or (')' == c) or ('[' == c) or (']' == c) or ('/' == c) or (esc == c) else '') + c
+            es += (esc if ('-' == c) or ('^' == c) or ('$' == c) or ('|' == c) or ('{' == c) or ('}' == c) or ('(' == c) or (')' == c) or ('[' == c) or (']' == c) or ('/' == c) or (esc == c) else '') + c
     else:
         while i < l:
             c = s[i]
             i += 1
-            #escaped_re = /([.*+?^${}()|[\]\/\\\-])/g
             es += (esc if ('?' == c) or ('*' == c) or ('+' == c) or ('.' == c) or ('^' == c) or ('$' == c) or ('|' == c) or ('{' == c) or ('}' == c) or ('(' == c) or (')' == c) or ('[' == c) or (']' == c) or ('/' == c) or (esc == c) else '') + c
     return es
 
@@ -1255,15 +1254,8 @@ def analyze_re( re_obj ):
 # https://docs.python.org/3/library/re.html
 # http://php.net/manual/en/reference.pcre.pattern.syntax.php
 # A simple regular expression analyzer
-class RegexAnalyzer:
-    """
-    RegexAnalyzer for Python
-    https://github.com/foo123/RegexAnalyzer
-    """
-    
-    VERSION = "0.6.0"
-    
-    Node = Node
+class Analyzer:
+    VERSION = "1.0.0"
     
     def __init__(self, re=None, delim='/'):
         self.ast = None
@@ -1510,8 +1502,276 @@ class RegexAnalyzer:
             peek[n] = concat(p, cases)
         
         return peek
+
+def flatten( a ):
+    r = []
+    while len(a):
+        if isinstance(a[0],(list,tuple)):
+            a = list(a[0]) + a[1:]
+        else:
+            r.append(a[0])
+            a = a[1:]
+    return r
+
+def getArgs( args ):
+    return flatten(args)
     
+# A simple regular expression composer
+class Composer:
+    VERSION = "1.0.0"
     
+    def __init__( self ):
+        self.re = None
+        self.g = 0
+        self.grp = None
+        self.level = 0
+        self.ast = None
+        self.reset( )
+
+    def __del__( self ):
+        self.dispose( )
     
+    def dispose( self ):
+        self.re = None
+        self.g = None
+        self.grp = None
+        self.level = None
+        self.ast = None
+        return self
+    
+    def reset( self ):
+        self.g = 0
+        self.grp = {}
+        self.level = 0
+        self.ast = [{'node': [], 'type': T_SEQUENCE, 'flag': ''}]
+        return self
+
+    def compose( self, flags=0 ):
+        src = ''.join(self.ast[0]['node'])
+        self.re = {
+            'source'  : src,
+            'flags'   : flags,
+            'groups'  : self.grp,
+            'pattern' : re.compile(src, flags)
+        }
+        self.reset( )
+        return self.re
+
+    def partial( self, reset=True ):
+        re = ''.join(self.ast[0]['node'])
+        if reset is not False: self.reset( )
+        return re
+
+    def token( self, token, escaped=False ):
+        if token:
+            self.ast[self.level]['node'].append(esc_re(str(token), ESC) if escaped is True else str(token))
+        return self
+    
+    def match( self, token, escaped=False ):
+        return self.token(token, escaped)
+    
+    def literal( self, literal ):
+        return self.token(literal, True)
+    
+    def regexp( self, re ):
+        return self.token(str(re), False)
+    
+    def SOL( self ):
+        self.ast[self.level]['node'].append('^')
+        return self
+    
+    def SOF( self ):
+        return self.SOL( )
+    
+    def EOL( self ):
+        self.ast[self.level]['node'].append('$')
+        return self
+    
+    def EOF( self ):
+        return self.EOL( )
+    
+    def LF( self ):
+        self.ast[self.level]['node'].append(ESC+'n')
+        return self
+    
+    def CR( self ):
+        self.ast[self.level]['node'].append(ESC+'r')
+        return self
+    
+    def TAB( self ):
+        self.ast[self.level]['node'].append(ESC+'t')
+        return self
+    
+    def CTRL( self, code='0' ):
+        self.ast[self.level]['node'].append(ESC+'c'+str(code))
+        return self
+    
+    def HEX( self, code='0' ):
+        self.ast[self.level]['node'].append(ESC+'x'+pad(code, 2))
+        return self
+    
+    def UNICODE( self, code='0' ):
+        self.ast[self.level]['node'].append(ESC+'u'+pad(code, 4))
+        return self
+    
+    def backSpace( self ):
+        self.ast[self.level]['node'].append('['+ESC+'b]')
+        return self
+    
+    def any( self, multiline=False ):
+        self.ast[self.level]['node'].append('['+ESC+'s'+ESC+'S]' if multiline is True else '.')
+        return self
+    
+    def space( self, positive=True ):
+        self.ast[self.level]['node'].append(ESC+'S' if positive is False else ESC+'s')
+        return self
+    
+    def digit( self, positive=True ):
+        self.ast[self.level]['node'].append(ESC+'D' if positive is False else ESC+'d')
+        return self
+    
+    def word( self, positive=True ):
+        self.ast[self.level]['node'].append(ESC+'W' if positive is False else ESC+'w')
+        return self
+    
+    def boundary( self, positive=True ):
+        self.ast[self.level]['node'].append(ESC+'B' if positive is False else ESC+'b')
+        return self
+    
+    def characters( self, *args ):
+        if T_CHARGROUP == self.ast[self.level]['type']:
+            self.ast[self.level]['node'].append( ''.join( list(map(lambda s: esc_re(str(s), ESC, 1), getArgs(args))) ) )
+        return self
+    
+    def chars( self, *args ):
+        if T_CHARGROUP == self.ast[self.level]['type']:
+            self.ast[self.level]['node'].append( ''.join( list(map(lambda s: esc_re(str(s), ESC, 1), getArgs(args))) ) )
+        return self
+    
+    def range( self, start, end ):
+        if T_CHARGROUP == self.ast[self.level]['type']:
+            self.ast[self.level]['node'].append(esc_re(str(start), ESC, 1)+'-'+esc_re(str(end), ESC, 1))
+        return self
+    
+    def backReference( self, n ):
+        n = str(n)
+        self.ast[self.level]['node'].append(ESC+str(self.grp[n] if n in self.grp else n))
+        return self
+    
+    def repeat( self, min, max=None, greedy=True ):
+        repeat = ('{'+str(min)+'}' if max is None or max == min else '{'+str(min)+','+str(max)+'}') + ('?' if greedy is False else '')
+        self.ast[self.level]['node'][len(self.ast[self.level]['node'])-1] += repeat
+        return self
+    
+    def zeroOrOne( self, greedy=True ):
+        self.ast[self.level]['node'][len(self.ast[self.level]['node'])-1] += ('??' if greedy is False else '?')
+        return self
+    
+    def zeroOrMore( self, greedy=True ):
+        self.ast[self.level]['node'][len(self.ast[self.level]['node'])-1] += ('*?' if greedy is False else '*')
+        return self
+    
+    def oneOrMore( self, greedy=True ):
+        self.ast[self.level]['node'][len(self.ast[self.level]['node'])-1] += ('+?' if greedy is False else '+')
+        return self
+    
+    def alternate( self ):
+        self.level += 1
+        self.ast.append({'node': [], 'type': T_ALTERNATION, 'flag': ''})
+        return self
+    
+    def either( self ):
+        return self.alternate()
+    
+    def group( self, opts=dict() ):
+        type = T_GROUP
+        fl = ''
+        if ('name' in opts) and len(str(opts['name'])):
+            self.g += 1
+            self.grp[str(self.g)] = self.g
+            self.grp[str(opts['name'])] = self.g
+        elif ('lookahead' in opts) and ((opts['lookahead'] is True) or (opts['lookahead'] is False)):
+            fl = '?!' if opts['lookahead'] is False else '?='
+        elif ('lookbehind' in opts) and ((opts['lookbehind'] is True) or (opts['lookbehind'] is False)):
+            fl = '?<!' if opts['lookbehind'] is False else '?<='
+        elif ('nocapture' in opts) and (opts['nocapture'] is True):
+            fl = '?:';
+        elif ('characters' in opts) and ((opts['characters'] is True) or (opts['characters'] is False)):
+            type = T_CHARGROUP
+            fl = '^' if opts['characters'] is False else ''
+        else:
+            self.g += 1
+            self.grp[str(self.g)] = self.g
+        self.level += 1
+        self.ast.append({'node': [], 'type': type, 'flag': fl})
+        return self
+    
+    def subGroup( self, opts=dict() ):
+        return self.group( opts )
+    
+    def characterGroup( self, positive=True ):
+        return self.group({'characters':positive is not False})
+    
+    def charGroup( self, positive=True ):
+        return self.group({'characters':positive is not False})
+    
+    def namedGroup( self, name ):
+        return self.group({'name':name})
+    
+    def nonCaptureGroup( self ):
+        return self.group({'nocapture':True})
+    
+    def lookAheadGroup( self, positive=True ):
+        return self.group({'lookahead':positive is not False})
+    
+    def lookBehindGroup( self, positive=True ):
+        return self.group({'lookbehind':positive is not False})
+    
+    def end( self, n=1 ):
+        # support ending multiple blocks at once
+        if not isinstance(n, int): n = int(n, 10)
+        if 0 >= n: n = 1
+        while n :
+            n -= 1
+            prev = self.ast.pop(-1) if len(self.ast) else None
+            type = prev['type'] if prev else 0
+            flag = prev['flag'] if prev else ''
+            part = prev['node'] if prev else []
+            if 0 < self.level:
+                self.level -= 1
+                if T_ALTERNATION == type:
+                    self.ast[self.level]['node'].append('|'.join(part))
+                elif T_GROUP == type:
+                    self.ast[self.level]['node'].append('('+flag+''.join(part)+')')
+                elif T_CHARGROUP == type:
+                    self.ast[self.level]['node'].append('['+flag+''.join(part)+']')
+                else:
+                    self.ast[self.level]['node'].append(''.join(part))
+        return self
+    
+    def startOfLine( self ):
+        return self.SOL( )
+
+    def startOfInput( self ):
+        return self.SOF( )
+
+    def endOfLine( self ):
+        return self.EOL( )
+
+    def endOfInput( self ):
+        return self.EOF( )
+
+
+class Regex:
+    """
+    Regular Expressipn Analyzer and Composer for Python
+    https://github.com/foo123/Analyzer
+    """
+    VERSION = "1.0.0"
+    Node = Node
+    Analyzer = Analyzer
+    Composer = Composer
+
+
 # if used with 'import *'
-__all__ = ['RegexAnalyzer']
+__all__ = ['Regex']

@@ -7,65 +7,58 @@ function echo_($s="")
     echo $s . PHP_EOL;
 }
 
-include('../../src/php/RegexComposer.php');
+include('../../src/php/Regex.php');
 
-echo_("Testing Composer.VERSION = " . RegexComposer::VERSION);
-echo_("================");
+echo_("Regex.VERSION = " . Regex::VERSION);
 
-$identifierSubRegex = new RegexComposer();
-$identifierSubRegex = $identifierSubRegex                
-                ->characterGroup()
+echo_("Testing Regex.Composer");
+echo_("===============================================================");
+
+$identifierSubRegex = Regex::Composer()                
+                ->characterGroup( )
                     ->characters('_')
                     ->range('a', 'z')
-                ->end()
+                ->end( )
                 
-                ->characterGroup()
+                ->characterGroup( )
                     ->characters('_')
                     ->range('a', 'z')
                     ->range('0', '9')
-                ->end()
-                
-                ->zeroOrMore()
+                ->end( )->zeroOrMore( )
             
-                ->partial();
+                ->partial( );
 
-$outregex = new RegexComposer();
-$outregex = $outregex                    
-                    ->startOfInput()
-                    
-                    ->either()
-                        
-                        ->sub($identifierSubRegex)
-                        
-                        ->match('**aabb**')
-                        
-                        ->any()
-                        
-                        ->space()
-                        
-                        ->digit(false)->oneOrMore()
-                    
-                    ->end()
-                    
-                    ->zeroOrMore(false)
-                    
-                    ->endOfInput()
-                    
-                    ->compose('i');
+$outregex = Regex::Composer()                    
+                ->SOL( )
+                
+                ->nonCaptureGroup( )->either( )
+                    ->regexp( $identifierSubRegex )
+                    ->namedGroup( 'token' )->literal( '**aabb**' )->end( )
+                    ->any( )
+                    ->space( )
+                    ->digit( false )->oneOrMore( )
+                ->end( 2 )->zeroOrMore( false )
+                
+                ->backReference( 'token' )
+                
+                ->EOL( )
+                
+                ->compose( 'i' );
     
-echo_("Partial: " . $identifierSubRegex);
-echo_("Composed: " . $outregex);
-echo_("Expected: " . "/^([_a-z][_a-z0-9]*|\\*\\*aabb\\*\\*|.|\\s|\\D+)*?$/i");
-echo_("================");
+
+echo_("Partial        : " . $identifierSubRegex);
+echo_("Composed       : " . $outregex->pattern);
+echo_("Expected       : " . "/^(?:[_a-z][_a-z0-9]*|(\\*\\*aabb\\*\\*)|.|\\s|\\D+)*?\\1$/i");
+echo_("Output         : " . print_r($outregex, true));
+echo_("===============================================================");
 echo_();
 
-include('../../src/php/RegexAnalyzer.php');
 
-echo_("Testing Analyzer.VERSION = " . RegexAnalyzer::VERSION);
-echo_("=========================================");
+echo_("Testing Regex.Analyzer");
+echo_("===============================================================");
 
 $inregex = '/(?P<named_group>[abcde]+)fgh(?P=named_group)(?# a comment)/i';
-$anal = new RegexAnalyzer($inregex);
+$anal = Regex::Analyzer($inregex);
 $peekChars = $anal->peek( );
 $minLen = $anal->minimum( );
 $maxLen = $anal->maximum( );
@@ -86,19 +79,19 @@ echo_("Input                                       : " . $inregex);
 echo_("Regular Expression                          : " . $anal->input());
 echo_("Regular Expression Flags                    : " . implode(',',array_keys($anal->fl)));
 echo_("Reconstructed Regular Expression            : " . $anal->source());
-echo_("=============================================");
+echo_("===============================================================");
 echo_("Regular Expression Syntax Tree              : ");
 echo_(print_r($anal->tree(true), true));
-echo_("=============================================");
+echo_("===============================================================");
 echo_("Regular Expression (Named) Matched Groups   : ");
 echo_(print_r($groups, true));
-echo_("=============================================");
+echo_("===============================================================");
 echo_("Regular Expression Peek Characters          : ");
 echo_(print_r(array('positive'=>array_keys($peekChars['positive']),'negative'=>array_keys($peekChars['negative'])), true));
-echo_("=============================================");
+echo_("===============================================================");
 echo_("Regular Expression Minimum / Maximum Length : ");
 echo_(print_r(array('minimum'=>$minLen,'maximum'=>-1===$maxLen?'unlimited':$maxLen), true));
-echo_("=============================================");
+echo_("===============================================================");
 echo_("Regular Expression Sample Match Strings     : ");
 echo_(print_r($sampleStr, true));
-echo_("=============================================");
+echo_("===============================================================");

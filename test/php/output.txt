@@ -1,17 +1,31 @@
-Testing Composer.VERSION = 0.1
-================
-Partial: [_a-z][_a-z0-9]*
-Composed: /^([_a-z][_a-z0-9]*|\*\*aabb\*\*|.|\s|\D+)*?$/i
-Expected: /^([_a-z][_a-z0-9]*|\*\*aabb\*\*|.|\s|\D+)*?$/i
-================
+Regex.VERSION = 1.0.0
+Testing Regex.Composer
+===============================================================
+Partial        : [_a-z][_a-z0-9]*
+Composed       : /^(?:[_a-z][_a-z0-9]*|(\*\*aabb\*\*)|.|\s|\D+)*?\1$/i
+Expected       : /^(?:[_a-z][_a-z0-9]*|(\*\*aabb\*\*)|.|\s|\D+)*?\1$/i
+Output         : stdClass Object
+(
+    [source] => ^(?:[_a-z][_a-z0-9]*|(\*\*aabb\*\*)|.|\s|\D+)*?\1$
+    [flags] => i
+    [groups] => Array
+        (
+            [1] => 1
+            [token] => 1
+        )
 
-Testing Analyzer.VERSION = 0.6.0
-=========================================
+    [pattern] => /^(?:[_a-z][_a-z0-9]*|(\*\*aabb\*\*)|.|\s|\D+)*?\1$/i
+)
+
+===============================================================
+
+Testing Regex.Analyzer
+===============================================================
 Input                                       : /(?P<named_group>[abcde]+)fgh(?P=named_group)(?# a comment)/i
 Regular Expression                          : (?P<named_group>[abcde]+)fgh(?P=named_group)(?# a comment)
 Regular Expression Flags                    : i
 Reconstructed Regular Expression            : ([abcde]+)fgh\1
-=============================================
+===============================================================
 Regular Expression Syntax Tree              : 
 Array
 (
@@ -104,7 +118,7 @@ Array
 
 )
 
-=============================================
+===============================================================
 Regular Expression (Named) Matched Groups   : 
 Array
 (
@@ -112,7 +126,7 @@ Array
     [named_group] => 1
 )
 
-=============================================
+===============================================================
 Regular Expression Peek Characters          : 
 Array
 (
@@ -136,7 +150,7 @@ Array
 
 )
 
-=============================================
+===============================================================
 Regular Expression Minimum / Maximum Length : 
 Array
 (
@@ -144,49 +158,13 @@ Array
     [maximum] => unlimited
 )
 
-=============================================
+===============================================================
 Regular Expression Sample Match Strings     : 
 Array
 (
     [0] => Array
         (
-            [sample] => efghe
-            [match] => yes
-            [groups] => Array
-                (
-                    [1] => e
-                    [named_group] => e
-                )
-
-        )
-
-    [1] => Array
-        (
-            [sample] => EbfghEb
-            [match] => yes
-            [groups] => Array
-                (
-                    [1] => Eb
-                    [named_group] => Eb
-                )
-
-        )
-
-    [2] => Array
-        (
-            [sample] => BefghBe
-            [match] => yes
-            [groups] => Array
-                (
-                    [1] => Be
-                    [named_group] => Be
-                )
-
-        )
-
-    [3] => Array
-        (
-            [sample] => CfghC
+            [sample] => CFGHC
             [match] => yes
             [groups] => Array
                 (
@@ -196,18 +174,54 @@ Array
 
         )
 
-    [4] => Array
+    [1] => Array
         (
-            [sample] => CAFGHCA
+            [sample] => aDfghaD
             [match] => yes
             [groups] => Array
                 (
-                    [1] => CA
-                    [named_group] => CA
+                    [1] => aD
+                    [named_group] => aD
+                )
+
+        )
+
+    [2] => Array
+        (
+            [sample] => AbeefghAbee
+            [match] => yes
+            [groups] => Array
+                (
+                    [1] => Abee
+                    [named_group] => Abee
+                )
+
+        )
+
+    [3] => Array
+        (
+            [sample] => EacfghEac
+            [match] => yes
+            [groups] => Array
+                (
+                    [1] => Eac
+                    [named_group] => Eac
+                )
+
+        )
+
+    [4] => Array
+        (
+            [sample] => aDDDFGHaDDD
+            [match] => yes
+            [groups] => Array
+                (
+                    [1] => aDDD
+                    [named_group] => aDDD
                 )
 
         )
 
 )
 
-=============================================
+===============================================================

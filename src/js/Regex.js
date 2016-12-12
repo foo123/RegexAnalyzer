@@ -1,9 +1,9 @@
 /**
 *
-*   RegexAnalyzer
-*   @version: 0.6.0
+*   Regex
+*   @version: 1.0.0
 *
-*   A simple Regular Expression Analyzer for PHP, Python, Node/XPCOM/JS, ActionScript
+*   A simple & generic Regular Expression Analyzer & Composer for PHP, Python, Node/XPCOM/JS, Java, C/C++, ActionScript
 *   https://github.com/foo123/RegexAnalyzer
 *
 **/
@@ -20,13 +20,13 @@ else if ( ('function'===typeof define)&&define.amd&&('function'===typeof require
 else if ( !(name in root) ) /* Browser/WebWorker/.. */
     (root[name] = factory.call(root)||1)&&('function'===typeof(define))&&define.amd&&define(function(){return root[name];} );
 }(  /* current root */          this, 
-    /* module name */           "RegexAnalyzer",
-    /* module factory */        function ModuleFactory__RegexAnalyzer( undef ){
+    /* module name */           "Regex",
+    /* module factory */        function ModuleFactory__Regex( undef ){
 "use strict";
-var __version__ = "0.6.0",
+var __version__ = "1.0.0",
 
-    PROTO = 'prototype', Obj = Object, Arr = Array, /*Str = String,*/ 
-    Keys = Obj.keys, to_string = Obj[PROTO].toString, hasOwnProperty = Obj[PROTO].hasOwnProperty,
+    PROTO = 'prototype', OP = Object[PROTO], AP = Array[PROTO], 
+    Keys = Object.keys, to_string = OP.toString, HAS = OP.hasOwnProperty,
     fromCharCode = String.fromCharCode, CHAR = 'charAt', CHARCODE = 'charCodeAt', toJSON = JSON.stringify,
     INF = Infinity, ESC = '\\',
     specialChars = {
@@ -98,10 +98,6 @@ var __version__ = "0.6.0",
     T_COMMENT = 2048
 ;
 
-function HAS( o, x )
-{
-    return hasOwnProperty.call(o, x);
-}
 function is_array( x )
 {
     return (x instanceof Array) || ('[object Array]' === to_string.call(x));
@@ -121,7 +117,7 @@ function array( x )
 function clone( obj, cloned )
 {
     cloned = cloned || {};
-    for (var p in obj) if ( HAS(obj,p) ) cloned[p] = obj[p];
+    for (var p in obj) if ( HAS.call(obj,p) ) cloned[p] = obj[p];
     return cloned;
 }
 function RE_OBJ( re )
@@ -140,7 +136,7 @@ RE_OBJ[PROTO] = {
     ,re: null
     ,len: null
     ,pos: null
-    ,g: null
+    ,index: null
     ,groupIndex: null
     ,inGroup: null
     ,groups: null
@@ -230,15 +226,30 @@ Node[PROTO] = {
 };
 
 var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
+    RE = function( re, fl ){ return new RegExp(re, fl||''); },
+    slice = function( a ) { return AP.slice.apply(a, AP.slice.call(arguments, 1)); },
+    flatten = function( a ) {
+        var r = [], i = 0;
+        while (i < a.length) r = r.concat(a[i++]);
+        return r;
+    },
+    getArgs = function( args, asArray ) {
+        /*var a = slice(args);
+        if ( asArray && a[0] && 
+            ( a[0] instanceof Array || '[object Array]' == to_string.call(a[0]) )
+        )
+            a = a[0];*/
+        return flatten( slice( args ) ); //a;
+    },
     esc_re = function( s, esc, chargroup ) {
         var es = '', l = s.length, i=0, c;
+        //escaped_re = /([.*+?^${}()|[\]\/\\\-])/g
         if ( chargroup )
         {
             while( i < l )
             {
                 c = s[CHAR](i++);
-                //escaped_re = /([.*+?^${}()|[\]\/\\\-])/g
-                es += (('?' === c) || /*('*' === c) ||*/ ('+' === c) ||
+                es += (/*('?' === c) || ('*' === c) || ('+' === c) ||*/
                         ('-' === c) || /*('.' === c) ||*/ ('^' === c) || ('$' === c) || ('|' === c) || 
                         ('{' === c) || ('}' === c) || ('(' === c) || (')' === c) ||
                         ('[' === c) || (']' === c) || ('/' === c) || (esc === c) ? esc : '') + c;
@@ -249,7 +260,6 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             while( i < l )
             {
                 c = s[CHAR](i++);
-                //escaped_re = /([.*+?^${}()|[\]\/\\\-])/g
                 es += (('?' === c) || ('*' === c) || ('+' === c) ||
                     /*('-' === c) ||*/ ('.' === c) || ('^' === c) || ('$' === c) || ('|' === c) || 
                     ('{' === c) || ('}' === c) || ('(' === c) || (')' === c) ||
@@ -288,7 +298,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             }
             else
             {
-                for (p in p2) if ( HAS(p2,p) ) p1[p] = 1;
+                for (p in p2) if ( HAS.call(p2,p) ) p1[p] = 1;
             }
         }
         return p1;
@@ -746,7 +756,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             var part = node.val;
             if (node.flags.BackReference)
             {
-                ret += HAS(state.group,part) ? state.group[part] : '';
+                ret += HAS.call(state.group,part) ? state.group[part] : '';
                 return ret;
             }
             else if ('D' === part)
@@ -1044,7 +1054,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                         sequence.push( ch );
                     }
                     
-                    else if ( HAS(specialCharsEscaped,ch) && ('/' !== ch) )
+                    else if ( HAS.call(specialCharsEscaped,ch) && ('/' !== ch) )
                     {
                         if ( chars.length )
                         {
@@ -1124,7 +1134,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                     if ( ")" === ch ) break;
                     flags[ "GroupName" ] += ch;
                 }
-                flags[ "GroupIndex" ] = HAS(re_obj.group,flags[ "GroupName" ]) ? re_obj.group[flags[ "GroupName" ]] : null;
+                flags[ "GroupIndex" ] = HAS.call(re_obj.group,flags[ "GroupName" ]) ? re_obj.group[flags[ "GroupName" ]] : null;
                 return Node(T_SPECIAL, String(flags[ "GroupIndex" ]), flags);
             }
             
@@ -1241,7 +1251,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                     sequence.push( Node(T_HEXCHAR, m[0], {"Char": fromCharCode(parseInt(m[1], 16)), "Code": m[1]}) );
                 }
                 
-                else if ( HAS(specialCharsEscaped,ch) && ('/' !== ch) )
+                else if ( HAS.call(specialCharsEscaped,ch) && ('/' !== ch) )
                 {
                     if ( wordlen )
                     {
@@ -1410,7 +1420,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                 }
             
                 // special characters like ^, $, ., etc..
-                else if ( HAS(specialChars,ch) )
+                else if ( HAS.call(specialChars,ch) )
                 {
                     if ( wordlen )
                     {
@@ -1454,16 +1464,15 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
 // https://docs.python.org/3/library/re.html
 // http://php.net/manual/en/reference.pcre.pattern.syntax.php
 // A simple regular expression analyzer
-var RegexAnalyzer = function RegexAnalyzer( re, delim ) {
-    if ( !(this instanceof RegexAnalyzer) ) return new RegexAnalyzer(re, delim);
+function Analyzer( re, delim )
+{
+    if ( !(this instanceof Analyzer) ) return new Analyzer(re, delim);
     if ( re ) this.input( re, delim );
-};
-RegexAnalyzer.VERSION = __version__;
-RegexAnalyzer.Node = Node;
-RegexAnalyzer.getCharRange = character_range;
-RegexAnalyzer[PROTO] = {
+}
+Analyzer.VERSION = __version__;
+Analyzer[PROTO] = {
     
-    constructor: RegexAnalyzer,
+    constructor: Analyzer,
 
     ast: null,
     re: null,
@@ -1758,8 +1767,7 @@ RegexAnalyzer[PROTO] = {
     }
 };
 // alias
-RegexAnalyzer[PROTO].set = RegexAnalyzer[PROTO].input;
-
+Analyzer[PROTO].set = Analyzer[PROTO].input;
 /*
 // custom method to access named groups feature, if any
 RegExp[PROTO].$group = null;
@@ -1769,6 +1777,339 @@ RegExp[PROTO].group = function( group ){
 };
 */
 
+// A simple regular expression composer
+function Composer( )
+{
+    var self = this;
+    if ( !(self instanceof Composer) ) return new Composer( );
+    self.re = null;
+    self.reset( );
+}
+Composer.VERSION = __version__;
+Composer[PROTO] = {
+    
+    constructor: Composer,
+
+    re: null,
+    g: 0,
+    grp: null,
+    level: 0,
+    ast: null,
+
+    dispose: function( ) {
+        var self = this;
+        self.re = null;
+        self.g = null;
+        self.grp = null;
+        self.level = null;
+        self.ast = null;
+        return self;
+    },
+    
+    reset: function( ) {
+        var self = this;
+        self.g = 0;
+        self.grp = {};
+        self.level = 0;
+        self.ast = [{node: [], type: T_SEQUENCE, flag: ''}];
+        return self;
+    },
+
+    compose: function( /* flags */ ) {
+        var self = this,
+            fl = slice(arguments).join(''),
+            src = self.ast[0].node.join('');
+        self.re = {
+            source  : src,
+            flags   : fl,
+            groups  : self.grp,
+            pattern : RE(src, fl)
+        };
+        self.reset( );
+        return self.re;
+    },
+
+    partial: function( reset ) {
+        var self = this, re = self.ast[0].node.join('');
+        if ( false !== reset ) self.reset( );
+        return re;
+    },
+
+    token: function( token, escaped ) {
+        var self = this;
+        if ( null != token )
+            self.ast[self.level].node.push(true===escaped ? esc_re(String(token), ESC) : String(token));
+        return self;
+    },
+    
+    literal: function( literal ) {
+        return this.token(literal, true);
+    },
+    
+    regexp: function( re ) {
+        return this.token(String(re), false);
+    },
+    
+    SOL: function( ) {
+        var self = this;
+        self.ast[self.level].node.push('^');
+        return self;
+    },
+    
+    SOF: function( ) {
+        return this.SOL( );
+    },
+    
+    EOL: function( ) {
+        var self = this;
+        self.ast[self.level].node.push('$');
+        return self;
+    },
+    
+    EOF: function( ) {
+        return this.EOL( );
+    },
+    
+    LF: function( ) {
+        var self = this;
+        self.ast[self.level].node.push(ESC+'n');
+        return self;
+    },
+    
+    CR: function( ) {
+        var self = this;
+        self.ast[self.level].node.push(ESC+'r');
+        return self;
+    },
+    
+    TAB: function( ) {
+        var self = this;
+        self.ast[self.level].node.push(ESC+'t');
+        return self;
+    },
+    
+    CTRL: function( code ) {
+        var self = this;
+        self.ast[self.level].node.push(ESC+'c'+(code||0));
+        return self;
+    },
+    
+    HEX: function( code ) {
+        var self = this;
+        self.ast[self.level].node.push(ESC+'x'+pad(code||0, 2));
+        return self;
+    },
+    
+    UNICODE: function( code ) {
+        var self = this;
+        self.ast[self.level].node.push(ESC+'u'+pad(code||0, 4));
+        return self;
+    },
+    
+    backSpace: function( ) {
+        var self = this;
+        self.ast[self.level].node.push('['+ESC+'b]');
+        return self;
+    },
+    
+    any: function( multiline ) {
+        var self = this;
+        self.ast[self.level].node.push(true===multiline ? '['+ESC+'s'+ESC+'S]' : '.');
+        return self;
+    },
+    
+    space: function( positive ) {
+        var self = this;
+        self.ast[self.level].node.push(false===positive ? ESC+'S' : ESC+'s');
+        return self;
+    },
+    
+    digit: function( positive ) {
+        var self = this;
+        self.ast[self.level].node.push(false===positive ? ESC+'D' : ESC+'d');
+        return self;
+    },
+    
+    word: function( positive ) {
+        var self = this;
+        self.ast[self.level].node.push(false===positive ? ESC+'W' : ESC+'w');
+        return self;
+    },
+    
+    boundary: function( positive ) {
+        var self = this;
+        self.ast[self.level].node.push(false===positive ? ESC+'B' : ESC+'b');
+        return self;
+    },
+    
+    characters: function( ) {
+        var self = this;
+        if ( T_CHARGROUP === self.ast[self.level].type )
+            self.ast[self.level].node.push(getArgs(arguments,1).map(function(c){ return esc_re(String(c), ESC, 1); }).join(''));
+        return self;
+    },
+    
+    range: function( start, end ) {
+        var self = this;
+        if ( null != start && null != end && T_CHARGROUP === self.ast[self.level].type )
+            self.ast[self.level].node.push(esc_re(String(start), ESC, 1)+'-'+esc_re(String(end), ESC, 1));
+        return self;
+    },
+    
+    backReference: function( n ) {
+        var self = this;
+        self.ast[self.level].node.push(ESC+(HAS.call(self.grp,n) ? self.grp[n] : n|0));
+        return self;
+    },
+    
+    repeat: function( min, max, greedy ) {
+        var self = this;
+        if ( null == min ) return self;
+        var repeat = (null==max || min===max ? ('{'+String(min)+'}') : ('{'+String(min)+','+String(max)+'}')) + (false===greedy ? '?' : '');
+        self.ast[self.level].node[self.ast[self.level].node.length-1] += repeat;
+        return self;
+    },
+    
+    zeroOrOne: function( greedy ) {
+        var self = this;
+        self.ast[self.level].node[self.ast[self.level].node.length-1] += (false===greedy ? '??' : '?');
+        return self;
+    },
+    
+    zeroOrMore: function( greedy ) {
+        var self = this;
+        self.ast[self.level].node[self.ast[self.level].node.length-1] += (false===greedy ? '*?' : '*');
+        return self;
+    },
+    
+    oneOrMore: function( greedy ) {
+        var self = this;
+        self.ast[self.level].node[self.ast[self.level].node.length-1] += (false===greedy ? '+?' : '+');
+        return self;
+    },
+    
+    alternate: function( ) {
+        var self = this;
+        self.level++;
+        self.ast.push({node: [], type: T_ALTERNATION, flag: ''});
+        return self;
+    },
+    
+    either: function( ) {
+        return this.alternate();
+    },
+    
+    group: function( opts ) {
+        var self = this, type = T_GROUP, fl = '';
+        opts = opts || {};
+        if ( !!opts['name'] )
+        {
+            self.g++;
+            self.grp[self.g] = self.g;
+            self.grp[opts.name] = self.g;
+        }
+        else if ( (true === opts['lookahead']) || (false === opts['lookahead']) )
+        {
+            fl = false === opts['lookahead'] ? '?!' : '?=';
+        }
+        else if ( (true === opts['lookbehind']) || (false === opts['lookbehind']) )
+        {
+            fl = false === opts['lookbehind'] ? '?<!' : '?<=';
+        }
+        else if ( true === opts['nocapture'] )
+        {
+            fl = '?:';
+        }
+        else if ( (true === opts['characters']) || (false === opts['characters']) )
+        {
+            type = T_CHARGROUP;
+            fl = false === opts['characters'] ? '^' : '';
+        }
+        else
+        {
+            self.g++;
+            self.grp[self.g] = self.g;
+        }
+        self.level++;
+        self.ast.push({node: [], type: type, flag: fl});
+        return self;
+    },
+    
+    subGroup: function( opts ) {
+        return this.group( opts );
+    },
+    
+    characterGroup: function( positive ) {
+        return this.group({'characters':false!==positive});
+    },
+    
+    namedGroup: function( name ) {
+        return this.group({'name':name});
+    },
+    
+    nonCaptureGroup: function( ) {
+        return this.group({'nocapture':true});
+    },
+    
+    lookAheadGroup: function( positive ) {
+        return this.group({'lookahead':false!==positive});
+    },
+    
+    lookBehindGroup: function( positive ) {
+        return this.group({'lookbehind':false!==positive});
+    },
+    
+    end: function( n ) {
+        var self = this, prev, type, flag, part;
+        n = (arguments.length ? n|0 : 1) || 1;
+        // support ending multiple blocks at once
+        while( n-- )
+        {
+            prev = self.ast.length ? self.ast.pop() : null;
+            type = prev ? prev.type : 0;
+            flag = prev ? prev.flag : '';
+            part = prev ? prev.node : [];
+            if ( 0 < self.level )
+            {
+                --self.level;
+                if ( T_ALTERNATION === type )
+                    self.ast[self.level].node.push(part.join('|'));
+                else if ( T_GROUP === type )
+                    self.ast[self.level].node.push('('+flag+part.join('')+')');
+                else if ( T_CHARGROUP === type )
+                    self.ast[self.level].node.push('['+flag+part.join('')+']');
+                else
+                    self.ast[self.level].node.push(part.join(''));
+            }
+        }
+        return self;
+    }
+};
+// aliases
+var CP = Composer[PROTO];
+CP.startOfLine = CP.SOL;
+CP.endOfLine = CP.EOL;
+CP.startOfInput = CP.SOF;
+CP.endOfInput = CP.EOF;
+CP.match = CP.token;
+CP.sub = CP.regexp;
+CP.lineFeed = CP.LF;
+CP.carriageReturn = CP.CR;
+CP.tabulate = CP.TAB;
+CP.wordBoundary = CP.boundary;
+CP.chars = CP.characters;
+CP.charGroup = CP.characterGroup;
+CP.namedSubGroup = CP.namedGroup;
+CP.nonCaptureSubGroup = CP.nonCaptureGroup;
+CP.lookAheadSubGroup = CP.lookAheadGroup;
+CP.lookBehindSubGroup = CP.lookBehindGroup;
+
+var Regex = {
+    VERSION     : __version__,
+    Node        : Node,
+    Analyzer    : Analyzer,
+    Composer    : Composer
+};
 /* export the module */
-return RegexAnalyzer;
+return Regex;
 });
