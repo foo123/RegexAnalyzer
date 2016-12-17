@@ -1,4 +1,4 @@
-Regex.VERSION = 1.0.0
+Regex.VERSION = 1.0.1
 Testing Regex.Composer
 ===============================================================
 Partial        : [_a-z][_a-z0-9]*
@@ -115,43 +115,43 @@ Regular Expression Minimum / Maximum Length :
 Regular Expression Sample Match Strings     : 
 [
     {
-        "sample": "DCCefghDCCe",
+        "sample": "cFGHc",
         "match": "yes",
         "groups": {
-            "1": "DCCe",
-            "named_group": "DCCe"
+            "1": "c",
+            "named_group": "c"
         }
     },
     {
-        "sample": "dBFGHdB",
+        "sample": "cDEfghcDE",
         "match": "yes",
         "groups": {
-            "1": "dB",
-            "named_group": "dB"
+            "1": "cDE",
+            "named_group": "cDE"
         }
     },
     {
-        "sample": "EbcfghEbc",
+        "sample": "EDcFGHEDc",
         "match": "yes",
         "groups": {
-            "1": "Ebc",
-            "named_group": "Ebc"
+            "1": "EDc",
+            "named_group": "EDc"
         }
     },
     {
-        "sample": "cbfghcb",
+        "sample": "eBFGHeB",
         "match": "yes",
         "groups": {
-            "1": "cb",
-            "named_group": "cb"
+            "1": "eB",
+            "named_group": "eB"
         }
     },
     {
-        "sample": "dAfghdA",
+        "sample": "cBFGHcB",
         "match": "yes",
         "groups": {
-            "1": "dA",
-            "named_group": "dA"
+            "1": "cB",
+            "named_group": "cB"
         }
     }
 ]

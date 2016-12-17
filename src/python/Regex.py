@@ -2,7 +2,7 @@
 ##
 #
 #   Regex
-#   @version: 1.0.0
+#   @version: 1.0.1
 #
 #   A simple & generic Regular Expression Analyzer & Composer for PHP, Python, Node/XPCOM/JS, Java, C/C++, ActionScript
 #   https://github.com/foo123/Analyzer
@@ -638,7 +638,7 @@ def reduce_src( ret, node, state ):
         if 'BackReference' in node.flags:
             ret['src'] += ESC+node.val
         else:
-            ret['src'] += ESC+node.val if ('MatchStart' not in node.flags) and ('MatchEnd' not in node.flags) else( ''+node.val)
+            ret['src'] += (''+node.val) if ('MatchAnyChar' in node.flags) or ('MatchStart' in node.flags) or ('MatchEnd' in node.flags) else (ESC+node.val)
     elif T_STRING == type:
         ret['src'] += esc_re(node.val, ESC) if state['escaped'] else node.val
     
@@ -675,6 +675,8 @@ def reduce_peek( ret, node, state ):
             ret["positive" if inNegativeCharGroup else "negative"][ '\\w' ] = 1
         elif 'S' == part:
             ret["positive" if inNegativeCharGroup else "negative"][ '\\s' ] = 1
+        elif 'B' == part:
+            ret["positive" if inNegativeCharGroup else "negative"][ '\\b' ] = 1
         else:
             ret[peek][ESC + part] = 1
     elif T_STRING == type:
@@ -1255,7 +1257,7 @@ def analyze_re( re_obj ):
 # http://php.net/manual/en/reference.pcre.pattern.syntax.php
 # A simple regular expression analyzer
 class Analyzer:
-    VERSION = "1.0.0"
+    VERSION = "1.0.1"
     
     def __init__(self, re=None, delim='/'):
         self.ast = None
@@ -1481,6 +1483,11 @@ class Analyzer:
                     del p[c]
                     cases = concat(cases, ['_'] + character_range('0', '9') + character_range('a', 'z') + character_range('A', 'Z'))
                 
+                elif '\\b' == c:
+                
+                    del p[c]
+                    cases[ _G.specialChars['b'] ] = 1
+                
                 
                 elif '\\.' == c:
                 
@@ -1518,7 +1525,7 @@ def getArgs( args ):
     
 # A simple regular expression composer
 class Composer:
-    VERSION = "1.0.0"
+    VERSION = "1.0.1"
     
     def __init__( self ):
         self.re = None
@@ -1683,9 +1690,15 @@ class Composer:
     def either( self ):
         return self.alternate()
     
-    def group( self, opts=dict() ):
+    def group( self, opts=dict(), v=None ):
         type = T_GROUP
         fl = ''
+        if is_string(opts):
+            fl = opts
+            opts = {}
+            opts[fl] = v
+            fl = ''
+        
         if ('name' in opts) and len(str(opts['name'])):
             self.g += 1
             self.grp[str(self.g)] = self.g
@@ -1767,7 +1780,7 @@ class Regex:
     Regular Expressipn Analyzer and Composer for Python
     https://github.com/foo123/Analyzer
     """
-    VERSION = "1.0.0"
+    VERSION = "1.0.1"
     Node = Node
     Analyzer = Analyzer
     Composer = Composer

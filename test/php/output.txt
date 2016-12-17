@@ -1,4 +1,4 @@
-Regex.VERSION = 1.0.0
+Regex.VERSION = 1.0.1
 Testing Regex.Composer
 ===============================================================
 Partial        : [_a-z][_a-z0-9]*
@@ -164,60 +164,60 @@ Array
 (
     [0] => Array
         (
-            [sample] => CFGHC
+            [sample] => EAbAFGHEAbA
             [match] => yes
             [groups] => Array
                 (
-                    [1] => C
-                    [named_group] => C
+                    [1] => EAbA
+                    [named_group] => EAbA
                 )
 
         )
 
     [1] => Array
         (
-            [sample] => aDfghaD
+            [sample] => dFGHd
             [match] => yes
             [groups] => Array
                 (
-                    [1] => aD
-                    [named_group] => aD
+                    [1] => d
+                    [named_group] => d
                 )
 
         )
 
     [2] => Array
         (
-            [sample] => AbeefghAbee
+            [sample] => eDBbFGHeDBb
             [match] => yes
             [groups] => Array
                 (
-                    [1] => Abee
-                    [named_group] => Abee
+                    [1] => eDBb
+                    [named_group] => eDBb
                 )
 
         )
 
     [3] => Array
         (
-            [sample] => EacfghEac
+            [sample] => eEBFGHeEB
             [match] => yes
             [groups] => Array
                 (
-                    [1] => Eac
-                    [named_group] => Eac
+                    [1] => eEB
+                    [named_group] => eEB
                 )
 
         )
 
     [4] => Array
         (
-            [sample] => aDDDFGHaDDD
+            [sample] => ddceFGHddce
             [match] => yes
             [groups] => Array
                 (
-                    [1] => aDDD
-                    [named_group] => aDDD
+                    [1] => ddce
+                    [named_group] => ddce
                 )
 
         )

@@ -2,7 +2,7 @@
 /**
 *
 *   Regex
-*   @version: 1.0.0
+*   @version: 1.0.1
 *
 *   A simple & generic Regular Expression Analyzer & Composer for PHP, Python, Node/XPCOM/JS, Java, C/C++, ActionScript
 *   https://github.com/foo123/RegexAnalyzer
@@ -131,7 +131,7 @@ class RegexNode
 // http://php.net/manual/en/reference.pcre.pattern.syntax.php
 class RegexAnalyzer
 {
-    const VERSION = "1.0.0";
+    const VERSION = "1.0.1";
     public static $BSPACES = null;
     public static $SPACES = null;
     public static $PUNCTS = null;
@@ -801,7 +801,7 @@ class RegexAnalyzer
             }
             else
             {
-                $ret->src .= empty($node->flags->MatchStart) && empty($node->flags->MatchEnd) ? (Regex::ESC.$node->val) : (''.$node->val);
+                $ret->src .= isset($node->flags->MatchAnyChar) || isset($node->flags->MatchStart) || isset($node->flags->MatchEnd) ? (''.$node->val) : (Regex::ESC.$node->val);
             }
         }
         elseif ( Regex::T_STRING === $type )
@@ -856,6 +856,10 @@ class RegexAnalyzer
             elseif ('S' === $part)
             {
                 $ret[$inNegativeCharGroup?"positive":"negative"][ '\\s' ] = 1;
+            }
+            elseif ('B' === $part)
+            {
+                $ret[$inNegativeCharGroup?"positive":"negative"][ '\\b' ] = 1;
             }
             else
             {
@@ -1689,6 +1693,12 @@ class RegexAnalyzer
                         ));
                 }
                 
+                else if ('\\b' === $c)
+                {
+                    unset( $p[$c] );
+                    $cases[ $this->specialChars['b'] ] = 1;
+                }
+                
                 else if ('\\.' === $c)
                 {
                     unset( $p[$c] );
@@ -1726,7 +1736,7 @@ class RegexAnalyzer
 class RegexComposer
 {
     
-    const VERSION = "1.0.0";
+    const VERSION = "1.0.1";
     
     public $re = null;
     private $g = 0;
@@ -1971,15 +1981,23 @@ class RegexComposer
         return $this->alternate( );
     }
     
-    public function group( $opts=array() )
+    public function group( $opts=array(), $v=null )
     {
         $type = Regex::T_GROUP; $fl = '';
-        $opts = (array)$opts;
-        if ( isset($opts['name']) && strlen($opts['name']) )
+        if ( is_string($opts) )
+        {
+            $fl = $opts; $opts = array();
+            $opts[$fl] = $v; $fl = '';
+        }
+        else
+        {
+            $opts = (array)$opts;
+        }
+        if ( (isset($opts['name']) && strlen($opts['name'])) || (isset($opts['named']) && strlen($opts['named'])) )
         {
             $this->g++;
             $this->grp[$this->g] = $this->g;
-            $this->grp[$opts['name']] = $this->g;
+            $this->grp[isset($opts['name']) ? $opts['name'] : $opts['named']] = $this->g;
         }
         elseif ( isset($opts['lookahead']) && ((true === $opts['lookahead']) || (false === $opts['lookahead'])) )
         {
@@ -2092,7 +2110,7 @@ class RegexComposer
 }
 class Regex
 {
-    const VERSION = "1.0.0";
+    const VERSION = "1.0.1";
     const T_SEQUENCE = 1;
     const T_ALTERNATION = 2;
     const T_GROUP = 4;

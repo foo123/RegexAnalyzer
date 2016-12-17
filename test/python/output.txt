@@ -1,5 +1,5 @@
 Regex Module loaded succesfully
-Regex.VERSION = 1.0.0
+Regex.VERSION = 1.0.1
 Testing Regex.Composer
 ===============================================================
 Partial        : [_a-z][_a-z0-9]*
@@ -7,7 +7,7 @@ Composed       : ^(?:[_a-z][_a-z0-9]*|(\*\*aabb\*\*)|.|\s|\D+)*?\1$
 Expected       : ^(?:[_a-z][_a-z0-9]*|(\*\*aabb\*\*)|.|\s|\D+)*?\1$
 Output         : {   'flags': 2,
     'groups': {'1': 1, 'token': 1},
-    'pattern': <_sre.SRE_Pattern object at 0x0130C7E0>,
+    'pattern': <_sre.SRE_Pattern object at 0x0127C6E8>,
     'source': '^(?:[_a-z][_a-z0-9]*|(\\*\\*aabb\\*\\*)|.|\\s|\\D+)*?\\1$'}
 ===============================================================
 
@@ -56,19 +56,19 @@ Regular Expression Minimum / Maximum Length :
 {'maximum': 'unlimited', 'minimum': 5}
 ===============================================================
 Regular Expression Sample Match Strings     : 
-[   {   'groups': {'1': 'EeDA', 'named_group': 'EeDA'},
+[   {   'groups': {'1': 'BeD', 'named_group': 'BeD'},
         'match': 'yes',
-        'sample': 'EeDAFGHEeDA'},
-    {   'groups': {'1': 'cDBA', 'named_group': 'cDBA'},
+        'sample': 'BeDFGHBeD'},
+    {   'groups': {'1': 'A', 'named_group': 'A'},
         'match': 'yes',
-        'sample': 'cDBAfghcDBA'},
-    {   'groups': {'1': 'AED', 'named_group': 'AED'},
+        'sample': 'AFGHA'},
+    {   'groups': {'1': 'eeAc', 'named_group': 'eeAc'},
         'match': 'yes',
-        'sample': 'AEDFGHAED'},
-    {   'groups': {'1': 'cadA', 'named_group': 'cadA'},
+        'sample': 'eeAcFGHeeAc'},
+    {   'groups': {'1': 'dbc', 'named_group': 'dbc'},
         'match': 'yes',
-        'sample': 'cadAFGHcadA'},
-    {   'groups': {'1': 'dC', 'named_group': 'dC'},
+        'sample': 'dbcFGHdbc'},
+    {   'groups': {'1': 'Dbe', 'named_group': 'Dbe'},
         'match': 'yes',
-        'sample': 'dCFGHdC'}]
+        'sample': 'DbeFGHDbe'}]
 ===============================================================

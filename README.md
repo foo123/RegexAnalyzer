@@ -5,7 +5,7 @@ A generic, simple &amp; intuitive **Regular Expression Analyzer &amp; Composer**
 Java, C/C++, ActionScript (TODO)
 
 
-**Regex v.1.0.0**
+**Regex v.1.0.1**
 
 
 **see also:**  

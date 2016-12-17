@@ -1,7 +1,7 @@
 /**
 *
 *   Regex
-*   @version: 1.0.0
+*   @version: 1.0.1
 *
 *   A simple & generic Regular Expression Analyzer & Composer for PHP, Python, Node/XPCOM/JS, Java, C/C++, ActionScript
 *   https://github.com/foo123/RegexAnalyzer
@@ -23,7 +23,7 @@ else if ( !(name in root) ) /* Browser/WebWorker/.. */
     /* module name */           "Regex",
     /* module factory */        function ModuleFactory__Regex( undef ){
 "use strict";
-var __version__ = "1.0.0",
+var __version__ = "1.0.1",
 
     PROTO = 'prototype', OP = Object[PROTO], AP = Array[PROTO], 
     Keys = Object.keys, to_string = OP.toString, HAS = OP.hasOwnProperty,
@@ -861,7 +861,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             }
             else
             {
-                ret.src += !node.flags.MatchStart && !node.flags.MatchEnd ? (ESC+node.val) : (''+node.val);
+                ret.src += node.flags.MatchAnyChar || node.flags.MatchStart || node.flags.MatchEnd ? (''+node.val) : (ESC+node.val);
             }
         }
         else if ( T_STRING === type )
@@ -917,6 +917,10 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             else if ('S' === part)
             {
                 ret[inNegativeCharGroup?"positive":"negative"][ '\\s' ] = 1;
+            }
+            else if ('B' === part)
+            {
+                ret[inNegativeCharGroup?"positive":"negative"][ '\\b' ] = 1;
             }
             else
             {
@@ -1732,6 +1736,12 @@ Analyzer[PROTO] = {
                     cases = concat(cases, ['_'].concat(character_range('0', '9')).concat(character_range('a', 'z')).concat(character_range('A', 'Z')));
                 }
                 
+                else if ('\\b' === c)
+                {
+                    delete p[c];
+                    cases[ specialChars['b'] ] = 1;
+                }
+                
                 else if ('\\.' === c)
                 {
                     delete p[c];
@@ -1999,14 +2009,22 @@ Composer[PROTO] = {
         return this.alternate();
     },
     
-    group: function( opts ) {
+    group: function( opts, v ) {
         var self = this, type = T_GROUP, fl = '';
-        opts = opts || {};
-        if ( !!opts['name'] )
+        if ( is_string(opts) )
+        {
+            fl = opts; opts = {};
+            opts[fl] = v; fl = '';
+        }
+        else
+        {
+            opts = opts || {};
+        }
+        if ( !!opts['name'] || !!opts['named'] )
         {
             self.g++;
             self.grp[self.g] = self.g;
-            self.grp[opts.name] = self.g;
+            self.grp[opts.name||opts.named] = self.g;
         }
         else if ( (true === opts['lookahead']) || (false === opts['lookahead']) )
         {
