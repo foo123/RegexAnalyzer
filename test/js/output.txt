@@ -1,11 +1,11 @@
-Regex.VERSION = 1.0.1
+Regex.VERSION = 1.1.0
 Testing Regex.Composer
 ===============================================================
 Partial        : [_a-z][_a-z0-9]*
-Composed       : /^(?:[_a-z][_a-z0-9]*|(\*\*aabb\*\*)|.|\s|\D+)*?\1$/i
-Expected       : /^(?:[_a-z][_a-z0-9]*|(\*\*aabb\*\*)|.|\s|\D+)*?\1$/i
+Composed       : /^(?:[_a-z][_a-z0-9]*|(\*\*aabb\*\*).\s|\D+)*\1$/i
+Expected       : /^(?:[_a-z][_a-z0-9]*|(\*\*aabb\*\*).\s|\D+)*?\1$/i
 Output         : {
-    "source": "^(?:[_a-z][_a-z0-9]*|(\\*\\*aabb\\*\\*)|.|\\s|\\D+)*?\\1$",
+    "source": "^(?:[_a-z][_a-z0-9]*|(\\*\\*aabb\\*\\*).\\s|\\D+)*\\1$",
     "flags": "i",
     "groups": {
         "1": 1,
@@ -115,43 +115,43 @@ Regular Expression Minimum / Maximum Length :
 Regular Expression Sample Match Strings     : 
 [
     {
-        "sample": "cFGHc",
+        "sample": "AdfghAd",
         "match": "yes",
         "groups": {
-            "1": "c",
-            "named_group": "c"
+            "1": "Ad",
+            "named_group": "Ad"
         }
     },
     {
-        "sample": "cDEfghcDE",
+        "sample": "dcECFGHdcEC",
         "match": "yes",
         "groups": {
-            "1": "cDE",
-            "named_group": "cDE"
+            "1": "dcEC",
+            "named_group": "dcEC"
         }
     },
     {
-        "sample": "EDcFGHEDc",
+        "sample": "bdBFGHbdB",
         "match": "yes",
         "groups": {
-            "1": "EDc",
-            "named_group": "EDc"
+            "1": "bdB",
+            "named_group": "bdB"
         }
     },
     {
-        "sample": "eBFGHeB",
+        "sample": "aFGHa",
         "match": "yes",
         "groups": {
-            "1": "eB",
-            "named_group": "eB"
+            "1": "a",
+            "named_group": "a"
         }
     },
     {
-        "sample": "cBFGHcB",
+        "sample": "bDeFGHbDe",
         "match": "yes",
         "groups": {
-            "1": "cB",
-            "named_group": "cB"
+            "1": "bDe",
+            "named_group": "bDe"
         }
     }
 ]

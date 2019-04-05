@@ -33,9 +33,11 @@ var outregex = Regex.Composer( )
                 
                 .nonCaptureGroup( ).either( )
                     .regexp( identifierSubRegex )
+                .or_( )
                     .namedGroup( 'token' ).literal( '**aabb**' ).end( )
                     .any( )
                     .space( )
+                .or_( )
                     .digit( false ).oneOrMore( )
                 .end( 2 ).zeroOrMore( false )
                 
@@ -47,7 +49,7 @@ var outregex = Regex.Composer( )
     
 echo("Partial        : " + identifierSubRegex);
 echo("Composed       : " + outregex.pattern.toString());
-echo("Expected       : " + "/^(?:[_a-z][_a-z0-9]*|(\\*\\*aabb\\*\\*)|.|\\s|\\D+)*?\\1$/i");
+echo("Expected       : " + "/^(?:[_a-z][_a-z0-9]*|(\\*\\*aabb\\*\\*).\\s|\\D+)*?\\1$/i");
 echo("Output         : " + JSON.stringify(outregex, null, 4));
 echo("===============================================================");
 echo();

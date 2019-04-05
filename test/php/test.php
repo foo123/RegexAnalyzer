@@ -33,9 +33,11 @@ $outregex = Regex::Composer()
                 
                 ->nonCaptureGroup( )->either( )
                     ->regexp( $identifierSubRegex )
+                ->or_( )
                     ->namedGroup( 'token' )->literal( '**aabb**' )->end( )
                     ->any( )
                     ->space( )
+                ->or_( )
                     ->digit( false )->oneOrMore( )
                 ->end( 2 )->zeroOrMore( false )
                 
@@ -48,7 +50,7 @@ $outregex = Regex::Composer()
 
 echo_("Partial        : " . $identifierSubRegex);
 echo_("Composed       : " . $outregex->pattern);
-echo_("Expected       : " . "/^(?:[_a-z][_a-z0-9]*|(\\*\\*aabb\\*\\*)|.|\\s|\\D+)*?\\1$/i");
+echo_("Expected       : " . "/^(?:[_a-z][_a-z0-9]*|(\\*\\*aabb\\*\\*).\\s|\\D+*?)\\1$/i");
 echo_("Output         : " . print_r($outregex, true));
 echo_("===============================================================");
 echo_();

@@ -32,11 +32,11 @@ echo_("===============================================================")
 
 identifierSubRegex = Regex.Composer( ).characterGroup( ).characters( '_' ).range( 'a', 'z' ).end( ).characterGroup( ).characters( '_' ).range( 'a', 'z' ).range( '0', '9' ).end( ).zeroOrMore( ).partial( )
 
-outregex = Regex.Composer( ).SOL( ).nonCaptureGroup( ).either( ).regexp( identifierSubRegex ).namedGroup( 'token' ).literal( '**aabb**' ).end( ).any( ).space( ).digit( False ).oneOrMore( ).end( 2 ).zeroOrMore( False ).backReference( 'token' ).EOL( ).compose( re.I )
+outregex = Regex.Composer( ).SOL( ).nonCaptureGroup( ).either( ).regexp( identifierSubRegex ).or_( ).namedGroup( 'token' ).literal( '**aabb**' ).end( ).any( ).space( ).or_( ).digit( False ).oneOrMore( ).end( 2 ).zeroOrMore( False ).backReference( 'token' ).EOL( ).compose( re.I )
     
 echo_("Partial        : " + identifierSubRegex)
 echo_("Composed       : " + outregex['pattern'].pattern)
-echo_("Expected       : " + "^(?:[_a-z][_a-z0-9]*|(\\*\\*aabb\\*\\*)|.|\\s|\\D+)*?\\1$")
+echo_("Expected       : " + "^(?:[_a-z][_a-z0-9]*|(\\*\\*aabb\\*\\*).\\s|\\D+)*?\\1$")
 echo_("Output         : " + pprint.pformat(outregex, 4))
 echo_("===============================================================")
 echo_()

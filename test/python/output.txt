@@ -1,14 +1,14 @@
 Regex Module loaded succesfully
-Regex.VERSION = 1.0.1
+Regex.VERSION = 1.1.0
 Testing Regex.Composer
 ===============================================================
 Partial        : [_a-z][_a-z0-9]*
-Composed       : ^(?:[_a-z][_a-z0-9]*|(\*\*aabb\*\*)|.|\s|\D+)*?\1$
-Expected       : ^(?:[_a-z][_a-z0-9]*|(\*\*aabb\*\*)|.|\s|\D+)*?\1$
-Output         : {   'flags': 2,
+Composed       : ^(?:[_a-z][_a-z0-9]*|(\*\*aabb\*\*).\s|\D+)*?\1$
+Expected       : ^(?:[_a-z][_a-z0-9]*|(\*\*aabb\*\*).\s|\D+)*?\1$
+Output         : {   'flags': <RegexFlag.IGNORECASE: 2>,
     'groups': {'1': 1, 'token': 1},
-    'pattern': <_sre.SRE_Pattern object at 0x0127C6E8>,
-    'source': '^(?:[_a-z][_a-z0-9]*|(\\*\\*aabb\\*\\*)|.|\\s|\\D+)*?\\1$'}
+    'pattern': re.compile('^(?:[_a-z][_a-z0-9]*|(\\*\\*aabb\\*\\*).\\s|\\D+)*?\\1$', re.IGNORECASE),
+    'source': '^(?:[_a-z][_a-z0-9]*|(\\*\\*aabb\\*\\*).\\s|\\D+)*?\\1$'}
 ===============================================================
 
 Testing Regex.Analyzer
@@ -49,26 +49,25 @@ Regular Expression (Named) Matched Groups   :
 {'1': 1, 'named_group': 1}
 ===============================================================
 Regular Expression Peek Characters          : 
-{   'negative': [],
-    'positive': ['a', 'A', 'c', 'b', 'e', 'd', 'C', 'B', 'E', 'D']}
+{'negative': [], 'positive': ['a', 'b', 'c', 'd', 'e', 'A', 'B', 'C', 'D', 'E']}
 ===============================================================
 Regular Expression Minimum / Maximum Length : 
 {'maximum': 'unlimited', 'minimum': 5}
 ===============================================================
 Regular Expression Sample Match Strings     : 
-[   {   'groups': {'1': 'BeD', 'named_group': 'BeD'},
+[   {   'groups': {'1': 'decC', 'named_group': 'decC'},
         'match': 'yes',
-        'sample': 'BeDFGHBeD'},
-    {   'groups': {'1': 'A', 'named_group': 'A'},
+        'sample': 'decCFGHdecC'},
+    {   'groups': {'1': 'DaE', 'named_group': 'DaE'},
         'match': 'yes',
-        'sample': 'AFGHA'},
-    {   'groups': {'1': 'eeAc', 'named_group': 'eeAc'},
+        'sample': 'DaEfghDaE'},
+    {   'groups': {'1': 'bbEc', 'named_group': 'bbEc'},
         'match': 'yes',
-        'sample': 'eeAcFGHeeAc'},
-    {   'groups': {'1': 'dbc', 'named_group': 'dbc'},
+        'sample': 'bbEcfghbbEc'},
+    {   'groups': {'1': 'E', 'named_group': 'E'},
         'match': 'yes',
-        'sample': 'dbcFGHdbc'},
-    {   'groups': {'1': 'Dbe', 'named_group': 'Dbe'},
+        'sample': 'EFGHE'},
+    {   'groups': {'1': 'ca', 'named_group': 'ca'},
         'match': 'yes',
-        'sample': 'DbeFGHDbe'}]
+        'sample': 'cafghca'}]
 ===============================================================

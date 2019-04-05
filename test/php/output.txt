@@ -1,12 +1,12 @@
-Regex.VERSION = 1.0.1
+Regex.VERSION = 1.1.0
 Testing Regex.Composer
 ===============================================================
 Partial        : [_a-z][_a-z0-9]*
-Composed       : /^(?:[_a-z][_a-z0-9]*|(\*\*aabb\*\*)|.|\s|\D+)*?\1$/i
-Expected       : /^(?:[_a-z][_a-z0-9]*|(\*\*aabb\*\*)|.|\s|\D+)*?\1$/i
+Composed       : /^(?:[_a-z][_a-z0-9]*|(\*\*aabb\*\*).\s|\D+)*?\1$/i
+Expected       : /^(?:[_a-z][_a-z0-9]*|(\*\*aabb\*\*).\s|\D+*?)\1$/i
 Output         : stdClass Object
 (
-    [source] => ^(?:[_a-z][_a-z0-9]*|(\*\*aabb\*\*)|.|\s|\D+)*?\1$
+    [source] => ^(?:[_a-z][_a-z0-9]*|(\*\*aabb\*\*).\s|\D+)*?\1$
     [flags] => i
     [groups] => Array
         (
@@ -14,7 +14,7 @@ Output         : stdClass Object
             [token] => 1
         )
 
-    [pattern] => /^(?:[_a-z][_a-z0-9]*|(\*\*aabb\*\*)|.|\s|\D+)*?\1$/i
+    [pattern] => /^(?:[_a-z][_a-z0-9]*|(\*\*aabb\*\*).\s|\D+)*?\1$/i
 )
 
 ===============================================================
@@ -164,60 +164,60 @@ Array
 (
     [0] => Array
         (
-            [sample] => EAbAFGHEAbA
+            [sample] => adDAFGHadDA
             [match] => yes
             [groups] => Array
                 (
-                    [1] => EAbA
-                    [named_group] => EAbA
+                    [1] => adDA
+                    [named_group] => adDA
                 )
 
         )
 
     [1] => Array
         (
-            [sample] => dFGHd
+            [sample] => BEECFGHBEEC
             [match] => yes
             [groups] => Array
                 (
-                    [1] => d
-                    [named_group] => d
+                    [1] => BEEC
+                    [named_group] => BEEC
                 )
 
         )
 
     [2] => Array
         (
-            [sample] => eDBbFGHeDBb
+            [sample] => CcCEFGHCcCE
             [match] => yes
             [groups] => Array
                 (
-                    [1] => eDBb
-                    [named_group] => eDBb
+                    [1] => CcCE
+                    [named_group] => CcCE
                 )
 
         )
 
     [3] => Array
         (
-            [sample] => eEBFGHeEB
+            [sample] => EbDfghEbD
             [match] => yes
             [groups] => Array
                 (
-                    [1] => eEB
-                    [named_group] => eEB
+                    [1] => EbD
+                    [named_group] => EbD
                 )
 
         )
 
     [4] => Array
         (
-            [sample] => ddceFGHddce
+            [sample] => DFGHD
             [match] => yes
             [groups] => Array
                 (
-                    [1] => ddce
-                    [named_group] => ddce
+                    [1] => D
+                    [named_group] => D
                 )
 
         )

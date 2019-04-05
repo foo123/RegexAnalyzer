@@ -1,9 +1,9 @@
 /**
 *
 *   Regex
-*   @version: 1.0.1
+*   @version: 1.1.0
 *
-*   A simple & generic Regular Expression Analyzer & Composer for PHP, Python, Node/XPCOM/JS, Java, C/C++, ActionScript
+*   A simple & generic Regular Expression Analyzer & Composer for PHP, Python, Node.js / Browser / XPCOM Javascript
 *   https://github.com/foo123/RegexAnalyzer
 *
 **/
@@ -19,13 +19,13 @@ else if ( ('function'===typeof define)&&define.amd&&('function'===typeof require
     define(name,['module'],function(module){factory.moduleUri = module.uri; return factory.call(root);});
 else if ( !(name in root) ) /* Browser/WebWorker/.. */
     (root[name] = factory.call(root)||1)&&('function'===typeof(define))&&define.amd&&define(function(){return root[name];} );
-}(  /* current root */          this, 
+}(  /* current root */          'undefined' !== typeof self ? self : this,
     /* module name */           "Regex",
     /* module factory */        function ModuleFactory__Regex( undef ){
 "use strict";
-var __version__ = "1.0.1",
+var __version__ = "1.1.0",
 
-    PROTO = 'prototype', OP = Object[PROTO], AP = Array[PROTO], 
+    PROTO = 'prototype', OP = Object[PROTO], AP = Array[PROTO],
     Keys = Object.keys, to_string = OP.toString, HAS = OP.hasOwnProperty,
     fromCharCode = String.fromCharCode, CHAR = 'charAt', CHARCODE = 'charCodeAt', toJSON = JSON.stringify,
     INF = Infinity, ESC = '\\',
@@ -46,7 +46,7 @@ var __version__ = "1.0.1",
     },
     /*
         http://www.javascriptkit.com/javatutors/redev2.shtml
-        
+
         \f matches form-feed.
         \r matches carriage return.
         \n matches linefeed.
@@ -64,7 +64,7 @@ var __version__ = "1.0.1",
         \B matches a non-word boundary (short for [^\b]).
         \cX matches a control character. E.g: \cm matches control-M.
         \xhh matches the character with two characters of hexadecimal code hh.
-        \uhhhh matches the Unicode character with four characters of hexadecimal code hhhh.        
+        \uhhhh matches the Unicode character with four characters of hexadecimal code hhhh.
     */
     specialCharsEscaped = {
         "\\" : "ESC",
@@ -160,31 +160,31 @@ function Node( type, value, flags )
     self.flags = flags || {};
     switch(type)
     {
-        case T_SEQUENCE: 
+        case T_SEQUENCE:
             self.typeName = "Sequence"; break;
-        case T_ALTERNATION: 
+        case T_ALTERNATION:
             self.typeName = "Alternation"; break;
-        case T_GROUP: 
+        case T_GROUP:
             self.typeName = "Group"; break;
-        case T_CHARGROUP: 
+        case T_CHARGROUP:
             self.typeName = "CharacterGroup"; break;
-        case T_CHARS: 
+        case T_CHARS:
             self.typeName = "Characters"; break;
-        case T_CHARRANGE: 
+        case T_CHARRANGE:
             self.typeName = "CharacterRange"; break;
-        case T_STRING: 
+        case T_STRING:
             self.typeName = "String"; break;
-        case T_QUANTIFIER: 
+        case T_QUANTIFIER:
             self.typeName = "Quantifier"; break;
-        case T_UNICODECHAR: 
+        case T_UNICODECHAR:
             self.typeName = "UnicodeChar"; break;
-        case T_HEXCHAR: 
+        case T_HEXCHAR:
             self.typeName = "HexChar"; break;
-        case T_SPECIAL: 
+        case T_SPECIAL:
             self.typeName = "Special"; break;
-        case T_COMMENT: 
+        case T_COMMENT:
             self.typeName = "Comment"; break;
-        default: 
+        default:
             self.typeName = "unspecified"; break;
     }
 };
@@ -198,7 +198,7 @@ Node.toObjectStatic = function toObject( v ) {
         } : {
             type: v.typeName,
             value: toObject(v.val)
-        }; 
+        };
     }
     else if (is_array(v))
     {
@@ -235,7 +235,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
     },
     getArgs = function( args, asArray ) {
         /*var a = slice(args);
-        if ( asArray && a[0] && 
+        if ( asArray && a[0] &&
             ( a[0] instanceof Array || '[object Array]' == to_string.call(a[0]) )
         )
             a = a[0];*/
@@ -250,7 +250,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             {
                 c = s[CHAR](i++);
                 es += (/*('?' === c) || ('*' === c) || ('+' === c) ||*/
-                        ('-' === c) || /*('.' === c) ||*/ ('^' === c) || ('$' === c) || ('|' === c) || 
+                        ('-' === c) || /*('.' === c) ||*/ ('^' === c) || ('$' === c) || ('|' === c) ||
                         ('{' === c) || ('}' === c) || ('(' === c) || (')' === c) ||
                         ('[' === c) || (']' === c) || ('/' === c) || (esc === c) ? esc : '') + c;
             }
@@ -261,7 +261,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             {
                 c = s[CHAR](i++);
                 es += (('?' === c) || ('*' === c) || ('+' === c) ||
-                    /*('-' === c) ||*/ ('.' === c) || ('^' === c) || ('$' === c) || ('|' === c) || 
+                    /*('-' === c) ||*/ ('.' === c) || ('^' === c) || ('$' === c) || ('|' === c) ||
                     ('{' === c) || ('}' === c) || ('(' === c) || (')' === c) ||
                     ('[' === c) || (']' === c) || ('/' === c) || (esc === c) ? esc : '') + c;
             }
@@ -281,9 +281,9 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
     character_range = function(first, last) {
         if ( first && is_array(first) ) { last = first[1]; first = first[0]; }
         var ch, chars, start = first[CHARCODE](0), end = last[CHARCODE](0);
-        
+
         if ( end === start ) return [ fromCharCode( start ) ];
-        
+
         chars = [];
         for (ch = start; ch <= end; ++ch) chars.push( fromCharCode( ch ) );
         return chars;
@@ -303,21 +303,21 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
         }
         return p1;
     },
-    
+
     BSPACES = "\r\n", SPACES = " \t\v", PUNCTS = "~!@#$%^&*()-+=[]{}\\|;:,./<>?",
     DIGITS = "0123456789", DIGITS_RANGE = char_code_range(DIGITS),
     HEXDIGITS_RANGES = [DIGITS_RANGE, [char_code("a"), char_code("f")], [char_code("A"), char_code("F")]],
     ALPHAS = "_"+(character_range("a", "z").join(""))+(character_range("A", "Z").join("")),
     ALL = SPACES+PUNCTS+DIGITS+ALPHAS, ALL_ARY = ALL.split(""),
-    
+
     match_chars = function( CHARS, s, pos, minlen, maxlen ) {
         pos = pos || 0;
         minlen = minlen || 1;
         maxlen = maxlen || INF;
         var lp = pos, l = 0, sl = s.length, ch;
-        while ( (lp < sl) && (l <= maxlen) && -1 < CHARS.indexOf( ch=s[CHAR](lp) ) ) 
-        { 
-            lp++; l++; 
+        while ( (lp < sl) && (l <= maxlen) && -1 < CHARS.indexOf( ch=s[CHAR](lp) ) )
+        {
+            lp++; l++;
         }
         return l >= minlen ? l : false;
     },
@@ -326,8 +326,8 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
         minlen = minlen || 1;
         maxlen = maxlen || INF;
         var lp = pos, l = 0, sl = s.length, ch;
-        while ( (lp < sl) && (l <= maxlen) && ((ch=s[CHARCODE](lp)) >= RANGE[0] && ch <= RANGE[1]) ) 
-        { 
+        while ( (lp < sl) && (l <= maxlen) && ((ch=s[CHARCODE](lp)) >= RANGE[0] && ch <= RANGE[1]) )
+        {
             lp++; l++;
         }
         return l >= minlen ? l : false;
@@ -336,10 +336,10 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
         pos = pos || 0;
         minlen = minlen || 1;
         maxlen = maxlen || INF;
-        var lp = pos, l = 0, sl = s.length, ch, 
+        var lp = pos, l = 0, sl = s.length, ch,
             i, Rl = RANGES.length, RANGE, found = true;
-        while ( (lp < sl) && (l <= maxlen) && found ) 
-        { 
+        while ( (lp < sl) && (l <= maxlen) && found )
+        {
             ch = s[CHARCODE](lp); found = false;
             for (i=0; i<Rl; i++)
             {
@@ -354,39 +354,39 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
         return l >= minlen ? l : false;
     },
 
-    punct = function( ){ 
-        return PUNCTS[CHAR](rnd(0, PUNCTS.length-1)); 
+    punct = function( ){
+        return PUNCTS[CHAR](rnd(0, PUNCTS.length-1));
     },
-    space = function( positive ){ 
-        return false !== positive 
+    space = function( positive ){
+        return false !== positive
             ? SPACES[CHAR](rnd(0, SPACES.length-1))
             : (punct()+digit()+alpha())[CHAR](rnd(0,2))
-        ; 
+        ;
     },
-    digit = function( positive ){ 
-        return false !== positive 
+    digit = function( positive ){
+        return false !== positive
             ? DIGITS[CHAR](rnd(0, DIGITS.length-1))
             : (punct()+space()+alpha())[CHAR](rnd(0,2))
-        ; 
+        ;
     },
-    alpha = function( positive ){ 
-        return false !== positive 
+    alpha = function( positive ){
+        return false !== positive
             ? ALPHAS[CHAR](rnd(0, ALPHAS.length-1))
             : (punct()+space()+digit())[CHAR](rnd(0,2))
-        ; 
+        ;
     },
-    word = function( positive ){ 
-        return false !== positive 
+    word = function( positive ){
+        return false !== positive
             ? (ALPHAS+DIGITS)[CHAR](rnd(0, ALPHAS.length+DIGITS.length-1))
             : (punct()+space())[CHAR](rnd(0,1))
-        ; 
+        ;
     },
-    any = function( ){ 
+    any = function( ){
         return ALL[CHAR](rnd(0, ALL.length-1));
     },
-    character = function( chars, positive ){ 
-        if ( false !== positive ) return chars.length ? chars[rnd(0, chars.length-1)] : ''; 
-        var choices = ALL_ARY.filter(function(c){ return 0 > chars.indexOf(c); }); 
+    character = function( chars, positive ){
+        if ( false !== positive ) return chars.length ? chars[rnd(0, chars.length-1)] : '';
+        var choices = ALL_ARY.filter(function(c){ return 0 > chars.indexOf(c); });
         return choices.length ? choices[rnd(0, choices.length-1)] : '';
     },
     random_upper_or_lower = function( c ) { return 0.5 < Math.random() ? c.toLowerCase( ) : c.toUpperCase( ); },
@@ -403,24 +403,24 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             return random_upper_or_lower( chars );
         }
     },
-    
+
     walk = function walk( ret, node, state ) {
         if ( (null == node) || !state ) return ret;
-        
+
         var i, l, r, type = node instanceof Node ? node.type : null;
-        
+
         // walk the tree
         if ( null === type )
         {
             // custom, let reduce handle it
             ret = state.reduce( ret, node, state );
         }
-        
+
         else if ( state.IGNORE & type )
         {
             /* nothing */
         }
-        
+
         else if ( state.MAP & type )
         {
             r = state.map( ret, node, state );
@@ -444,12 +444,12 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                 }
             }
         }
-        
+
         else if ( state.REDUCE & type )
         {
             ret = state.reduce( ret, node, state );
         }
-        
+
         state.node = null;
         return ret;
     },
@@ -688,20 +688,20 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             return ret;
         }
         if ( -1 === ret ) return ret;
-        
+
         if ( node === +node )
         {
             ret += node;
             return ret;
         }
-        
+
         if ( (T_SPECIAL === node.type) && node.flags.MatchEnd )
         {
             state.stop = 1;
             return ret;
         }
         var type = node.type;
-        
+
         if ( (T_CHARS === type) || (T_CHARRANGE === type) ||
             (T_UNICODECHAR === type) || (T_HEXCHAR === type) ||
             ((T_SPECIAL === type) && !node.flags.MatchStart && !node.flags.MatchEnd)
@@ -713,7 +713,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
         {
             ret += node.val.length;
         }
-        
+
         return ret;
     },
     reduce_str = function reduce_str( ret, node, state ) {
@@ -722,20 +722,20 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             ret += state.ret;
             return ret;
         }
-        
+
         if ( is_string(node) )
         {
             ret += node;
             return ret;
         }
-        
+
         if ( (T_SPECIAL === node.type) && node.flags.MatchEnd )
         {
             state.stop = 1;
             return ret;
         }
         var type = node.type, sample = null;
-        
+
         if ( T_CHARS === type )
         {
             sample = node.val;
@@ -796,7 +796,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
         {
             sample = node.val;
         }
-        
+
         if ( sample )
         {
             ret += T_STRING === type ?
@@ -804,7 +804,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             (character(state.isCaseInsensitive ? case_insensitive(sample, true) : sample, !state.node || !state.node.flags.NegativeMatch))
             ;
         }
-        
+
         return ret;
     },
     reduce_src = function reduce_src( ret, node, state ) {
@@ -814,13 +814,13 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             if ( state.ret.group ) ret.group = clone(state.ret.group, ret.group);
             return ret;
         }
-        
+
         if ( is_string(node) )
         {
             ret.src += node;
             return ret;
         }
-        
+
         var type = node.type;
         if ( T_CHARS === type )
         {
@@ -868,7 +868,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
         {
             ret.src += state.escaped ? esc_re(node.val, ESC) : node.val;
         }
-        
+
         return ret;
     },
     reduce_peek = function reduce_peek( ret, node, state ) {
@@ -883,11 +883,11 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             state.stop = 1;
             return ret;
         }
-        
+
         var type = node.type, inCharGroup = state.node && (T_CHARGROUP === state.node.type),
             inNegativeCharGroup = inCharGroup && state.node.flags.NegativeMatch,
             peek = inNegativeCharGroup ? "negative" : "positive";
-        
+
         if ( T_CHARS === type )
         {
             ret[peek] = concat( ret[peek], node.val );
@@ -931,10 +931,10 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
         {
             ret["positive"][node.val[CHAR](0)] = 1;
         }
-        
+
         return ret;
     },
-    
+
     match_hex = function( s ) {
         var m = false;
         if ( (s.length > 2) && ('x' === s[CHAR](0)) )
@@ -958,7 +958,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             m = ['', '', null];
             pos++;
             if ( l=match_chars(SPACES, s, pos) ) pos += l;
-            if ( l=match_char_range(DIGITS_RANGE, s, pos) ) 
+            if ( l=match_char_range(DIGITS_RANGE, s, pos) )
             {
                 m[1] = s.slice(pos, pos+l);
                 pos += l;
@@ -970,7 +970,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             if ( l=match_chars(SPACES, s, pos) ) pos += l;
             if ( (pos < sl) && (',' === s[CHAR](pos)) ) {pos += 1; hasComma = true;}
             if ( l=match_chars(SPACES, s, pos) ) pos += l;
-            if ( l=match_char_range(DIGITS_RANGE, s, pos) ) 
+            if ( l=match_char_range(DIGITS_RANGE, s, pos) )
             {
                 m[2] = s.slice(pos, pos+l);
                 pos += l;
@@ -993,13 +993,13 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
     chargroup = function chargroup( re_obj ) {
         var sequence = [], chars = [], allchars = [], flags = {}, flag, ch, lre,
         prevch, range, isRange = false, m, isUnicode, isHex, escaped = false;
-        
+
         if ( '^' === re_obj.re[CHAR]( re_obj.pos ) )
         {
             flags[ "NegativeMatch" ] = 1;
             re_obj.pos++;
         }
-                
+
         lre = re_obj.len;
         while ( re_obj.pos < lre )
         {
@@ -1008,10 +1008,10 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
             m = null;
             prevch = ch;
             ch = re_obj.re[CHAR]( re_obj.pos++ );
-            
+
             escaped = ESC === ch;
             if ( escaped ) ch = re_obj.re[CHAR]( re_obj.pos++ );
-            
+
             if ( escaped )
             {
                 // unicode character
@@ -1022,7 +1022,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                     ch = Node(T_UNICODECHAR, m[0], {"Char": fromCharCode(parseInt(m[1], 16)), "Code": m[1]});
                     isUnicode = true; isHex = false;
                 }
-                
+
                 // hex character
                 else if ( 'x' === ch )
                 {
@@ -1032,7 +1032,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                     isUnicode = true; isHex = true;
                 }
             }
-            
+
             if ( isRange )
             {
                 if ( chars.length )
@@ -1057,7 +1057,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                         }
                         sequence.push( ch );
                     }
-                    
+
                     else if ( HAS.call(specialCharsEscaped,ch) && ('/' !== ch) )
                     {
                         if ( chars.length )
@@ -1069,13 +1069,13 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                         flag[ specialCharsEscaped[ch] ] = 1;
                         sequence.push( Node(T_SPECIAL, ch, flag) );
                     }
-                    
+
                     else
                     {
                         chars.push( ch );
                     }
                 }
-                
+
                 else
                 {
                     // end of char group
@@ -1090,14 +1090,14 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                         if ( allchars.length ) sequence.push( Node(T_CHARS, allchars) );
                         return Node(T_CHARGROUP, sequence, flags);
                     }
-                    
+
                     else if ( '-' === ch )
                     {
                         range = [prevch, ''];
                         if ( prevch instanceof Node ) sequence.pop(); else chars.pop();
                         isRange = true;
                     }
-                    
+
                     else
                     {
                         chars.push( ch );
@@ -1114,18 +1114,18 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
         if ( allchars.length ) sequence.push( Node(T_CHARS, allchars) );
         return Node(T_CHARGROUP, sequence, flags);
     },
-    
+
     analyze_re = function analyze_re( re_obj ) {
         var lre, ch, m, word = '', wordlen = 0,
             alternation = [], sequence = [], flags = {},
             flag, escaped = false, pre, pre3, captured;
-        
+
         if ( re_obj.inGroup > 0 )
         {
             pre = re_obj.re.substr(re_obj.pos, 2);
             pre3 = re_obj.re.substr(re_obj.pos, 3);
             captured = 1;
-            
+
             if ( "?P=" === pre3 )
             {
                 flags[ "BackReference" ] = 1;
@@ -1141,7 +1141,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                 flags[ "GroupIndex" ] = HAS.call(re_obj.group,flags[ "GroupName" ]) ? re_obj.group[flags[ "GroupName" ]] : null;
                 return Node(T_SPECIAL, String(flags[ "GroupIndex" ]), flags);
             }
-            
+
             else if ( "?#" === pre )
             {
                 flags[ "Comment" ] = 1;
@@ -1156,42 +1156,42 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                 }
                 return Node(T_COMMENT, word);
             }
-            
+
             else if ( "?:" === pre )
             {
                 flags[ "NotCaptured" ] = 1;
                 re_obj.pos += 2;
                 captured = 0;
             }
-            
+
             else if ( "?=" === pre )
             {
                 flags[ "LookAhead" ] = 1;
                 re_obj.pos += 2;
                 captured = 0;
             }
-            
+
             else if ( "?!" === pre )
             {
                 flags[ "NegativeLookAhead" ] = 1;
                 re_obj.pos += 2;
                 captured = 0;
             }
-            
+
             else if ( "?<=" === pre3 )
             {
                 flags[ "LookBehind" ] = 1;
                 re_obj.pos += 3;
                 captured = 0;
             }
-            
+
             else if ( "?<!" === pre3 )
             {
                 flags[ "NegativeLookBehind" ] = 1;
                 re_obj.pos += 3;
                 captured = 0;
             }
-            
+
             else if ( ("?<" === pre) || ("?P<" === pre3) )
             {
                 flags[ "NamedGroup" ] = 1;
@@ -1205,7 +1205,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                     flags[ "GroupName" ] += ch;
                 }
             }
-            
+
             ++re_obj.index;
             if ( captured )
             {
@@ -1215,16 +1215,16 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                 if ( flags[ "GroupName" ] ) re_obj.group[flags[ "GroupName" ]] = flags[ "GroupIndex" ];
             }
         }
-        
+
         lre = re_obj.len;
         while ( re_obj.pos < lre )
         {
             ch = re_obj.re[CHAR]( re_obj.pos++ );
-            
+
             //   \\abc
             escaped = ESC === ch;
             if ( escaped ) ch = re_obj.re[CHAR]( re_obj.pos++ );
-            
+
             if ( escaped )
             {
                 // unicode character
@@ -1240,7 +1240,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                     re_obj.pos += m[0].length-1;
                     sequence.push( Node(T_UNICODECHAR, m[0], {"Char": fromCharCode(parseInt(m[1], 16)), "Code": m[1]}) );
                 }
-                
+
                 // hex character
                 else if ( 'x' === ch )
                 {
@@ -1254,7 +1254,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                     re_obj.pos += m[0].length-1;
                     sequence.push( Node(T_HEXCHAR, m[0], {"Char": fromCharCode(parseInt(m[1], 16)), "Code": m[1]}) );
                 }
-                
+
                 else if ( HAS.call(specialCharsEscaped,ch) && ('/' !== ch) )
                 {
                     if ( wordlen )
@@ -1267,7 +1267,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                     flag[ specialCharsEscaped[ch] ] = 1;
                     sequence.push( Node(T_SPECIAL, ch, flag) );
                 }
-                
+
                 else if ( ('1' <= ch) && ('9' >= ch) )
                 {
                     if ( wordlen )
@@ -1289,14 +1289,14 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                     sequence.push( Node(T_SPECIAL, word, flag) );
                     word = '';
                 }
-                
+
                 else
                 {
                     word += ch;
                     wordlen += 1;
                 }
             }
-            
+
             else
             {
                 // group end
@@ -1321,7 +1321,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                         return Node(T_GROUP, Node(T_SEQUENCE, sequence), flags);
                     }
                 }
-                
+
                 // parse alternation
                 else if ( '|' === ch )
                 {
@@ -1334,7 +1334,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                     alternation.push( Node(T_SEQUENCE, sequence) );
                     sequence = [];
                 }
-                
+
                 // parse character group
                 else if ( '[' === ch )
                 {
@@ -1346,7 +1346,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                     }
                     sequence.push( chargroup( re_obj ) );
                 }
-                
+
                 // parse sub-group
                 else if ( '(' === ch )
                 {
@@ -1360,7 +1360,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                     sequence.push( analyze_re( re_obj ) );
                     re_obj.inGroup -= 1;
                 }
-                
+
                 // parse num repeats
                 else if ( '{' === ch )
                 {
@@ -1391,7 +1391,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                     }
                     sequence.push( Node(T_QUANTIFIER, prev, flag) );
                 }
-                
+
                 // quantifiers
                 else if ( ('*' === ch) || ('+' === ch) || ('?' === ch) )
                 {
@@ -1422,7 +1422,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                     }
                     sequence.push( Node(T_QUANTIFIER, prev, flag) );
                 }
-            
+
                 // special characters like ^, $, ., etc..
                 else if ( HAS.call(specialChars,ch) )
                 {
@@ -1436,7 +1436,7 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                     flag[ specialChars[ch] ] = 1;
                     sequence.push( Node(T_SPECIAL, ch, flag) );
                 }
-            
+
                 else
                 {
                     word += ch;
@@ -1444,14 +1444,14 @@ var rnd = function( a, b ){ return Math.round((b-a)*Math.random()+a); },
                 }
             }
         }
-        
+
         if ( wordlen )
         {
             sequence.push( Node(T_STRING, word) );
             word = '';
             wordlen = 0;
         }
-        
+
         if ( alternation.length )
         {
             alternation.push( Node(T_SEQUENCE, sequence) );
@@ -1475,7 +1475,7 @@ function Analyzer( re, delim )
 }
 Analyzer.VERSION = __version__;
 Analyzer[PROTO] = {
-    
+
     constructor: Analyzer,
 
     ast: null,
@@ -1499,7 +1499,7 @@ Analyzer[PROTO] = {
         self.ch = null;
         return self;
     },
-    
+
     reset: function( ) {
         var self = this;
         self.ast = null;
@@ -1510,7 +1510,7 @@ Analyzer[PROTO] = {
         self.ch = null;
         return self;
     },
-    
+
     input: function( re, delim ) {
         var self = this;
         if ( !arguments.length ) return self.re;
@@ -1520,7 +1520,7 @@ Analyzer[PROTO] = {
             var l, ch, fl = {};
             re = re.toString( );
             l = re.length;
-            
+
             if ( delim )
             {
                 // parse re flags, if any
@@ -1530,7 +1530,7 @@ Analyzer[PROTO] = {
                     if ( delim === ch ) break;
                     else { fl[ ch ] = 1; l--; }
                 }
-                
+
                 if ( 0 < l )
                 {
                     // remove re delimiters
@@ -1542,14 +1542,14 @@ Analyzer[PROTO] = {
                     re = '';
                 }
             }
-            
+
             // re is different, reset the ast, etc
             if ( self.re !== re ) self.reset();
             self.re = re; self.fl = fl;
         }
         return self;
     },
-    
+
     analyze: function( ) {
         var self = this;
         if ( (null != self.re) && (null === self.ast) )
@@ -1560,7 +1560,7 @@ Analyzer[PROTO] = {
         }
         return self;
     },
-    
+
     synthesize: function( escaped ) {
         var self = this, state, re;
         if ( null == self.re ) return self;
@@ -1586,35 +1586,35 @@ Analyzer[PROTO] = {
         }
         return self;
     },
-    
+
     source: function( ) {
         var self = this;
         if ( null == self.re ) return null;
         if ( null === self.src ) self.synthesize();
         return self.src;
     },
-    
+
     groups: function( raw ) {
         var self = this;
         if ( null == self.re ) return null;
         if ( null === self.grp ) self.synthesize();
         return true===raw ? sel.grp : clone(self.grp);
     },
-    
+
     compile: function( flags ) {
         var self = this;
         if ( null == self.re ) return null;
         flags = flags || self.fl || {};
         return new RegExp(self.source(), (flags.g||flags.G?'g':'')+(flags.i||flags.I?'i':'')+(flags.m||flags.M?'m':'')+(flags.y||flags.Y?'y':''));
     },
-    
+
     tree: function( flat ) {
         var self = this;
         if ( null == self.re ) return null;
         if ( null === self.ast ) self.analyze( );
         return true===flat ? self.ast.toObject() : self.ast;
     },
-    
+
     // experimental feature
     sample: function( maxlen, numsamples ) {
         var self = this, state;
@@ -1639,7 +1639,7 @@ Analyzer[PROTO] = {
         }
         return walk('', self.ast, state);
     },
-    
+
     // experimental feature
     minimum: function( ) {
         var self = this, state;
@@ -1663,7 +1663,7 @@ Analyzer[PROTO] = {
         }
         return self.min;
     },
-    
+
     // experimental feature
     maximum: function( ) {
         var self = this, state;
@@ -1687,7 +1687,7 @@ Analyzer[PROTO] = {
         }
         return self.max;
     },
-    
+
     // experimental feature
     peek: function( ) {
         var self = this, state, isCaseInsensitive, peek, n, c, p, cases;
@@ -1723,49 +1723,49 @@ Analyzer[PROTO] = {
                     delete p[c];
                     cases = concat(cases, character_range('0', '9'));
                 }
-                
+
                 else if ('\\s' === c)
                 {
                     delete p[c];
                     cases = concat(cases, ['\f','\n','\r','\t','\v','\u00A0','\u2028','\u2029']);
                 }
-                
+
                 else if ('\\w' === c)
                 {
                     delete p[c];
                     cases = concat(cases, ['_'].concat(character_range('0', '9')).concat(character_range('a', 'z')).concat(character_range('A', 'Z')));
                 }
-                
+
                 else if ('\\b' === c)
                 {
                     delete p[c];
                     cases[ specialChars['b'] ] = 1;
                 }
-                
+
                 else if ('\\.' === c)
                 {
                     delete p[c];
                     cases[ specialChars['.'] ] = 1;
                 }
-                
+
                 /*else if ('\\^' === c)
                 {
                     delete p[c];
                     cases[ specialChars['^'] ] = 1;
                 }
-                
+
                 else if ('\\$' === c)
                 {
                     delete p[c];
                     cases[ specialChars['$'] ] = 1;
                 }*/
-                
+
                 else if ( (ESC !== c[CHAR](0)) && isCaseInsensitive )
                 {
                     cases[ c.toLowerCase() ] = 1;
                     cases[ c.toUpperCase() ] = 1;
                 }
-                
+
                 else if ( ESC === c[CHAR](0) )
                 {
                     delete p[c];
@@ -1797,7 +1797,7 @@ function Composer( )
 }
 Composer.VERSION = __version__;
 Composer[PROTO] = {
-    
+
     constructor: Composer,
 
     re: null,
@@ -1815,7 +1815,7 @@ Composer[PROTO] = {
         self.ast = null;
         return self;
     },
-    
+
     reset: function( ) {
         var self = this;
         self.g = 0;
@@ -1848,167 +1848,185 @@ Composer[PROTO] = {
     token: function( token, escaped ) {
         var self = this;
         if ( null != token )
-            self.ast[self.level].node.push(true===escaped ? esc_re(String(token), ESC) : String(token));
+            self.ast[self.level].node.push(escaped ? esc_re(String(token), ESC) : String(token));
         return self;
     },
-    
+
     literal: function( literal ) {
-        return this.token(literal, true);
+        return this.token(String(literal), true);
     },
-    
+
     regexp: function( re ) {
         return this.token(String(re), false);
     },
-    
+
     SOL: function( ) {
         var self = this;
         self.ast[self.level].node.push('^');
         return self;
     },
-    
+
     SOF: function( ) {
         return this.SOL( );
     },
-    
+
     EOL: function( ) {
         var self = this;
         self.ast[self.level].node.push('$');
         return self;
     },
-    
+
     EOF: function( ) {
         return this.EOL( );
     },
-    
+
     LF: function( ) {
         var self = this;
         self.ast[self.level].node.push(ESC+'n');
         return self;
     },
-    
+
     CR: function( ) {
         var self = this;
         self.ast[self.level].node.push(ESC+'r');
         return self;
     },
-    
+
     TAB: function( ) {
         var self = this;
         self.ast[self.level].node.push(ESC+'t');
         return self;
     },
-    
+
     CTRL: function( code ) {
         var self = this;
         self.ast[self.level].node.push(ESC+'c'+(code||0));
         return self;
     },
-    
+
     HEX: function( code ) {
         var self = this;
         self.ast[self.level].node.push(ESC+'x'+pad(code||0, 2));
         return self;
     },
-    
+
     UNICODE: function( code ) {
         var self = this;
         self.ast[self.level].node.push(ESC+'u'+pad(code||0, 4));
         return self;
     },
-    
+
     backSpace: function( ) {
         var self = this;
         self.ast[self.level].node.push('['+ESC+'b]');
         return self;
     },
-    
+
     any: function( multiline ) {
         var self = this;
-        self.ast[self.level].node.push(true===multiline ? '['+ESC+'s'+ESC+'S]' : '.');
+        self.ast[self.level].node.push(multiline ? '['+ESC+'s'+ESC+'S]' : '.');
         return self;
     },
-    
+
     space: function( positive ) {
         var self = this;
-        self.ast[self.level].node.push(false===positive ? ESC+'S' : ESC+'s');
+        if ( arguments.length < 1 ) positive = true;
+        self.ast[self.level].node.push(!positive ? ESC+'S' : ESC+'s');
         return self;
     },
-    
+
     digit: function( positive ) {
         var self = this;
-        self.ast[self.level].node.push(false===positive ? ESC+'D' : ESC+'d');
+        if ( arguments.length < 1 ) positive = true;
+        self.ast[self.level].node.push(!positive ? ESC+'D' : ESC+'d');
         return self;
     },
-    
+
     word: function( positive ) {
         var self = this;
-        self.ast[self.level].node.push(false===positive ? ESC+'W' : ESC+'w');
+        if ( arguments.length < 1 ) positive = true;
+        self.ast[self.level].node.push(!positive ? ESC+'W' : ESC+'w');
         return self;
     },
-    
+
     boundary: function( positive ) {
         var self = this;
-        self.ast[self.level].node.push(false===positive ? ESC+'B' : ESC+'b');
+        if ( arguments.length < 1 ) positive = true;
+        self.ast[self.level].node.push(!positive ? ESC+'B' : ESC+'b');
         return self;
     },
-    
+
     characters: function( ) {
         var self = this;
         if ( T_CHARGROUP === self.ast[self.level].type )
             self.ast[self.level].node.push(getArgs(arguments,1).map(function(c){ return esc_re(String(c), ESC, 1); }).join(''));
         return self;
     },
-    
+
     range: function( start, end ) {
         var self = this;
         if ( null != start && null != end && T_CHARGROUP === self.ast[self.level].type )
             self.ast[self.level].node.push(esc_re(String(start), ESC, 1)+'-'+esc_re(String(end), ESC, 1));
         return self;
     },
-    
+
     backReference: function( n ) {
         var self = this;
         self.ast[self.level].node.push(ESC+(HAS.call(self.grp,n) ? self.grp[n] : n|0));
         return self;
     },
-    
+
     repeat: function( min, max, greedy ) {
         var self = this;
         if ( null == min ) return self;
-        var repeat = (null==max || min===max ? ('{'+String(min)+'}') : ('{'+String(min)+','+String(max)+'}')) + (false===greedy ? '?' : '');
+        if ( arguments.length < 3 ) greedy = true;
+        var repeat = (null==max || min===max ? ('{'+String(min)+'}') : ('{'+String(min)+','+String(max)+'}')) + (!greedy ? '?' : '');
         self.ast[self.level].node[self.ast[self.level].node.length-1] += repeat;
         return self;
     },
-    
+
     zeroOrOne: function( greedy ) {
         var self = this;
-        self.ast[self.level].node[self.ast[self.level].node.length-1] += (false===greedy ? '??' : '?');
+        if ( arguments.length < 3 ) greedy = true;
+        self.ast[self.level].node[self.ast[self.level].node.length-1] += (!greedy ? '??' : '?');
         return self;
     },
-    
+
     zeroOrMore: function( greedy ) {
         var self = this;
-        self.ast[self.level].node[self.ast[self.level].node.length-1] += (false===greedy ? '*?' : '*');
+        if ( arguments.length < 3 ) greedy = true;
+        self.ast[self.level].node[self.ast[self.level].node.length-1] += (!greedy ? '*?' : '*');
         return self;
     },
-    
+
     oneOrMore: function( greedy ) {
         var self = this;
-        self.ast[self.level].node[self.ast[self.level].node.length-1] += (false===greedy ? '+?' : '+');
+        if ( arguments.length < 3 ) greedy = true;
+        self.ast[self.level].node[self.ast[self.level].node.length-1] += (!greedy ? '+?' : '+');
         return self;
     },
-    
+
     alternate: function( ) {
         var self = this;
         self.level++;
-        self.ast.push({node: [], type: T_ALTERNATION, flag: ''});
+        self.ast.push({node: [], type: T_ALTERNATION, flag: '', sequences: []});
         return self;
     },
-    
+
     either: function( ) {
         return this.alternate();
     },
-    
+
+    or_: function( ) {
+        var self = this, ast = self.ast[self.level];
+        if ( (T_ALTERNATION === ast.type) && ast.node.length )
+        {
+            ast.sequences.push(ast.node.join(''));
+            ast.node = [];
+        }
+        return self;
+    },
+
     group: function( opts, v ) {
         var self = this, type = T_GROUP, fl = '';
         if ( is_string(opts) )
@@ -2052,33 +2070,33 @@ Composer[PROTO] = {
         self.ast.push({node: [], type: type, flag: fl});
         return self;
     },
-    
+
     subGroup: function( opts ) {
         return this.group( opts );
     },
-    
+
     characterGroup: function( positive ) {
         return this.group({'characters':false!==positive});
     },
-    
+
     namedGroup: function( name ) {
         return this.group({'name':name});
     },
-    
+
     nonCaptureGroup: function( ) {
         return this.group({'nocapture':true});
     },
-    
+
     lookAheadGroup: function( positive ) {
         return this.group({'lookahead':false!==positive});
     },
-    
+
     lookBehindGroup: function( positive ) {
         return this.group({'lookbehind':false!==positive});
     },
-    
+
     end: function( n ) {
-        var self = this, prev, type, flag, part;
+        var self = this, prev, type, flag, part, sequences;
         n = (arguments.length ? n|0 : 1) || 1;
         // support ending multiple blocks at once
         while( n-- )
@@ -2087,6 +2105,11 @@ Composer[PROTO] = {
             type = prev ? prev.type : 0;
             flag = prev ? prev.flag : '';
             part = prev ? prev.node : [];
+            if ( T_ALTERNATION === type )
+            {
+                sequences = prev ? prev.sequences : [];
+                part = !part.length ? sequences : sequences.concat(part.join(''));
+            }
             if ( 0 < self.level )
             {
                 --self.level;

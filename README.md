@@ -1,26 +1,25 @@
 Regex.Analyzer and Regex.Composer
 =================================
 
-A generic, simple &amp; intuitive **Regular Expression Analyzer &amp; Composer** for PHP, Python, Node/XPCOM/JS,
-Java, C/C++, ActionScript (TODO)
+A generic, simple &amp; intuitive **Regular Expression Analyzer &amp; Composer** for PHP, Python, Node.js / Browser / XPCOM Javascript
 
 
-**Regex v.1.0.1**
+**Regex v.1.1.0**
 
 
 **see also:**  
 
-* [Contemplate](https://github.com/foo123/Contemplate) a light-weight template engine for Node/XPCOM/JS, PHP, Python, ActionScript
+* [Contemplate](https://github.com/foo123/Contemplate) a light-weight template engine for Node.js / Browser / XPCOM Javascript, PHP, Python
 * [Tao](https://github.com/foo123/Tao.js) A simple, tiny, isomorphic, precise and fast template engine for handling both string and live dom based templates
 * [ModelView](https://github.com/foo123/modelview.js) a light-weight and flexible MVVM framework for JavaScript/HTML5
 * [ModelView MVC jQueryUI Widgets](https://github.com/foo123/modelview-widgets) plug-n-play, state-full, full-MVC widgets for jQueryUI using modelview.js (e.g calendars, datepickers, colorpickers, tables/grids, etc..) (in progress)
-* [Dromeo](https://github.com/foo123/Dromeo) a flexible, agnostic router for Node/XPCOM/JS, PHP, Python, ActionScript
-* [PublishSubscribe](https://github.com/foo123/PublishSubscribe) a simple and flexible publish-subscribe pattern implementation for Node/XPCOM/JS, PHP, Python, ActionScript
-* [GrammarTemplate](https://github.com/foo123/GrammarTemplate) versatile and intuitive grammar-based templating for PHP, Python, Node/XPCOM/JS, ActionScript
-* [Xpresion](https://github.com/foo123/Xpresion) a simple and flexible eXpression parser engine (with custom functions and variables support) for PHP, Python, Node/XPCOM/JS, ActionScript
-* [Dialect](https://github.com/foo123/Dialect) a simple cross-platform &amp; cross-vendor SQL builder for PHP, Python, Node/XPCOM/JS, ActionScript
+* [Dromeo](https://github.com/foo123/Dromeo) a flexible, agnostic router for Node.js / Browser / XPCOM Javascript, PHP, Python
+* [PublishSubscribe](https://github.com/foo123/PublishSubscribe) a simple and flexible publish-subscribe pattern implementation for Node.js / Browser / XPCOM Javascript, PHP, Python
+* [GrammarTemplate](https://github.com/foo123/GrammarTemplate) versatile and intuitive grammar-based templating for Node.js / Browser / XPCOM Javascript, PHP, Python
+* [Xpresion](https://github.com/foo123/Xpresion) a simple and flexible eXpression parser engine (with custom functions and variables support) for Node.js / Browser / XPCOM Javascript, PHP, Python
+* [Dialect](https://github.com/foo123/Dialect) an intuitive and versatile cross-platform &amp; cross-vendor SQL query builder for Node.js / Browser / XPCOM Javascript, PHP, Python
 * [Simulacra](https://github.com/foo123/Simulacra) a simulation, algebraic, probability and combinatorics PHP package for scientific computations
-* [RT](https://github.com/foo123/RT) client-side real-time communication for Node/XPCOM/JS with support for Poll/BOSH/WebSockets
+* [RT](https://github.com/foo123/RT) client-side real-time communication for Node.js / Browser / XPCOM Javascript with support for Poll / BOSH / WebSockets
 * [Asynchronous](https://github.com/foo123/asynchronous.js) a simple manager for async, linearised, parallelised, interleaved and sequential tasks for JavaScript
 
 
