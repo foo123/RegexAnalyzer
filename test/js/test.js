@@ -120,18 +120,27 @@ echo(JSON.stringify(Regex.Analyzer('/[abdA-Zxy0-9]/').tree(), null, 2));
 
 // https://github.com/foo123/RegexAnalyzer/issues/6
 echo('/(?<n>a)\\k<n>/');
+echo(JSON.stringify(Regex.Analyzer('/(?<n>a)\\k<n>/').backwardsCompatible(false).source(), null, 2));
 echo(JSON.stringify(Regex.Analyzer('/(?<n>a)\\k<n>/').tree(), null, 2));
 echo('/(?P<n>a)(?P=n)/');
+echo(JSON.stringify(Regex.Analyzer('/(?P<n>a)(?P=n)/').backwardsCompatible(false).source(), null, 2));
 echo(JSON.stringify(Regex.Analyzer('/(?P<n>a)(?P=n)/').tree(), null, 2));
 
 // https://github.com/foo123/RegexAnalyzer/issues/7
+echo('/\\u{2}/u');
+echo(JSON.stringify(Regex.Analyzer('/\\u{2}/u').source(), null, 2));
+echo(JSON.stringify(Regex.Analyzer('/\\u{2}/u').tree(), null, 2));
 echo('/\\u{61}/u');
+echo(JSON.stringify(Regex.Analyzer('/\\u{61}/u').source(), null, 2));
 echo(JSON.stringify(Regex.Analyzer('/\\u{61}/u').tree(), null, 2));
 echo('/\\u{61}/');
+echo(JSON.stringify(Regex.Analyzer('/\\u{61}/').source(), null, 2));
 echo(JSON.stringify(Regex.Analyzer('/\\u{61}/').tree(), null, 2));
 
 // https://github.com/foo123/RegexAnalyzer/issues/9
 echo('/\\u00/');
+echo(JSON.stringify(Regex.Analyzer('/\\u00/').source(), null, 2));
 echo(JSON.stringify(Regex.Analyzer('/\\u00/').tree(), null, 2));
 echo('/\\x3/');
+echo(JSON.stringify(Regex.Analyzer('/\\x3/').source(), null, 2));
 echo(JSON.stringify(Regex.Analyzer('/\\x3/').tree(), null, 2));

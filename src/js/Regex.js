@@ -512,6 +512,10 @@ var rnd = function(a, b) {return Math.round((b-a)*Math.random()+a);},
             {
                 g = [].concat('(?<!').concat(array(node.val)).concat(')');
             }
+            else if (node.flags.NamedGroup && !state.compatibility)
+            {
+                g = [].concat('(?<'+node.flags.GroupName+'>').concat(array(node.val)).concat(')');
+            }
             else
             {
                 g = [].concat('(').concat(array(node.val)).concat(')');
@@ -964,9 +968,9 @@ var rnd = function(a, b) {return Math.round((b-a)*Math.random()+a);},
     },
     match_unicode = function(s, flags) {
         var m = false, l;
-        if ((s.length > 4) && ('u' === s[CHAR](0)))
+        if ((s.length > 3) && ('u' === s[CHAR](0)))
         {
-            if (flags.u && '{' === s[CHAR](1) && (l=match_char_ranges(HEXDIGITS_RANGES, s, 2, 2, 6)) && '}' === s[CHAR](l+2))
+            if (flags.u && '{' === s[CHAR](1) && (l=match_char_ranges(HEXDIGITS_RANGES, s, 2, 1, 6)) && '}' === s[CHAR](l+2))
             {
                 return [m=s.slice(0,l+3), m.slice(2, -1), 1];
             }
