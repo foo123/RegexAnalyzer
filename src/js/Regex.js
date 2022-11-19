@@ -27,7 +27,11 @@ var __version__ = "1.2.0",
 
     PROTO = 'prototype', OP = Object[PROTO], AP = Array[PROTO],
     Keys = Object.keys, to_string = OP.toString, HAS = OP.hasOwnProperty,
-    fromCharCode = String.fromCharCode, CHAR = 'charAt', CHARCODE = 'charCodeAt', toJSON = JSON.stringify,
+    fromCharCode = String.fromCharCode,
+    fromCodePoint = String.fromCodePoint || String.fromCharCode,
+    CHAR = 'charAt', CHARCODE = 'charCodeAt',
+    CODEPOINT = String.prototype.codePointAt ? 'codePointAt' : CHARCODE,
+    toJSON = JSON.stringify,
     INF = Infinity, ESC = '\\',
     specialChars = {
         "." : "MatchAnyChar",
@@ -280,18 +284,18 @@ var rnd = function(a, b) {return Math.round((b-a)*Math.random()+a);},
         while (ps.length < n) ps = z + ps;
         return ps;
     },
-    char_code = function(c) {return c[CHARCODE](0);},
-    char_code_range = function(s) {return [s[CHARCODE](0), s[CHARCODE](s.length-1)];},
+    char_code = function(c) {return c[CODEPOINT](0);},
+    char_code_range = function(s) {return [s[CODEPOINT](0), s[CODEPOINT](s.length-1)];},
     //char_codes = function( s_or_a ) { return (s_or_a.substr ? s_or_a.split("") : s_or_a).map( char_code ); },
     // http://stackoverflow.com/questions/12376870/create-an-array-of-characters-from-specified-range
     character_range = function(first, last) {
         if (first && is_array(first)) {last = first[1]; first = first[0];}
-        var ch, chars, start = first[CHARCODE](0), end = last[CHARCODE](0);
+        var ch, chars, start = first[CODEPOINT](0), end = last[CODEPOINT](0);
 
-        if (end === start) return [fromCharCode(start)];
+        if (end === start) return [fromCodePoint(start)];
 
         chars = [];
-        for (ch = start; ch <= end; ++ch) chars.push(fromCharCode(ch));
+        for (ch = start; ch <= end; ++ch) chars.push(fromCodePoint(ch));
         return chars;
     },
     concat = function(p1, p2) {
@@ -1044,7 +1048,7 @@ var rnd = function(a, b) {return Math.round((b-a)*Math.random()+a);},
                     if (m)
                     {
                         re_obj.pos += m[0].length-1;
-                        ch = Node(T_UNICODECHAR, m[0], {"Char": fromCharCode(parseInt(m[1], 16)), "Code": m[1], "UnicodePoint": !!m[2]});
+                        ch = Node(T_UNICODECHAR, m[0], {"Char": m[2] ? fromCodePoint(parseInt(m[1], 16)) : fromCharCode(parseInt(m[1], 16)), "Code": m[1], "UnicodePoint": !!m[2]});
                         isUnicode = true; isHex = false;
                     }
                 }
@@ -1314,7 +1318,7 @@ var rnd = function(a, b) {return Math.round((b-a)*Math.random()+a);},
                             wordlen = 0;
                         }
                         re_obj.pos += m[0].length-1;
-                        sequence.push(Node(T_UNICODECHAR, m[0], {"Char": fromCharCode(parseInt(m[1], 16)), "Code": m[1], "UnicodePoint": !!m[2]}));
+                        sequence.push(Node(T_UNICODECHAR, m[0], {"Char": m[2] ? fromCodePoint(parseInt(m[1], 16)) : fromCharCode(parseInt(m[1], 16)), "Code": m[1], "UnicodePoint": !!m[2]}));
                     }
                     else
                     {
