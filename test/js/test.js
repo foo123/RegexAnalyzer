@@ -12,40 +12,40 @@ echo("Regex.VERSION = " + Regex.VERSION);
 echo("Testing Regex.Composer");
 echo("===============================================================");
 
-var identifierSubRegex = Regex.Composer( )
+var identifierSubRegex = Regex.Composer()
                 
-                .characterGroup( )
-                    .characters( '_' )
-                    .range( 'a', 'z' )
-                .end( )
+                .characterGroup()
+                    .characters('_')
+                    .range('a', 'z')
+                .end()
                 
-                .characterGroup( )
-                    .characters( '_' )
-                    .range( 'a', 'z' )
-                    .range( '0', '9' )
-                .end( ).zeroOrMore( )
+                .characterGroup()
+                    .characters('_')
+                    .range('a', 'z')
+                    .range('0', '9')
+                .end().zeroOrMore()
             
-                .partial( );
+                .partial();
 
-var outregex = Regex.Composer( )
+var outregex = Regex.Composer()
                     
-                .SOL( )
+                .SOL()
                 
-                .nonCaptureGroup( ).either( )
-                    .regexp( identifierSubRegex )
-                .or_( )
-                    .namedGroup( 'token' ).literal( '**aabb**' ).end( )
-                    .any( )
-                    .space( )
-                .or_( )
-                    .digit( false ).oneOrMore( )
-                .end( 2 ).zeroOrMore( false )
+                .nonCaptureGroup().either()
+                    .regexp(identifierSubRegex)
+                .or_()
+                    .namedGroup('token').literal('**aabb**').end()
+                    .any()
+                    .space()
+                .or_()
+                    .digit(false).oneOrMore()
+                .end(2).zeroOrMore(false)
                 
-                .backReference( 'token' )
+                .backReference('token')
                 
-                .EOL( )
+                .EOL()
                 
-                .compose( 'i' );
+                .compose('i');
     
 echo("Partial        : " + identifierSubRegex);
 echo("Composed       : " + outregex.pattern.toString());
@@ -62,26 +62,26 @@ echo("Testing Regex.Analyzer");
 echo("===============================================================");
 
 // test it
-anal = Regex.Analyzer( inregex );
-peekChars = anal.peek( );
-minLen = anal.minimum( );
-maxLen = anal.maximum( );
-regexp = anal.compile( {i:anal.fl.i?1:0} );
-sampleStr = anal.sample( 1, 5 );
+anal = Regex.Analyzer(inregex);
+peekChars = anal.peek();
+minLen = anal.minimum();
+maxLen = anal.maximum();
+regexp = anal.compile({i:anal.fl.i?1:0});
+sampleStr = anal.sample(1, 5);
 groups = anal.groups();
-for(var i=0; i<5; i++)
+for (var i=0; i<5; i++)
 {
     var m = sampleStr[i].match(regexp);
     sampleStr[i] = {sample:sampleStr[i], match:(m ? 'yes' : 'no'), groups: {}};
     if ( m )
     {
         for(var g in groups)
-            if ( Object.prototype.hasOwnProperty.call(groups,g) )
+            if (Object.prototype.hasOwnProperty.call(groups, g))
                 sampleStr[i].groups[g] = m[groups[g]];
     }
 }
 
-echo("Input                                       : " + inregex.toString( ));
+echo("Input                                       : " + inregex.toString());
 echo("Regular Expression                          : " + anal.input());
 echo("Regular Expression Flags                    : " + Object.keys(anal.fl).join(','));
 echo("Reconstructed Regular Expression            : " + anal.source());
@@ -101,3 +101,15 @@ echo("===============================================================");
 echo("Regular Expression Sample Match Strings     : ");
 echo(JSON.stringify(sampleStr, null, 4));
 echo("===============================================================");
+
+// https://github.com/foo123/RegexAnalyzer/issues/5
+echo('/[a-]/');
+echo(JSON.stringify(Regex.Analyzer('/[a-]/').tree(), null, 2));
+echo('/[-a]/');
+echo(JSON.stringify(Regex.Analyzer('/[-a]/').tree(), null, 2));
+echo('/[\\d-x]/');
+echo(JSON.stringify(Regex.Analyzer('/[\\d-x]/').tree(), null, 2));
+
+// https://github.com/foo123/RegexAnalyzer/issues/6
+echo('/(?<n>a)\\k<n>/');
+echo(JSON.stringify(Regex.Analyzer('/(?<n>a)\\k<n>/').tree(), null, 2));

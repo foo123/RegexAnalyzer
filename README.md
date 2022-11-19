@@ -4,7 +4,7 @@ Regex.Analyzer and Regex.Composer
 A generic, simple &amp; intuitive **Regular Expression Analyzer &amp; Composer** for PHP, Python, Node.js / Browser / XPCOM Javascript
 
 
-**Regex v.1.1.0**
+**Regex v.1.2.0** (js only)
 
 
 **see also:**
@@ -33,12 +33,12 @@ These were used mostly as parts of other projects but uploaded here as standalon
 See `/test/js/test.js` under `/test` folder for examples of how to use
 
 
-**Regex.Analyzer Live Playground Example:**  
+**Regex.Analyzer Live Playground Example:**
 
 [![Live Playground Example](/test/screenshot.png)](https://foo123.github.com/examples/regex-analyzer/)
 
 
-**Regex.Composer Live Playground Example:**  
+**Regex.Composer Live Playground Example:**
 
 [![Live Playground Example](/test/screenshot2.png)](https://foo123.github.com/examples/regex-composer/)
 
@@ -61,24 +61,24 @@ echo("Testing Regex.Composer");
 echo("===============================================================");
 
 var identifierSubRegex = Regex.Composer( )
-                
+
                 .characterGroup( )
                     .characters( '_' )
                     .range( 'a', 'z' )
                 .end( )
-                
+
                 .characterGroup( )
                     .characters( '_' )
                     .range( 'a', 'z' )
                     .range( '0', '9' )
                 .end( ).zeroOrMore( )
-            
+
                 .partial( );
 
 var outregex = Regex.Composer( )
-                    
+
                 .SOL( )
-                
+
                 .nonCaptureGroup( ).either( )
                     .regexp( identifierSubRegex )
                     .namedGroup( 'token' ).literal( '**aabb**' ).end( )
@@ -86,13 +86,13 @@ var outregex = Regex.Composer( )
                     .space( )
                     .digit( false ).oneOrMore( )
                 .end( 2 ).zeroOrMore( false )
-                
+
                 .backReference( 'token' )
-                
+
                 .EOL( )
-                
+
                 .compose( 'i' );
-    
+
 echo("Partial        : " + identifierSubRegex);
 echo("Composed       : " + outregex.pattern.toString());
 echo("Expected       : " + "/^(?:[_a-z][_a-z0-9]*|(\\*\\*aabb\\*\\*)|.|\\s|\\D+)*?\\1$/i");
@@ -175,7 +175,7 @@ Regular Expression                          : (?P<named_group>[abcde]+)fgh(?P=na
 Regular Expression Flags                    : i
 Reconstructed Regular Expression            : ([abcde]+)fgh\1
 ===============================================================
-Regular Expression Syntax Tree              : 
+Regular Expression Syntax Tree              :
 {
     "type": "Sequence",
     "value": [
@@ -236,13 +236,13 @@ Regular Expression Syntax Tree              :
     ]
 }
 ===============================================================
-Regular Expression (Named) Matched Groups   : 
+Regular Expression (Named) Matched Groups   :
 {
     "1": 1,
     "named_group": 1
 }
 ===============================================================
-Regular Expression Peek Characters          : 
+Regular Expression Peek Characters          :
 {
     "positive": [
         "a",
@@ -259,13 +259,13 @@ Regular Expression Peek Characters          :
     "negative": []
 }
 ===============================================================
-Regular Expression Minimum / Maximum Length : 
+Regular Expression Minimum / Maximum Length :
 {
     "minimum": 5,
     "maximum": "unlimited"
 }
 ===============================================================
-Regular Expression Sample Match Strings     : 
+Regular Expression Sample Match Strings     :
 [
     {
         "sample": "AdbFGHAdb",

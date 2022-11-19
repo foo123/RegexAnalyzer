@@ -1,11 +1,11 @@
-Regex.VERSION = 1.1.0
+Regex.VERSION = 1.2.0
 Testing Regex.Composer
 ===============================================================
 Partial        : [_a-z][_a-z0-9]*
-Composed       : /^(?:[_a-z][_a-z0-9]*|(\*\*aabb\*\*).\s|\D+)*\1$/i
+Composed       : /^(?:[_a-z][_a-z0-9]*|(\*\*aabb\*\*).\s|\D+)*?\1$/i
 Expected       : /^(?:[_a-z][_a-z0-9]*|(\*\*aabb\*\*).\s|\D+)*?\1$/i
 Output         : {
-    "source": "^(?:[_a-z][_a-z0-9]*|(\\*\\*aabb\\*\\*).\\s|\\D+)*\\1$",
+    "source": "^(?:[_a-z][_a-z0-9]*|(\\*\\*aabb\\*\\*).\\s|\\D+)*?\\1$",
     "flags": "i",
     "groups": {
         "1": 1,
@@ -115,19 +115,19 @@ Regular Expression Minimum / Maximum Length :
 Regular Expression Sample Match Strings     : 
 [
     {
-        "sample": "AdfghAd",
+        "sample": "EbcfghEbc",
         "match": "yes",
         "groups": {
-            "1": "Ad",
-            "named_group": "Ad"
+            "1": "Ebc",
+            "named_group": "Ebc"
         }
     },
     {
-        "sample": "dcECFGHdcEC",
+        "sample": "acFGHac",
         "match": "yes",
         "groups": {
-            "1": "dcEC",
-            "named_group": "dcEC"
+            "1": "ac",
+            "named_group": "ac"
         }
     },
     {
@@ -139,20 +139,140 @@ Regular Expression Sample Match Strings     :
         }
     },
     {
-        "sample": "aFGHa",
+        "sample": "DBacfghDBac",
         "match": "yes",
         "groups": {
-            "1": "a",
-            "named_group": "a"
+            "1": "DBac",
+            "named_group": "DBac"
         }
     },
     {
-        "sample": "bDeFGHbDe",
+        "sample": "CAFGHCA",
         "match": "yes",
         "groups": {
-            "1": "bDe",
-            "named_group": "bDe"
+            "1": "CA",
+            "named_group": "CA"
         }
     }
 ]
 ===============================================================
+/[a-]/
+{
+  "type": 1,
+  "val": [
+    {
+      "type": 8,
+      "val": [
+        {
+          "type": 256,
+          "val": [
+            "a",
+            "-"
+          ],
+          "flags": {},
+          "typeName": "Characters"
+        }
+      ],
+      "flags": {},
+      "typeName": "CharacterGroup"
+    }
+  ],
+  "flags": {},
+  "typeName": "Sequence"
+}
+/[-a]/
+{
+  "type": 1,
+  "val": [
+    {
+      "type": 8,
+      "val": [
+        {
+          "type": 256,
+          "val": [
+            "-",
+            "a"
+          ],
+          "flags": {},
+          "typeName": "Characters"
+        }
+      ],
+      "flags": {},
+      "typeName": "CharacterGroup"
+    }
+  ],
+  "flags": {},
+  "typeName": "Sequence"
+}
+/[\d-x]/
+{
+  "type": 1,
+  "val": [
+    {
+      "type": 8,
+      "val": [
+        {
+          "type": 128,
+          "val": "d",
+          "flags": {
+            "MatchDigitChar": 1
+          },
+          "typeName": "Special"
+        },
+        {
+          "type": 256,
+          "val": [
+            "-",
+            "x"
+          ],
+          "flags": {},
+          "typeName": "Characters"
+        }
+      ],
+      "flags": {},
+      "typeName": "CharacterGroup"
+    }
+  ],
+  "flags": {},
+  "typeName": "Sequence"
+}
+/(?<n>a)\k<n>/
+{
+  "type": 1,
+  "val": [
+    {
+      "type": 4,
+      "val": {
+        "type": 1,
+        "val": [
+          {
+            "type": 1024,
+            "val": "a",
+            "flags": {},
+            "typeName": "String"
+          }
+        ],
+        "flags": {},
+        "typeName": "Sequence"
+      },
+      "flags": {
+        "NamedGroup": 1,
+        "GroupName": "n",
+        "GroupIndex": 1
+      },
+      "typeName": "Group"
+    },
+    {
+      "type": 128,
+      "val": "1",
+      "flags": {
+        "BackReference": 1,
+        "GroupName": "n",
+        "GroupIndex": 1
+      },
+      "typeName": "Special"
+    }
+  ],
+  "flags": {},
+  "typeName": "Sequence"
+}
