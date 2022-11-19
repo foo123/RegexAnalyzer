@@ -1,7 +1,7 @@
 Regex.Analyzer and Regex.Composer
 =================================
 
-A generic, simple &amp; intuitive **Regular Expression Analyzer &amp; Composer** for PHP, Python, Node.js / Browser / XPCOM Javascript
+A generic, simple &amp; intuitive **Regular Expression Analyzer &amp; Composer** for PHP, Python,  Javascript
 
 
 **Regex v.1.2.0** (js only)

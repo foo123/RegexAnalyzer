@@ -13,24 +13,24 @@ echo("Testing Regex.Composer");
 echo("===============================================================");
 
 var identifierSubRegex = Regex.Composer()
-                
+
                 .characterGroup()
                     .characters('_')
                     .range('a', 'z')
                 .end()
-                
+
                 .characterGroup()
                     .characters('_')
                     .range('a', 'z')
                     .range('0', '9')
                 .end().zeroOrMore()
-            
+
                 .partial();
 
 var outregex = Regex.Composer()
-                    
+
                 .SOL()
-                
+
                 .nonCaptureGroup().either()
                     .regexp(identifierSubRegex)
                 .or_()
@@ -40,13 +40,13 @@ var outregex = Regex.Composer()
                 .or_()
                     .digit(false).oneOrMore()
                 .end(2).zeroOrMore(false)
-                
+
                 .backReference('token')
-                
+
                 .EOL()
-                
+
                 .compose('i');
-    
+
 echo("Partial        : " + identifierSubRegex);
 echo("Composed       : " + outregex.pattern.toString());
 echo("Expected       : " + "/^(?:[_a-z][_a-z0-9]*|(\\*\\*aabb\\*\\*).\\s|\\D+)*?\\1$/i");
@@ -109,7 +109,29 @@ echo('/[-a]/');
 echo(JSON.stringify(Regex.Analyzer('/[-a]/').tree(), null, 2));
 echo('/[\\d-x]/');
 echo(JSON.stringify(Regex.Analyzer('/[\\d-x]/').tree(), null, 2));
+echo('/[x-\\d]/');
+echo(JSON.stringify(Regex.Analyzer('/[x-\\d]/').tree(), null, 2));
+echo('/[abx-\\dA-Z]/');
+echo(JSON.stringify(Regex.Analyzer('/[abx-\\dA-Z]/').tree(), null, 2));
+echo('/[abx-\\dxyA-Z]/');
+echo(JSON.stringify(Regex.Analyzer('/[abx-\\dxyA-Z]/').tree(), null, 2));
+echo('/[abdA-Zxy0-9]/');
+echo(JSON.stringify(Regex.Analyzer('/[abdA-Zxy0-9]/').tree(), null, 2));
 
 // https://github.com/foo123/RegexAnalyzer/issues/6
 echo('/(?<n>a)\\k<n>/');
 echo(JSON.stringify(Regex.Analyzer('/(?<n>a)\\k<n>/').tree(), null, 2));
+echo('/(?P<n>a)(?P=n)/');
+echo(JSON.stringify(Regex.Analyzer('/(?P<n>a)(?P=n)/').tree(), null, 2));
+
+// https://github.com/foo123/RegexAnalyzer/issues/7
+echo('/\\u{61}/u');
+echo(JSON.stringify(Regex.Analyzer('/\\u{61}/u').tree(), null, 2));
+echo('/\\u{61}/');
+echo(JSON.stringify(Regex.Analyzer('/\\u{61}/').tree(), null, 2));
+
+// https://github.com/foo123/RegexAnalyzer/issues/9
+echo('/\\u00/');
+echo(JSON.stringify(Regex.Analyzer('/\\u00/').tree(), null, 2));
+echo('/\\x3/');
+echo(JSON.stringify(Regex.Analyzer('/\\x3/').tree(), null, 2));

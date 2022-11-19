@@ -69,7 +69,7 @@ Regular Expression Syntax Tree              :
         },
         {
             "type": "Special",
-            "value": "1",
+            "value": "named_group",
             "flags": {
                 "BackReference": 1,
                 "GroupName": "named_group",
@@ -115,43 +115,43 @@ Regular Expression Minimum / Maximum Length :
 Regular Expression Sample Match Strings     : 
 [
     {
-        "sample": "EbcfghEbc",
+        "sample": "DabAFGHDabA",
         "match": "yes",
         "groups": {
-            "1": "Ebc",
-            "named_group": "Ebc"
+            "1": "DabA",
+            "named_group": "DabA"
         }
     },
     {
-        "sample": "acFGHac",
+        "sample": "bcAdfghbcAd",
         "match": "yes",
         "groups": {
-            "1": "ac",
-            "named_group": "ac"
+            "1": "bcAd",
+            "named_group": "bcAd"
         }
     },
     {
-        "sample": "bdBFGHbdB",
+        "sample": "CeFGHCe",
         "match": "yes",
         "groups": {
-            "1": "bdB",
-            "named_group": "bdB"
+            "1": "Ce",
+            "named_group": "Ce"
         }
     },
     {
-        "sample": "DBacfghDBac",
+        "sample": "BAFGHBA",
         "match": "yes",
         "groups": {
-            "1": "DBac",
-            "named_group": "DBac"
+            "1": "BA",
+            "named_group": "BA"
         }
     },
     {
-        "sample": "CAFGHCA",
+        "sample": "bFGHb",
         "match": "yes",
         "groups": {
-            "1": "CA",
-            "named_group": "CA"
+            "1": "b",
+            "named_group": "b"
         }
     }
 ]
@@ -236,6 +236,171 @@ Regular Expression Sample Match Strings     :
   "flags": {},
   "typeName": "Sequence"
 }
+/[x-\d]/
+{
+  "type": 1,
+  "val": [
+    {
+      "type": 8,
+      "val": [
+        {
+          "type": 128,
+          "val": "d",
+          "flags": {
+            "MatchDigitChar": 1
+          },
+          "typeName": "Special"
+        },
+        {
+          "type": 256,
+          "val": [
+            "x",
+            "-"
+          ],
+          "flags": {},
+          "typeName": "Characters"
+        }
+      ],
+      "flags": {},
+      "typeName": "CharacterGroup"
+    }
+  ],
+  "flags": {},
+  "typeName": "Sequence"
+}
+/[abx-\dA-Z]/
+{
+  "type": 1,
+  "val": [
+    {
+      "type": 8,
+      "val": [
+        {
+          "type": 128,
+          "val": "d",
+          "flags": {
+            "MatchDigitChar": 1
+          },
+          "typeName": "Special"
+        },
+        {
+          "type": 512,
+          "val": [
+            "A",
+            "Z"
+          ],
+          "flags": {},
+          "typeName": "CharacterRange"
+        },
+        {
+          "type": 256,
+          "val": [
+            "a",
+            "b",
+            "x",
+            "-"
+          ],
+          "flags": {},
+          "typeName": "Characters"
+        }
+      ],
+      "flags": {},
+      "typeName": "CharacterGroup"
+    }
+  ],
+  "flags": {},
+  "typeName": "Sequence"
+}
+/[abx-\dxyA-Z]/
+{
+  "type": 1,
+  "val": [
+    {
+      "type": 8,
+      "val": [
+        {
+          "type": 128,
+          "val": "d",
+          "flags": {
+            "MatchDigitChar": 1
+          },
+          "typeName": "Special"
+        },
+        {
+          "type": 512,
+          "val": [
+            "A",
+            "Z"
+          ],
+          "flags": {},
+          "typeName": "CharacterRange"
+        },
+        {
+          "type": 256,
+          "val": [
+            "a",
+            "b",
+            "x",
+            "-",
+            "x",
+            "y"
+          ],
+          "flags": {},
+          "typeName": "Characters"
+        }
+      ],
+      "flags": {},
+      "typeName": "CharacterGroup"
+    }
+  ],
+  "flags": {},
+  "typeName": "Sequence"
+}
+/[abdA-Zxy0-9]/
+{
+  "type": 1,
+  "val": [
+    {
+      "type": 8,
+      "val": [
+        {
+          "type": 512,
+          "val": [
+            "A",
+            "Z"
+          ],
+          "flags": {},
+          "typeName": "CharacterRange"
+        },
+        {
+          "type": 512,
+          "val": [
+            "0",
+            "9"
+          ],
+          "flags": {},
+          "typeName": "CharacterRange"
+        },
+        {
+          "type": 256,
+          "val": [
+            "a",
+            "b",
+            "d",
+            "x",
+            "y"
+          ],
+          "flags": {},
+          "typeName": "Characters"
+        }
+      ],
+      "flags": {},
+      "typeName": "CharacterGroup"
+    }
+  ],
+  "flags": {},
+  "typeName": "Sequence"
+}
 /(?<n>a)\k<n>/
 {
   "type": 1,
@@ -264,13 +429,126 @@ Regular Expression Sample Match Strings     :
     },
     {
       "type": 128,
-      "val": "1",
+      "val": "n",
       "flags": {
         "BackReference": 1,
         "GroupName": "n",
         "GroupIndex": 1
       },
       "typeName": "Special"
+    }
+  ],
+  "flags": {},
+  "typeName": "Sequence"
+}
+/(?P<n>a)(?P=n)/
+{
+  "type": 1,
+  "val": [
+    {
+      "type": 4,
+      "val": {
+        "type": 1,
+        "val": [
+          {
+            "type": 1024,
+            "val": "a",
+            "flags": {},
+            "typeName": "String"
+          }
+        ],
+        "flags": {},
+        "typeName": "Sequence"
+      },
+      "flags": {
+        "NamedGroup": 1,
+        "GroupName": "n",
+        "GroupIndex": 1
+      },
+      "typeName": "Group"
+    },
+    {
+      "type": 128,
+      "val": "n",
+      "flags": {
+        "BackReference": 1,
+        "GroupName": "n",
+        "GroupIndex": 1
+      },
+      "typeName": "Special"
+    }
+  ],
+  "flags": {},
+  "typeName": "Sequence"
+}
+/\u{61}/u
+{
+  "type": 1,
+  "val": [
+    {
+      "type": 32,
+      "val": "u{61}",
+      "flags": {
+        "Char": "a",
+        "Code": "61",
+        "UnicodePoint": true
+      },
+      "typeName": "UnicodeChar"
+    }
+  ],
+  "flags": {},
+  "typeName": "Sequence"
+}
+/\u{61}/
+{
+  "type": 1,
+  "val": [
+    {
+      "type": 16,
+      "val": {
+        "type": 1024,
+        "val": "u",
+        "flags": {},
+        "typeName": "String"
+      },
+      "flags": {
+        "val": "{61}",
+        "MatchMinimum": "61",
+        "MatchMaximum": "61",
+        "min": 61,
+        "max": 61,
+        "StartRepeats": 1,
+        "isGreedy": 1
+      },
+      "typeName": "Quantifier"
+    }
+  ],
+  "flags": {},
+  "typeName": "Sequence"
+}
+/\u00/
+{
+  "type": 1,
+  "val": [
+    {
+      "type": 1024,
+      "val": "u00",
+      "flags": {},
+      "typeName": "String"
+    }
+  ],
+  "flags": {},
+  "typeName": "Sequence"
+}
+/\x3/
+{
+  "type": 1,
+  "val": [
+    {
+      "type": 1024,
+      "val": "x3",
+      "flags": {},
+      "typeName": "String"
     }
   ],
   "flags": {},

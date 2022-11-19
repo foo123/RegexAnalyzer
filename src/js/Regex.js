@@ -3,7 +3,7 @@
 *   Regex
 *   @version: 1.2.0
 *
-*   A simple & generic Regular Expression Analyzer & Composer for PHP, Python, Node.js / Browser / XPCOM Javascript
+*   A simple & generic Regular Expression Analyzer & Composer for PHP, Python, Javascript
 *   https://github.com/foo123/RegexAnalyzer
 *
 **/
@@ -120,10 +120,12 @@ function clone(obj, cloned)
     for (var p in obj) if (HAS.call(obj,p)) cloned[p] = obj[p];
     return cloned;
 }
-function RE_OBJ(re)
+function RE_OBJ(re, flags, flavor)
 {
     var self = this;
     self.re = re;
+    self.flags = flags;
+    self.flavor = flavor;
     self.len = re.length;
     self.pos = 0;
     self.index = 0;
@@ -134,6 +136,8 @@ function RE_OBJ(re)
 RE_OBJ[PROTO] = {
      constructor: RE_OBJ
     ,re: null
+    ,flags: null
+    ,flavor: ''
     ,len: null
     ,pos: null
     ,index: null
@@ -143,6 +147,8 @@ RE_OBJ[PROTO] = {
     ,dispose: function() {
         var self = this;
         self.re = null;
+        self.flags = null;
+        self.flavor = null;
         self.len = null;
         self.pos = null;
         self.index = null;
@@ -743,7 +749,7 @@ var rnd = function(a, b) {return Math.round((b-a)*Math.random()+a);},
         }
         else if (T_CHARRANGE === type)
         {
-            var range = [node.val[0],node.val[1]];
+            var range = [node.val[0], node.val[1]];
             if (T_UNICODECHAR === range[0].type || T_HEXCHAR === range[0].type) range[0] = range[0].flags.Char;
             if (T_UNICODECHAR === range[1].type || T_HEXCHAR === range[1].type) range[1] = range[1].flags.Char;
             sample = character_range(range);
@@ -757,7 +763,8 @@ var rnd = function(a, b) {return Math.round((b-a)*Math.random()+a);},
             var part = node.val;
             if (node.flags.BackReference)
             {
-                ret += HAS.call(state.group,part) ? state.group[part] : '';
+                part = node.flags.GroupIndex;
+                ret += HAS.call(state.group, part) ? state.group[part] : '';
                 return ret;
             }
             else if ('D' === part)
@@ -832,10 +839,10 @@ var rnd = function(a, b) {return Math.round((b-a)*Math.random()+a);},
             var range = [node.val[0], node.val[1]];
             if (state.escaped)
             {
-                if (T_UNICODECHAR === range[0].type) range[0] = ESC+'u'+pad(range[0].flags.Code,4);
+                if (T_UNICODECHAR === range[0].type) range[0] = range[0].flags.UnicodePoint ? ESC+'u{'+range[0].flags.Code+'}' : ESC+'u'+pad(range[0].flags.Code,4);
                 else if (T_HEXCHAR === range[0].type) range[0] = ESC+'x'+pad(range[0].flags.Code,2);
                 else range[0] = esc_re(range[0], ESC, 1);
-                if (T_UNICODECHAR === range[1].type) range[1] = ESC+'u'+pad(range[1].flags.Code,4);
+                if (T_UNICODECHAR === range[1].type) range[1] = range[1].flags.UnicodePoint ? ESC+'u{'+range[1].flags.Code+'}' : ESC+'u'+pad(range[1].flags.Code,4);
                 else if (T_HEXCHAR === range[1].type) range[1] = ESC+'x'+pad(range[1].flags.Code,2);
                 else range[1] = esc_re(range[1], ESC, 1);
             }
@@ -848,7 +855,7 @@ var rnd = function(a, b) {return Math.round((b-a)*Math.random()+a);},
         }
         else if (T_UNICODECHAR === type)
         {
-            ret.src += state.escaped ? ESC+'u'+pad(node.flags.Code,4) : node.flags.Char;
+            ret.src += node.flags.UnicodePoint ? ESC+'u{'+node.flags.Code+'}' : (state.escaped ? ESC+'u'+pad(node.flags.Code,4) : node.flags.Char);
         }
         else if (T_HEXCHAR === type)
         {
@@ -858,7 +865,14 @@ var rnd = function(a, b) {return Math.round((b-a)*Math.random()+a);},
         {
             if (node.flags.BackReference)
             {
-                ret.src += ESC+node.val;
+                if (state.compatibility || (node.flags.GroupIndex === node.flags.GroupName))
+                {
+                    ret.src += ESC+node.flags.GroupIndex;
+                }
+                else
+                {
+                    ret.src += ESC+'k<'+node.flags.GroupName+'>';
+                }
             }
             else
             {
@@ -944,17 +958,17 @@ var rnd = function(a, b) {return Math.round((b-a)*Math.random()+a);},
         }
         return false;
     },
-    match_unicode = function(s) {
+    match_unicode = function(s, flags) {
         var m = false, l;
         if ((s.length > 4) && ('u' === s[CHAR](0)))
         {
-            if ('{' === s[CHAR](1) && (l=match_char_ranges(HEXDIGITS_RANGES, s, 2, 2, 8)) && '}' === s[CHAR](l+2))
+            if (flags.u && '{' === s[CHAR](1) && (l=match_char_ranges(HEXDIGITS_RANGES, s, 2, 2, 6)) && '}' === s[CHAR](l+2))
             {
-                return [m=s.slice(0,l+3), m.slice(2, -1)];
+                return [m=s.slice(0,l+3), m.slice(2, -1), 1];
             }
-            else if (l=match_char_ranges(HEXDIGITS_RANGES, s, 1, 2, 4))
+            else if (l=match_char_ranges(HEXDIGITS_RANGES, s, 1, 4, 4))
             {
-                return [m=s.slice(0,l+1), m.slice(1)];
+                return [m=s.slice(0,l+1), m.slice(1), 0];
             }
         }
         return false;
@@ -1026,19 +1040,25 @@ var rnd = function(a, b) {return Math.round((b-a)*Math.random()+a);},
                 // unicode character
                 if ('u' === ch)
                 {
-                    m = match_unicode(re_obj.re.substr(re_obj.pos-1));
-                    re_obj.pos += m[0].length-1;
-                    ch = Node(T_UNICODECHAR, m[0], {"Char": fromCharCode(parseInt(m[1], 16)), "Code": m[1]});
-                    isUnicode = true; isHex = false;
+                    m = match_unicode(re_obj.re.substr(re_obj.pos-1), re_obj.flags);
+                    if (m)
+                    {
+                        re_obj.pos += m[0].length-1;
+                        ch = Node(T_UNICODECHAR, m[0], {"Char": fromCharCode(parseInt(m[1], 16)), "Code": m[1], "UnicodePoint": !!m[2]});
+                        isUnicode = true; isHex = false;
+                    }
                 }
 
                 // hex character
                 else if ('x' === ch)
                 {
                     m = match_hex(re_obj.re.substr(re_obj.pos-1));
-                    re_obj.pos += m[0].length-1;
-                    ch = Node(T_HEXCHAR, m[0], {"Char": fromCharCode(parseInt(m[1], 16)), "Code": m[1]});
-                    isUnicode = true; isHex = true;
+                    if (m)
+                    {
+                        re_obj.pos += m[0].length-1;
+                        ch = Node(T_HEXCHAR, m[0], {"Char": fromCharCode(parseInt(m[1], 16)), "Code": m[1]});
+                        isUnicode = true; isHex = true;
+                    }
                 }
 
                 // special character
@@ -1053,14 +1073,34 @@ var rnd = function(a, b) {return Math.round((b-a)*Math.random()+a);},
 
             if (isRange)
             {
-                if (chars.length)
+                if (
+                    (ch instanceof Node) &&
+                    (ch.type === T_SPECIAL) &&
+                    (-1 !== ['s','S','d','D','w','W'].indexOf(ch.val))
+                )
                 {
-                    allchars = allchars.concat(chars);
-                    chars = [];
+                    if (range[0] instanceof Node)
+                    {
+                        sequence.push(range[0]);
+                    }
+                    else
+                    {
+                        chars.push(range[0]);
+                    }
+                    chars.push('-');
+                    sequence.push(ch);
                 }
-                range[1] = ch;
+                else
+                {
+                    if (chars.length)
+                    {
+                        allchars = allchars.concat(chars);
+                        chars = [];
+                    }
+                    range[1] = ch;
+                    sequence.push(Node(T_CHARRANGE, range));
+                }
                 isRange = false;
-                sequence.push(Node(T_CHARRANGE, range));
             }
             else
             {
@@ -1171,8 +1211,8 @@ var rnd = function(a, b) {return Math.round((b-a)*Math.random()+a);},
                     if (")" === ch) break;
                     flags["GroupName"] += ch;
                 }
-                flags["GroupIndex"] = HAS.call(re_obj.group,flags["GroupName"]) ? re_obj.group[flags["GroupName"]] : null;
-                return Node(T_SPECIAL, String(flags["GroupIndex"]), flags);
+                flags["GroupIndex"] = HAS.call(re_obj.group, flags["GroupName"]) ? re_obj.group[flags["GroupName"]] : null;
+                return Node(T_SPECIAL, flags["GroupName"], flags);
             }
 
             else if ("?#" === pre)
@@ -1264,29 +1304,45 @@ var rnd = function(a, b) {return Math.round((b-a)*Math.random()+a);},
                 // unicode character
                 if ('u' === ch)
                 {
-                    if (wordlen)
+                    m = match_unicode(re_obj.re.substr(re_obj.pos-1), re_obj.flags);
+                    if (m)
                     {
-                        sequence.push(Node(T_STRING, word));
-                        word = '';
-                        wordlen = 0;
+                        if (wordlen)
+                        {
+                            sequence.push(Node(T_STRING, word));
+                            word = '';
+                            wordlen = 0;
+                        }
+                        re_obj.pos += m[0].length-1;
+                        sequence.push(Node(T_UNICODECHAR, m[0], {"Char": fromCharCode(parseInt(m[1], 16)), "Code": m[1], "UnicodePoint": !!m[2]}));
                     }
-                    m = match_unicode(re_obj.re.substr(re_obj.pos-1));
-                    re_obj.pos += m[0].length-1;
-                    sequence.push(Node(T_UNICODECHAR, m[0], {"Char": fromCharCode(parseInt(m[1], 16)), "Code": m[1]}));
+                    else
+                    {
+                        word += ch;
+                        wordlen += 1;
+                    }
                 }
 
                 // hex character
                 else if ('x' === ch)
                 {
-                    if (wordlen)
-                    {
-                        sequence.push(Node(T_STRING, word));
-                        word = '';
-                        wordlen = 0;
-                    }
                     m = match_hex(re_obj.re.substr(re_obj.pos-1));
-                    re_obj.pos += m[0].length-1;
-                    sequence.push(Node(T_HEXCHAR, m[0], {"Char": fromCharCode(parseInt(m[1], 16)), "Code": m[1]}));
+                    if (m)
+                    {
+                        if (wordlen)
+                        {
+                            sequence.push(Node(T_STRING, word));
+                            word = '';
+                            wordlen = 0;
+                        }
+                        re_obj.pos += m[0].length-1;
+                        sequence.push(Node(T_HEXCHAR, m[0], {"Char": fromCharCode(parseInt(m[1], 16)), "Code": m[1]}));
+                    }
+                    else
+                    {
+                        word += ch;
+                        wordlen += 1;
+                    }
                 }
 
                 // js back-reference
@@ -1311,7 +1367,7 @@ var rnd = function(a, b) {return Math.round((b-a)*Math.random()+a);},
                     flag["BackReference"] = 1;
                     flag["GroupName"] = word;
                     flag["GroupIndex"] = HAS.call(re_obj.group, word) ? re_obj.group[word] : null;
-                    sequence.push(Node(T_SPECIAL, String(flag["GroupIndex"]), flag));
+                    sequence.push(Node(T_SPECIAL, word, flag));
                     word = '';
                 }
 
@@ -1345,6 +1401,7 @@ var rnd = function(a, b) {return Math.round((b-a)*Math.random()+a);},
                     }
                     flag = {};
                     flag['BackReference'] = 1;
+                    flag['GroupName'] = word;
                     flag['GroupIndex'] = parseInt(word, 10);
                     sequence.push(Node(T_SPECIAL, word, flag));
                     word = '';
@@ -1528,10 +1585,10 @@ var rnd = function(a, b) {return Math.round((b-a)*Math.random()+a);},
 // https://docs.python.org/3/library/re.html
 // http://php.net/manual/en/reference.pcre.pattern.syntax.php
 // A simple regular expression analyzer
-function Analyzer(re, delim)
+function Analyzer(re, delim, flavor)
 {
-    if (!(this instanceof Analyzer)) return new Analyzer(re, delim);
-    if (re) this.input(re, delim);
+    if (!(this instanceof Analyzer)) return new Analyzer(re, delim, flavor);
+    if (re) this.input(re, delim, flavor);
 }
 Analyzer.VERSION = __version__;
 Analyzer[PROTO] = {
@@ -1539,6 +1596,7 @@ Analyzer[PROTO] = {
     constructor: Analyzer,
 
     ast: null,
+    flavor: '',
     re: null,
     fl: null,
     src: null,
@@ -1546,10 +1604,12 @@ Analyzer[PROTO] = {
     min: null,
     max: null,
     ch: null,
+    bc: true,
 
     dispose: function() {
         var self = this;
         self.ast = null;
+        self.flavor = null;
         self.re = null;
         self.fl = null;
         self.src = null;
@@ -1571,7 +1631,12 @@ Analyzer[PROTO] = {
         return self;
     },
 
-    input: function(re, delim) {
+    backwardsCompatible: function(enable) {
+        this.bc = !!enable;
+        return this;
+    },
+
+    input: function(re, delim, flavor) {
         var self = this;
         if (!arguments.length) return self.re;
         if (re)
@@ -1588,7 +1653,7 @@ Analyzer[PROTO] = {
                 {
                     ch = re[CHAR](l-1);
                     if (delim === ch) break;
-                    else { fl[ch] = 1; l--; }
+                    else {fl[ch] = 1; --l;}
                 }
 
                 if (0 < l)
@@ -1605,7 +1670,7 @@ Analyzer[PROTO] = {
 
             // re is different, reset the ast, etc
             if (self.re !== re) self.reset();
-            self.re = re; self.fl = fl;
+            self.re = re; self.fl = fl; self.flavor = String(flavor || '');
         }
         return self;
     },
@@ -1614,7 +1679,7 @@ Analyzer[PROTO] = {
         var self = this;
         if ((null != self.re) && (null === self.ast))
         {
-            var re = new RE_OBJ(self.re);
+            var re = new RE_OBJ(self.re, self.fl, self.flavor);
             self.ast = analyze_re(re);
             re.dispose();
         }
@@ -1639,6 +1704,7 @@ Analyzer[PROTO] = {
                 map                 : map_src,
                 reduce              : reduce_src,
                 escaped             : false !== escaped,
+                compatibility       : self.bc,
                 group               : {}
             };
             re = walk({src:'',group:{}}, self.ast, state);
@@ -1661,11 +1727,11 @@ Analyzer[PROTO] = {
         return true === raw ? sel.grp : clone(self.grp);
     },
 
-    compile: function(flags) {
+    compile: function(flags, notBackwardsCompatible) {
         var self = this;
         if (null == self.re) return null;
         flags = flags || self.fl || {};
-        return new RegExp(self.source(), (flags.g||flags.G?'g':'')+(flags.i||flags.I?'i':'')+(flags.m||flags.M?'m':'')+(flags.y||flags.Y?'y':'')+(flags.u?'u':''));
+        return new RegExp(self.source(), (flags.g||flags.G?'g':'')+(flags.i||flags.I?'i':'')+(flags.m||flags.M?'m':'')+(flags.y||flags.Y?'y':'')+(flags.u?'u':'')+(flags.d?'d':'')+(flags.s?'s':''));
     },
 
     tree: function(flat) {
